@@ -39,9 +39,9 @@ addParamValue(p,'nw',5,@isscalar);
 addParamValue(p,'winsize',5,@isscalar); % seconds
 addParamValue(p,'f',[0:.25:100]',@isnumeric);
 
-% Rejection
-addParamValue(p,'sdthresh',6,@isnumeric);
-
+% % Rejection
+% addParamValue(p,'sdthresh',6,@isnumeric);
+% 
 % Saving
 addParamValue(p,'overwrite',false,@islogical);
 
