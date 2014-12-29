@@ -27,7 +27,7 @@ query = linq(info);
 query.where(@(x) ~isempty(x.patientID)).select(@(x) x);
 
 if ~isempty(p.patient) && (query.count>0)
-   query.where(@(x) any(strcmp(x.patient,p.patient))).select(@(x) x);
+   query.where(@(x) any(strcmp(x.patientID,p.patient))).select(@(x) x);
 end
 
 if ~isempty(p.protocol) && (query.count>0)
