@@ -31,14 +31,13 @@ end
 fnames = unique(buildFilename(info));
 
 if numel(fnames) > 2
-   keyboard
    error('too many');
 end
 
 figure;
 for i = 1:numel(fnames)
    load(fnames{i});
-   %keyboard
+
    P2 = P;
    for j = 1:numel(f)
       P2(j,:,:) = squeeze(P(j,:,:)).*(1-reject');
