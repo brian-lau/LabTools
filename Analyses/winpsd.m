@@ -52,6 +52,10 @@ info = filterFilename(fullfile(p.basedir,p.area,p.patient,p.recording));
 info = filterFilename(info,'protocol',p.protocol,'task',...
    p.task,'condition',p.condition,'run',p.run);
 
+if isempty(info)
+   return;
+end
+
 files = buildFilename(info);
 
 if ~isempty(files)
@@ -85,15 +89,7 @@ if ~isempty(files)
    
    % Save
    labels = s(1).labels;
-%    if exist(fullfile(p.savedir,fname),'file')
-%       if p.overwrite
-%          save(fullfile(p.savedir,fname),'s','P','win','f','p','reject','files','runindex','labels');
-%       else
-%          fprintf('File found, skipping\n');
-%       end
-%    else
-       save(fullfile(p.savedir,fname),'s','P','win','f','p','reject','files','runindex','labels');
-%    end
+   save(fullfile(p.savedir,fname),'s','P','win','f','p','reject','files','runindex','labels');
    
    clear P runindex win
 else
