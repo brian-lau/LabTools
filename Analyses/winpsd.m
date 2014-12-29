@@ -20,7 +20,7 @@ function winpsd(varargin)
 
 p = inputParser;
 p.KeepUnmatched = true;
-addParamValue(p,'basedir','/Volumes/Data/Human/',@ischar);
+addParamValue(p,'basedir','/Volumes/Data/Human/STN/MATLAB',@ischar);
 addParamValue(p,'savedir',pwd,@ischar);
 addParamValue(p,'area','STN',@ischar);
 addParamValue(p,'patient','',@ischar);
@@ -28,11 +28,7 @@ addParamValue(p,'recording','Postop',@ischar);
 addParamValue(p,'protocol','',@ischar);
 addParamValue(p,'task','',@ischar);
 addParamValue(p,'condition','',@ischar);
-addParamValue(p,'run','',@isscalar);
-
-% Preprocessing
-addParamValue(p,'trim',1.5,@isscalar);
-addParamValue(p,'deline',false,@islogical);
+%addParamValue(p,'run','',@isscalar);
 
 % Spectrum parameters
 addParamValue(p,'nw',5,@isscalar);
@@ -42,25 +38,29 @@ addParamValue(p,'f',[0:.25:100]',@isnumeric);
 % % Rejection
 % addParamValue(p,'sdthresh',6,@isnumeric);
 % 
+
+% additional info to store in SampledProcess
+addParamValue(p,'data',[]);
+addParamValue(p,'dataName',@ischar);
+
 % Saving
 addParamValue(p,'overwrite',false,@islogical);
 
 parse(p,varargin{:});
 p = p.Results;
 
-info = filterFilename(fullfile(p.basedir,p.area,p.patient,p.recording));
-info = filterFilename(info,'protocol',p.protocol,'task',...
-   p.task,'condition',p.condition,'run',p.run);
-
+% List of files matching conditions
+info = filterFilename(p.basedir);
+info = filterFilename(info,'patient',p.patient,'protocol',p.protocol,'task',...
+   p.task,'condition',p.condition,'run','PRE');
 if isempty(info)
    return;
 end
-
 files = buildFilename(info);
 
 if ~isempty(files)
    % Savename
-   ind = findstr(files{1},'_RUN');
+   ind = findstr(files{1},'_PRE');
    [~,fname] = fileparts(files{1}(1:ind-1));
    fname = [fname '_WINPSD'];
    
@@ -69,12 +69,16 @@ if ~isempty(files)
       return;
    end
    
+   if numel(files) > 1
+      error('Multiple preprocessed files?');
+   else
+      load(files{1});
+   end
+   
    P = [];
    reject = [];
    runindex = [];
-   for i = 1:numel(files)
-      s(i) = loadSingleRun(files{i},'trim',p.trim,'deline',p.deline);
-      
+   for i = 1:numel(s)
       [tempP,f,win{i}] = winpmtm(s(i),p.nw,p.f,p.winsize);
       
       s(i).window = win{i};
@@ -89,9 +93,19 @@ if ~isempty(files)
    
    % Save
    labels = s(1).labels;
-   save(fullfile(p.savedir,fname),'s','P','win','f','p','reject','files','runindex','labels');
+   if not(isempty(p.data))
+      if isempty(p.dataName)
+         data = p.data;
+         save(fullfile(p.savedir,fname),'P','win','f','p','reject','files','runindex','labels','data');
+      else
+         eval([p.dataName '= p.data;']);
+         save(fullfile(p.savedir,fname),'P','win','f','p','reject','files','runindex','labels',p.dataName);
+      end
+   else
+      save(fullfile(p.savedir,fname),'P','win','f','p','reject','files','runindex','labels');
+   end
    
-   clear P runindex win
+   clear win
 else
    warning('requested, but not found');
 end
