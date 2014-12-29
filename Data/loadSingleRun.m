@@ -53,7 +53,7 @@ switch lower(ext)
       [hdr,values] = edfRead(lfpfile);
       labels = hdr.label;
       labels = cellfun(@(x) regexprep(x,'_','','emptymatch'),labels,'uni',false);
-      [~,temp] = intersect(labels,{'01D'    '12D'    '23D'    '01G'    '12G'    '23G'});
+      [~,temp] = intersect(labels,{'01D' '12D' '23D' '01G' '12G' '23G'});
       ind = zeros(numel(labels),1);
       ind(temp) = true;
       ind = logical(ind);
@@ -112,10 +112,15 @@ end
 
 if par.Results.resample < s.Fs
    fprintf('Resampling\n');
+   origFs = s.Fs;
    s.resample(par.Results.resample,'fix',true);
    if exist('t','var')
       t.resample(par.Results.resample,'fix',true);
    end
+else
+   origFs = s.Fs;
 end
 
-s.info('preprocess') = par.Results;
+preprocessParams = par.Results;
+preprocessParams.origFs = origFs;
+s.info('preprocessParams') = preprocessParams;
