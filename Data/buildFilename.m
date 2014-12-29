@@ -6,6 +6,7 @@ if nargin == 1
    else
       error('Incorrect # of inputs');
    end
+   
    for i = 1:numel(info)
       temp = struct2cell(info(i));
       temp2 = '';
@@ -22,12 +23,8 @@ if nargin == 1
       end
       f{i,1} = temp2;
    end
-%    for i = 1:numel(info)
-%       temp = struct2cell(info(i));
-%       [path,patientID,date,data,protocol,task,condition,run,filetype] = deal(temp{:});
-%       f{i,1} = buildFilename(path,patientID,date,data,protocol,task,condition,run,filetype);
-%    end
-   return
+   
+   return;
 elseif nargin == 9
    f = [patientID '_' date '_' data '_' protocol '_' task '_' condition '_' run filetype];
    f = fullfile(path,f);
