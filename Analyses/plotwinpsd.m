@@ -119,4 +119,6 @@ if par.saveplot
    
    print(h,'-dpdf',savename);
    close;
+else
+   close;
 end
