@@ -20,11 +20,11 @@ function winpsd(varargin)
 
 p = inputParser;
 p.KeepUnmatched = true;
-addParamValue(p,'basedir','/Volumes/Data/Human/STN/MATLAB',@ischar);
+addParamValue(p,'basedir',pwd,@ischar);
 addParamValue(p,'savedir',pwd,@ischar);
-addParamValue(p,'area','STN',@ischar);
+addParamValue(p,'area','',@ischar);
 addParamValue(p,'patient','',@ischar);
-addParamValue(p,'recording','Postop',@ischar);
+addParamValue(p,'recording','',@ischar);
 addParamValue(p,'protocol','',@ischar);
 addParamValue(p,'task','',@ischar);
 addParamValue(p,'condition','',@ischar);
@@ -35,11 +35,10 @@ addParamValue(p,'nw',5,@isscalar);
 addParamValue(p,'winsize',4,@isscalar); % seconds
 addParamValue(p,'f',[0:.25:100]',@isnumeric);
 
-% % Rejection
-% addParamValue(p,'sdthresh',6,@isnumeric);
-% 
+% Rejection
+addParamValue(p,'detectArtifacts',true,@islogical);
 
-% additional info to store in SampledProcess
+% Additional info to store in SampledProcess
 addParamValue(p,'data',[]);
 addParamValue(p,'dataName',@ischar);
 
@@ -50,10 +49,11 @@ parse(p,varargin{:});
 p = p.Results;
 
 % List of files matching conditions
-info = filterFilename(p.basedir);
+info = filterFilename(fullfile(p.basedir,p.area,p.patient,p.recording));
 info = filterFilename(info,'patient',p.patient,'protocol',p.protocol,'task',...
    p.task,'condition',p.condition,'run','PRE');
 if isempty(info)
+   fprintf('No files matching conditions\n');
    return;
 end
 files = buildFilename(info);

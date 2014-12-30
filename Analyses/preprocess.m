@@ -1,14 +1,19 @@
 % Preprocess raw LFP data
 %
+% Todo:
+%   o should store rejections?
+%   o allow manual rejections?
+%
 function preprocess(varargin)
 
+%% Parameters
 p = inputParser;
 p.KeepUnmatched = true;
-addParamValue(p,'basedir','/Volumes/Data/Human/',@ischar);
+addParamValue(p,'basedir',pwd,@ischar);
 addParamValue(p,'savedir',pwd,@ischar);
-addParamValue(p,'area','STN',@ischar);
+addParamValue(p,'area','',@ischar);
 addParamValue(p,'patient','',@ischar);
-addParamValue(p,'recording','Postop',@ischar);
+addParamValue(p,'recording','',@ischar);
 addParamValue(p,'protocol','',@ischar);
 addParamValue(p,'task','',@ischar);
 addParamValue(p,'condition','',@ischar);
@@ -18,7 +23,7 @@ addParamValue(p,'run','',@isscalar);
 addParamValue(p,'trim',1.5,@isscalar);
 addParamValue(p,'deline',false,@islogical);
 
-% additional info to store in SampledProcess
+% Additional info to store in SampledProcess
 addParamValue(p,'data',[]);
 addParamValue(p,'dataName',@ischar);
 
@@ -28,14 +33,14 @@ addParamValue(p,'overwrite',false,@islogical);
 parse(p,varargin{:});
 p = p.Results;
 
+%% Matching files
 info = filterFilename(fullfile(p.basedir,p.area,p.patient,p.recording));
 info = filterFilename(info,'protocol',p.protocol,'task',...
    p.task,'condition',p.condition,'run',p.run);
-
 if isempty(info)
+   fprintf('No files matching conditions\n');
    return;
 end
-
 files = buildFilename(info);
 
 if ~isempty(files)
