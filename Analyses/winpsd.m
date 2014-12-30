@@ -32,7 +32,7 @@ addParamValue(p,'condition','',@ischar);
 
 % Spectrum parameters
 addParamValue(p,'nw',5,@isscalar);
-addParamValue(p,'winsize',5,@isscalar); % seconds
+addParamValue(p,'winsize',4,@isscalar); % seconds
 addParamValue(p,'f',[0:.25:100]',@isnumeric);
 
 % % Rejection
@@ -93,16 +93,18 @@ if ~isempty(files)
    
    % Save
    labels = s(1).labels;
+   Fs = s.Fs;
+   origFs = arrayfun(@(x) x.info('preprocessParams').origFs,s);
    if not(isempty(p.data))
       if isempty(p.dataName)
          data = p.data;
-         save(fullfile(p.savedir,fname),'P','win','f','p','reject','files','runindex','labels','data');
+         save(fullfile(p.savedir,fname),'P','win','f','p','Fs','origFs','reject','files','runindex','labels','data');
       else
          eval([p.dataName '= p.data;']);
-         save(fullfile(p.savedir,fname),'P','win','f','p','reject','files','runindex','labels',p.dataName);
+         save(fullfile(p.savedir,fname),'P','win','f','p','Fs','origFs','reject','files','runindex','labels',p.dataName);
       end
    else
-      save(fullfile(p.savedir,fname),'P','win','f','p','reject','files','runindex','labels');
+      save(fullfile(p.savedir,fname),'P','win','f','p','Fs','origFs','reject','files','runindex','labels');
    end
    
    clear win

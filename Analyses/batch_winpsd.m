@@ -7,7 +7,6 @@ tasks = {'BASELINEASSIS' 'BASELINEDEBOUT'};
 
 f = [0:.25:250]';
 
-
 [NUM,TXT,RAW] = xlsread(fullfile(savedir,'PatientInfo.xlsx'));
 labels = RAW(1,:);
 RAW(1,:) = [];
@@ -16,7 +15,7 @@ for i = 1:numel(labels)
    [info(1:n).(labels{i})] = deal(RAW{:,i});
 end
 
-
+%% Calculate spectra
 for i = 1:numel(info)
    i
    for j = 1:numel(tasks)
@@ -26,13 +25,24 @@ for i = 1:numel(info)
 
          winpsd('patient',info(i).PATIENTID,'basedir',basedir,'savedir',savedir,...
             'condition',conditions{k},'task',tasks{j},'deline',logical(info(i).DELINE),...
-            'overwrite',overwrite,'data',temp,'dataName','clinic');
+            'f',f,'overwrite',overwrite,'data',temp,'dataName','clinic');
       end
+      plotwinpsd('patient',info(i).PATIENTID,'basedir',basedir,'savedir',savedir,...
+         'task',tasks{j},'overwrite',overwrite);
    end
 end
 
-% task = 'BASELINEASSIS';
-% for i = 1:numel(patients)
-%    plotwinpsd('patient',patients{i},'basedir',basedir,'savedir',savedir,...
-%       'task',task);
+
+% for i = 1:numel(info)
+%    i
+%    for j = 1:numel(tasks)
+%          plotwinpsd('patient',info(i).PATIENTID,'basedir',basedir,'savedir',savedir,...
+%             'task',tasks{j},'overwrite',overwrite);
+%    end
 % end
+% 
+%          plotwinpsd('patient','RICDi','basedir',basedir,'savedir',savedir,...
+%             'task','BASELINEASSIS','overwrite',overwrite);
+%          plotwinpsd('patient','RICDi','basedir',basedir,'savedir',savedir,...
+%             'task','BASELINEDEBOUT','overwrite',overwrite);
+%          

@@ -46,6 +46,10 @@ if ~isempty(p.filetype) && (query.count>0)
    query.where(@(x) any(strcmp(x.filetype,p.filetype))).select(@(x) x);
 end
 
+if ~isempty(p.run) && (query.count>0)
+   query.where(@(x) any(strcmp(x.run,p.run))).select(@(x) x);
+end
+
 if query.count > 0
    info = query.toArray();
 else
