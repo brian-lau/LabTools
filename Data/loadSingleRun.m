@@ -13,8 +13,11 @@ addParamValue(par,'trim',0,@isscalar);
 addParamValue(par,'deline',false,@islogical);
 % removePLI parameters
 addParamValue(par,'M',3,@isscalar);
-addParamValue(par,'B',[50 .2 1],@(x) isnumeric(x) && (numel(x)==3));
-addParamValue(par,'P',[0.1 4 1],@(x) isnumeric(x) && (numel(x)==3));
+addParamValue(par,'B',[50 .01 4],@(x) isnumeric(x) && (numel(x)==3));
+addParamValue(par,'P',[0.01 4 4],@(x) isnumeric(x) && (numel(x)==3));
+% addParamValue(par,'M',3,@isscalar);
+% addParamValue(par,'B',[50 .2 1],@(x) isnumeric(x) && (numel(x)==3));
+% addParamValue(par,'P',[0.1 4 1],@(x) isnumeric(x) && (numel(x)==3));
 addParamValue(par,'W',2,@isscalar);
 
 % Highpass filter cutoff, 0 skips highpass filtering
@@ -84,16 +87,6 @@ switch lower(ext)
       error('Unknown file type');
 end
 
-if par.Results.deline
-   fprintf('Removing line noise\n');
-   M = par.Results.M;  %number of harmonics to remove
-   B = par.Results.B;
-   P = par.Results.P;
-   W = par.Results.W;
-   f = @(x) removePLI_multichan(x',s.Fs,M,B,P,W,50,0);
-   s.map(@(x) f(x)','fix',true);
-end
-
 if par.Results.highpass
    fprintf('Highpass filtering\n');
    if isempty(par.Results.highpass_order)
@@ -102,6 +95,17 @@ if par.Results.highpass
       highpass(s,par.Results.highpass,'order',order,'fix',true);
    end
 end
+
+if par.Results.deline
+   fprintf('Removing line noise\n');
+   M = par.Results.M;
+   B = par.Results.B;
+   P = par.Results.P;
+   W = par.Results.W;
+   f = @(x) removePLI_multichan(x',s.Fs,M,B,P,W,50,0);
+   s.map(@(x) f(x)','fix',true);
+end
+
 
 if par.Results.trim
    s.window = [2 s.window(end)-2];
