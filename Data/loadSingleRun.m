@@ -110,7 +110,7 @@ end
 % detrend(s);
 % s.chop();
 
-if par.Results.resample < s.Fs
+if (par.Results.resample < s.Fs) && par.Results.resample
    fprintf('Resampling\n');
    origFs = s.Fs;
    s.resample(par.Results.resample,'fix',true);
