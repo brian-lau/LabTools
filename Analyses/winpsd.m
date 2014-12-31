@@ -1,20 +1,3 @@
-% area
-% patient
-% basedir
-% experiment (MSUP,BASELINEASSIS...)
-
-% spectrum parameters
-% 
-% load file
-% window
-% detect artifacts (use fieldtrip?
-% apply spectrum
-% 
-% store 
-% f
-% time samples
-% psd
-% params
 
 function winpsd(varargin)
 
@@ -49,7 +32,7 @@ parse(p,varargin{:});
 p = p.Results;
 
 % List of files matching conditions
-info = filterFilename(fullfile(p.basedir,p.area,p.patient,p.recording));
+info = filterFilename(p.basedir);
 info = filterFilename(info,'patient',p.patient,'protocol',p.protocol,'task',...
    p.task,'condition',p.condition,'run','PRE');
 if isempty(info)
