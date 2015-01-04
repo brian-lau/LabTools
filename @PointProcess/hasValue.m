@@ -1,4 +1,3 @@
-function [bool,times] = hasValue(self,value) % valueIsEqual
 % TODO handle PointProcess array
 % return array in case of one window?
 %          nWindow = size(self.window,1);
@@ -6,6 +5,9 @@ function [bool,times] = hasValue(self,value) % valueIsEqual
 %             bool(i,1) = valueFun(self,@(x) x==value);
 %             times{i,1} = self.windowedTimes{i}(bool{i,1});
 %          end
+
+function [bool,times] = hasValue(self,value)
+
 bool = valueFun(self,@(x) x==value);
 
 nWindow = size(self.window,1);

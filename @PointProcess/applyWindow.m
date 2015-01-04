@@ -1,4 +1,3 @@
-function applyWindow(self)
 % Window original event times, setting
 %     times
 %     values
@@ -6,11 +5,15 @@ function applyWindow(self)
 %     isValidWindow
 % TODO
 % Windows are inclusive on both sides, does this make sense???
+
+function applyWindow(self)
+
 nWindow = size(self.window,1);
 times = self.times_;
 if isempty(times)
-   return
+   return;
 end
+
 nTimes = size(times,2);
 values = self.values_;
 window = self.window;
@@ -20,8 +23,8 @@ windowIndex = cell(nWindow,nTimes);
 isValidWindow = false(nWindow,1);
 for i = 1:nWindow
    for j = 1:nTimes
-      ind = (times{j}>=window(i,1)) & (times{j}<=window(i,2));
-      windowedTimes{i,j} = times{j}(ind);
+      ind = (times{j}(:,1)>=window(i,1)) & (times{j}(:,1)<=window(i,2));
+      windowedTimes{i,j} = times{j}(ind,:);
       windowedValues{i,j} = values{j}(ind);
       windowIndex{i,j} = find(ind);
       if (window(i,1)>=self.tStart) && (window(i,2)<=self.tEnd)

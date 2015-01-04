@@ -1,4 +1,3 @@
-function validWindow = checkWindow(window,n)
 % Validate window, and replicate if necessary
 %
 % % single window
@@ -19,6 +18,9 @@ function validWindow = checkWindow(window,n)
 % For example, to use the same set of windows for n elements,
 % checkWindow({[-6 0;0 6;-6 6]},n)
 % checkWindow({[0 1;1 2] [2 3]},2)
+
+function validWindow = checkWindow(window,n)
+
 if nargin == 1
    n = 1;
 end

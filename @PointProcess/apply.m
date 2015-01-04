@@ -1,4 +1,3 @@
-function output = windowFun(self,fun,nOpt,varargin)
 % Apply a function to windowedTimes
 %
 % FUN should expect an array of event times. The output format of
@@ -69,6 +68,9 @@ function output = windowFun(self,fun,nOpt,varargin)
 % elements into a format that the function expects. For consistency, we
 % want a general format that can be passed around?
 % how about the one for getPsth and plotRaster
+
+function output = apply(self,fun,nOpt,varargin)
+
 if nargin < 3
    nOpt = 1;
 end

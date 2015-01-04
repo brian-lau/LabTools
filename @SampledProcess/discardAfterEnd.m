@@ -1,4 +1,5 @@
 function discardAfterEnd(self)
+
 ind = self.times_ > self.tEnd;
 if any(ind)
    self.times_(ind) = [];

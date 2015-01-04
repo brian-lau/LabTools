@@ -1,3 +1,5 @@
+% Subtract mean
+
 function self = detrend(self)
 
 for i = 1:numel(self)
