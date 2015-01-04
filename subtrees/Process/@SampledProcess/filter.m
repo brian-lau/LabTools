@@ -1,3 +1,8 @@
+% TODO
+%   o edge padding
+%   o what happens with nans?
+%   o different filtering methods (causal, etc.)
+
 function self = filter(self,b,varargin)
 
 p = inputParser;

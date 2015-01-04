@@ -1,11 +1,14 @@
-function applyWindow(self)
 % Window original event times, setting
 %     times
 %     values
 %     index
 %     isValidWindow
+
 % TODO
-% Windows are inclusive on both sides, does this make sense???
+%   o Windows are inclusive on both sides, does this make sense???
+
+function applyWindow(self)
+
 if isempty(self.times_)
    return;
 end

@@ -1,9 +1,10 @@
-function output = valueFun(self,fun,varargin)
 % Apply a function to windowValues
 
 % need to deal with arbitrary arguments to fun
 % need to deal with arbitrary outputs from fun
 % numel(self) > 1, see windowFun
+
+function output = valueFun(self,fun,varargin)
 
 % trap parameters
 % Specific to cellfun 'UniformOutput' & ErrorHandler

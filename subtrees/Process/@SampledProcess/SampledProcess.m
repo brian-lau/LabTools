@@ -97,7 +97,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
          % Store original window and offset for resetting
          self.window_ = self.window;
          self.offset_ = self.offset;
-      end% constructor
+      end % constructor
 
       function set.tStart(self,tStart)
          if ~isempty(self.tEnd)
@@ -168,7 +168,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
       [self,b] = highpass(self,corner,varargin)
       [self,b] = lowpass(self,corner,varargin)
       [self,b] = bandpass(self,corner,varargin)
-      %self = bandInterp(self,freqs,freqrange,chunksize)
       self = resample(self,newFs,varargin)
       %self = smooth(self)
       self = detrend(self)

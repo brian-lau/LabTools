@@ -8,7 +8,10 @@
 % set only in constructor
 %   - clock, timeUnit
 % FIXME offset is a misleading name? could imply offset in values...
-% TODO should we allow initial process be multiply windowed???
+% TODO 
+%   x should we allow initial process be multiply windowed???
+%   o labels can be numeric? 
+%   o dimLabels?
 classdef(CaseInsensitiveProperties, TruncatedProperties) Process < hgsetget & matlab.mixin.Copyable
    properties
       info@containers.Map % Information about process
@@ -19,8 +22,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Process < hgsetget & ma
    end
    properties(AbortSet)
       % tStart/tEnd are currently in subclasses since setters are different for each
-      %tStart  % Start time of process
-      %tEnd    % End time of process
       window   % [min max] time window of interest
       offset   % Offset of event/sample times relative to window
    end
@@ -41,7 +42,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Process < hgsetget & ma
       index    % Indices into times/values in window
       times_   % Original event/sample times
       values_  % Original attribute/values
-      window_  % Original [min max] time window
+      window_  % Original window
       offset_  % Original offset
    end
    properties(SetAccess = protected)
@@ -178,8 +179,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Process < hgsetget & ma
    end
    
    methods(Static, Access = protected)
-      [bool,keys] = mapHasValue(map,value,varargin)
       validWindow = checkWindow(window,n)
       validOffset = checkOffset(offset,n)
-   end % methods(Static, Protected)
+   end
 end

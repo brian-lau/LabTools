@@ -211,7 +211,7 @@ assertEqual(p.times{1},(1:5)');
 assertEqual(p.times{2},(6:10)');
 
 f = @() p.setWindow('dog');
-assertExceptionThrown(f,'process:setWindow:InputFormat')
+assertExceptionThrown(f,'Process:setWindow:InputFormat')
 
 function testSetWindow_multi
 p = PointProcess({[1:10] [1:10]-.5});
@@ -244,7 +244,7 @@ assertEqual(p(2).times{1},(0:2)');
 assertEqual(p(2).times{2},(3:4)');
 
 f = @() p.setWindow('dog');
-assertExceptionThrown(f,'process:setWindow:InputFormat')
+assertExceptionThrown(f,'Process:setWindow:InputFormat')
 
 % different windows
 p.setWindow({[0 2 ; 3 4] [0 4]});
@@ -377,10 +377,10 @@ assertEqual(p.times{1},1+(1:5)');
 assertEqual(p.times{2},5+(6:10)');
 
 f = @() p.setOffset([1 2 3]);
-assertExceptionThrown(f,'process:checkOffset:InputFormat')
+assertExceptionThrown(f,'Process:checkOffset:InputFormat')
 
 f = @() p.setOffset('dog');
-assertExceptionThrown(f,'process:setOffset:InputFormat')
+assertExceptionThrown(f,'Process:setOffset:InputFormat')
 
 function testSetOffset_multi
 p = PointProcess({1:10 [1:10]-.5});

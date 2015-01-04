@@ -1,4 +1,3 @@
-function validOffset = checkOffset(offset,n)
 % Validate offset, and replicate if necessary
 %
 % % single offset
@@ -18,6 +17,9 @@ function validOffset = checkOffset(offset,n)
 %
 % For example, to use the same set of windows for n elements,
 % checkWindow({[-6 0;0 6;-6 6]},n)
+
+function validOffset = checkOffset(offset,n)
+
 if nargin == 1
    n = 1;
 end
@@ -33,7 +35,7 @@ if iscell(offset)
          validOffset{1,i} = Process.checkOffset(offset{i},length(offset{i}));
       end
    else
-      error('process:checkOffset:InputFormat',...
+      error('Process:checkOffset:InputFormat',...
          'Cell array offset must be {[nx1]} or [nObjs x 1]');
    end
 else
@@ -43,7 +45,7 @@ else
       end
    end
    if numel(offset) ~= n
-      error('process:checkOffset:InputFormat',...
+      error('Process:checkOffset:InputFormat',...
          'Incorrect number of offsets.');
    end
    validOffset = offset(:);

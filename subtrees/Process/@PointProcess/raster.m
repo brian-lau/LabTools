@@ -1,10 +1,11 @@
-function [h,yOffset] = raster(self,varargin)
 % Raster plot
 %
 % For a full description of the possible parameters,
 %
 % SEE ALSO
 % plotRaster
+
+function [h,yOffset] = raster(self,varargin)
 
 p = inputParser;
 p.KeepUnmatched= true;

@@ -1,4 +1,3 @@
-function self = insert(self,times,values,labels)
 % Insert times
 % Note that this adjusts tStart and tEnd to include all times.
 % Note that if there is already an offset, new times are added to
@@ -15,6 +14,9 @@ function self = insert(self,times,values,labels)
 
 % TODO
 % perhaps additional flags to overwrite? no, replaceTimes
+
+function self = insert(self,times,values,labels)
+
 if nargin < 3
    error('PointProcess:insert:InputFormat',...
       'There must be values for each inserted time');

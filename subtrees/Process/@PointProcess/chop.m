@@ -1,4 +1,3 @@
-function obj = chop(self,shiftToWindow)
 % TODO
 % can we rechop?
 %     yes, not sure its useful, but i guess it should work.
@@ -7,6 +6,9 @@ function obj = chop(self,shiftToWindow)
 %
 % need to handle case where there is an offset?, or perhaps there
 % should be a convention?
+
+function obj = chop(self,shiftToWindow)
+
 if nargin == 1
    shiftToWindow = true;
 end
@@ -17,9 +19,12 @@ if numel(self) > 1
 end
 
 nWindow = size(self.window,1);
-% FIXME, http://www.mathworks.com/support/bugreports/893538
-% May need looped allocation if there is a circular reference.
-obj(nWindow) = PointProcess();
+% Looped allocation if there is a circular reference.
+% http://www.mathworks.com/support/bugreports/893538
+for i = 1:nWindow
+   obj(i) = PointProcess();
+end
+
 oldOffset = self.offset;
 self.offset = 0;
 for i = 1:nWindow
@@ -39,7 +44,6 @@ for i = 1:nWindow
    obj(i).window = self.window(i,:) - shift;
    obj(i).offset = oldOffset(i);
    
-   % Need to set offset_ and window_
    obj(i).window_ = obj(i).window;
    obj(i).offset_ = self.offset_ + self.window(i,1);
 end

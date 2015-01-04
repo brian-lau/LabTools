@@ -1,4 +1,3 @@
-function self = remove(self,times,labels)
 % Remove times and associated values
 % Note that this does NOT change tStart or tEnd.
 %
@@ -10,6 +9,9 @@ function self = remove(self,times,labels)
 %
 % SEE ALSO
 % insert
+
+function self = remove(self,times,labels)
+
 if nargin < 2
    error('PointProcess:remove:InputFormat',...
       'You must provide times to remove.');

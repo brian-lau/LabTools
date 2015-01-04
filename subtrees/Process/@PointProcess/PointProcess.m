@@ -1,3 +1,9 @@
+% removed requirement of unique eventTimes (overlapping spikes, etc),
+% should default to unique values, possibly check for unique values when
+% passed in
+%
+% uniformValues = true should allow concatonation of values as arrays
+
 classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process         
    properties(AbortSet)
       tStart % Start time of process
@@ -60,33 +66,47 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          
          self.info = p.Results.info;
          
-         % Create the values cell array
-         % FIXME not sorting values yet
          if ~isempty(p.Results.times)
-            if isnumeric(p.Results.times)
-               [a,b] = unique(p.Results.times(:));
-               eventTimes{1} = a;
-               tInd{1} = b;
-            elseif iscell(p.Results.times)
-               [eventTimes,tInd] = cellfun(@(x) unique(x(:)),p.Results.times,'uni',0);
+            if isnumeric(p.Results.times) % one PointProcess
+               if isrow(p.Results.times)
+                  % FIXME, this should probably check EventProcess in case
+                  % we have one event
+                  [eventTimes{1},tInd] = sortrows(p.Results.times');
+               else
+                  [eventTimes{1},tInd] = sortrows(p.Results.times);
+               end
+            else
+               times = p.Results.times;
+               for i = 1:numel(times);
+                  if isrow(times{i})
+                  % FIXME, this should probably check EventProcess in case
+                  % we have one event
+                     times{i} = times{i}';
+                  end
+               end
+               [eventTimes,tInd] = cellfun(@(x) sortrows(x),times,'uni',0);
             end
             
+            % Create the values cell array
+            % FIXME not sorting values yet
             if isempty(p.Results.values)
-               values = cellfun(@(x) ones(size(x)),eventTimes,'uni',0);
+               values = cellfun(@(x) ones(size(x,1),1),eventTimes,'uni',0);
             else
                if ~iscell(p.Results.values)
-                  values = {p.Results.values};
+                  values = {p.Results.values(:)};
                else
                   values = p.Results.values;
+                  if size(eventTimes{1},1) == numel(values)
+                     % vector times, missing cell wrapper on values
+                     values = {values};
+                  end
+                  for i = 1:numel(values)
+                     values{i} = reshape(values{i},size(eventTimes{i},1),1);
+                  end
                end
-               assert(numel(eventTimes)==numel(values),...
-                  'PointProcess:constuctor:InputSize',...
-                  '# of ''times'' must equal # of ''values''');
-               values = reshape(values,size(eventTimes));
-               assert(all(cellfun(@(x,y) numel(x)==numel(y),...
+               assert(all(cellfun(@(x,y) numel(x)==size(y,1),...
                   values,eventTimes)),'PointProcess:constuctor:InputSize',...
                   '# of ''times'' must equal # of ''values''');
-               values = cellfun(@(x) x(:),values,'uni',0);
             end
          else
             if ~isempty(p.Results.values)
@@ -102,12 +122,12 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
                   
          % Define the start and end times of the process
          if isempty(p.Results.tStart)
-            self.tStart = min([cellfun(@min,eventTimes) 0]);
+            self.tStart = min([cellfun(@(x) min(x(:)),eventTimes) 0]);
          else
             self.tStart = p.Results.tStart;
          end
          if isempty(p.Results.tEnd)
-            self.tEnd = max( max(cellfun(@max,eventTimes)) , self.tStart );
+            self.tEnd = max( max(cellfun(@(x) max(x(:)),eventTimes)) , self.tStart );
          else
             self.tEnd = p.Results.tEnd;
          end
@@ -183,7 +203,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          if isempty(self.times)
             count = 0;
          else
-            count = cellfun(@(x) numel(x),self.times);
+            count = cellfun(@(x) size(x,1),self.times);
          end
       end
       
