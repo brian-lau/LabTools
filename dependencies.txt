@@ -1,3 +1,0 @@
-Some functions require the following to be correctly installed
-
-fieldtrip https://github.com/fieldtrip/fieldtrip.git
