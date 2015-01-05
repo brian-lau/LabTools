@@ -12,8 +12,8 @@ addParamValue(par,'trim',0,@isscalar);
 % Remove line noise
 addParamValue(par,'deline',false,@islogical);
 % removePLI parameters
-addParamValue(par,'M',3,@isscalar);
-addParamValue(par,'B',[50 .01 4],@(x) isnumeric(x) && (numel(x)==3));
+addParamValue(par,'M',5,@isscalar);
+addParamValue(par,'B',[50 .2 4],@(x) isnumeric(x) && (numel(x)==3));
 addParamValue(par,'P',[0.01 4 4],@(x) isnumeric(x) && (numel(x)==3));
 % addParamValue(par,'M',3,@isscalar);
 % addParamValue(par,'B',[50 .2 1],@(x) isnumeric(x) && (numel(x)==3));
@@ -21,8 +21,9 @@ addParamValue(par,'P',[0.01 4 4],@(x) isnumeric(x) && (numel(x)==3));
 addParamValue(par,'W',2,@isscalar);
 
 % Highpass filter cutoff, 0 skips highpass filtering
-addParamValue(par,'highpass',1.0,@isscalar);
+addParamValue(par,'highpass',1.5,@isscalar);
 addParamValue(par,'highpass_order',[],@isscalar);
+addParamValue(par,'highpass_tbw',1,@isscalar);
 
 % detrend
 
@@ -90,9 +91,9 @@ end
 if par.Results.highpass
    fprintf('Highpass filtering\n');
    if isempty(par.Results.highpass_order)
-      highpass(s,par.Results.highpass,'fix',true);
+      highpass(s,par.Results.highpass,'tbw',par.Results.highpass_tbw,'fix',true);
    else
-      highpass(s,par.Results.highpass,'order',order,'fix',true);
+      highpass(s,par.Results.highpass,'order',order,'tbw',par.Results.highpass_tbw,'fix',true);
    end
 end
 
@@ -105,7 +106,6 @@ if par.Results.deline
    f = @(x) removePLI_multichan(x',s.Fs,M,B,P,W,50,0);
    s.map(@(x) f(x)','fix',true);
 end
-
 
 if par.Results.trim
    s.window = [2 s.window(end)-2];
