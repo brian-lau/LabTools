@@ -1,4 +1,3 @@
-function self = setWindow(self,window)
 % Set the window property. Works for array object input, where
 % window must either be
 %   [1 x 2] vector applied to all elements of the object array
@@ -7,11 +6,15 @@ function self = setWindow(self,window)
 %
 % SEE ALSO
 % window, applyWindow
+
+function self = setWindow(self,window)
+
 n = numel(self);
+
 if n == 1
    % single or multiple windows
    if ~isnumeric(window)
-      error('process:setWindow:InputFormat',...
+      error('Process:setWindow:InputFormat',...
          'Window for a scalar process must be a numeric [nWin x 2] array.');
    end
    self.window = self.checkWindow(window,size(window,1));
@@ -25,7 +28,7 @@ else
       window = self.checkWindow(window,n);
       [self.window] = deal(window{:});
    else
-      error('process:setWindow:InputFormat',...
+      error('Process:setWindow:InputFormat',...
          'Window badly formatted.');
    end
 end

@@ -27,6 +27,7 @@ if size(window,1) == 1
 else
    error('not done')
 end
+
 if nargout
    % TODO for pointprocess not obvious...
    [times,values] = arrayfun(@(x) deal(x.times{1,:},x.values{1,:}),self,'uni',false);

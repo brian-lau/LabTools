@@ -9,7 +9,7 @@
 %  offset(n)
 %    ]
 %
-% % aribitrary offsets for each of n elements
+% % aribitrary windows for each of n elements
 % {
 %   [offset(1,1)   [offset(1,2)   [start(1,n) end(1,n)]
 %    offset(2,1)]   offset(2,2)]   start(2,2) end(2,2)]
@@ -19,6 +19,8 @@
 % checkWindow({[-6 0;0 6;-6 6]},n)
 
 function validOffset = checkOffset(offset,n)
+
+import spk.*
 
 if nargin == 1
    n = 1;
@@ -32,10 +34,10 @@ if iscell(offset)
    % Different offsets for each element
    if numel(offset) == n
       for i = 1:n
-         validOffset{1,i} = Process.checkOffset(offset{i},length(offset{i}));
+         validOffset{1,i} = checkOffset(offset{i},length(offset{i}));
       end
    else
-      error('Process:checkOffset:InputFormat',...
+      error('spk:checkOffset:InputFormat',...
          'Cell array offset must be {[nx1]} or [nObjs x 1]');
    end
 else
@@ -45,7 +47,7 @@ else
       end
    end
    if numel(offset) ~= n
-      error('Process:checkOffset:InputFormat',...
+      error('spk:checkOffset:InputFormat',...
          'Incorrect number of offsets.');
    end
    validOffset = offset(:);

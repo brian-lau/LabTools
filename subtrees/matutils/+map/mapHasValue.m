@@ -1,4 +1,3 @@
-function [bool,keys] = mapHasValue(map,value,varargin)
 % Check whether dictionary contains value
 %
 % OUTPUT
@@ -6,14 +5,24 @@ function [bool,keys] = mapHasValue(map,value,varargin)
 % keys - corresponding cell array of keys for which bool is true
 %
 % It is possible to restrict to keys by passing in additional args
-% self.doesHashmapHaveValue(value,'keys',{cell array of keys})
+% mapHasValue(value,'keys',{cell array of keys})
 %
 % SEE ALSO
 % mapfun
 
-% TODO, checking for cell array input?
+% TODO
+%   o checking for cell array input?
 
-[temp,keys] = mapfun(@(x,y) isequal(x,y),map,{value},varargin{:});
+function [bool,keys] = mapHasValue(m,value,varargin)
+
+import map.*
+
+if iscell(m)
+   [temp,keys] = mapfun(@(x,y) isequal(x,y),m,{value},varargin{:},'UniformOutput',true);   
+else
+   [temp,keys] = mapfun(@(x,y) isequal(x,y),m,{value},varargin{:},'UniformOutput',false);
+end
+
 bool = cellfun(@(x) any(x),temp);
 if nargout == 2
    for i = 1:numel(temp)

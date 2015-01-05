@@ -1,8 +1,10 @@
-function plus(x,y)
 % Overloaded addition (plus, +)
 % When one of (x,y) is a PointProcess, and the other a scalar, +
 % will change the offset according to the scalar.
 % When x & y are both PointProcesses, they will be merged
+
+function plus(x,y)
+
 if isa(x,'PointProcess') && isa(y,'PointProcess')
    % TODO not done yet
    % should merge the objects

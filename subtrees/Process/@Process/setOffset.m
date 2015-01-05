@@ -1,4 +1,3 @@
-function self = setOffset(self,offset)
 % Set the offset property. Works for array object input, where
 % offset must either be
 %   scalar applied to all elements of the object array
@@ -7,11 +6,15 @@ function self = setOffset(self,offset)
 %
 % SEE ALSO
 % offset, applyOffset
+
+function self = setOffset(self,offset)
+
 n = numel(self);
+
 if n == 1
    % single or multiple offsets
    if ~isnumeric(offset)
-      error('process:setOffset:InputFormat',...
+      error('Process:setOffset:InputFormat',...
          'Offset for a scalar process must be a numeric [nWin x 1] array.');
    end
    self.offset = self.checkOffset(offset,size(self.window,1));
@@ -29,6 +32,6 @@ else
       offset = self.checkWindow(offset,n);
       [self.offset] = deal(offset{:});
    else
-      error('process:setOffset:InputFormat','Bad offset');
+      error('Process:setOffset:InputFormat','Bad offset');
    end
 end

@@ -1,5 +1,7 @@
-function minus(x,y)
 % Overloaded subtraction (minus, -)
+
+function minus(x,y)
+
 if isa(x,'PointProcess') && isa(y,'PointProcess')
    % not done yet
    % should delete the common times from object

@@ -1,10 +1,10 @@
-function cp = countingProcess(self)
 % Counting process representation
+
+function cp = countingProcess(self)
+
 if any(isnan(self.window))
    cp = [NaN NaN];
 else
-   %window = self.window;
-   %times = getTimes(self,window);
    times = times{1};
    count = cumsum(ones(size(times)));
    tStart = max(-inf,unique(min(times)));

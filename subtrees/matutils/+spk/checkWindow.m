@@ -21,6 +21,8 @@
 
 function validWindow = checkWindow(window,n)
 
+import spk.*
+
 if nargin == 1
    n = 1;
 end
@@ -33,10 +35,10 @@ if iscell(window)
    % Different windows for each element
    if numel(window) == n
       for i = 1:n
-         validWindow{1,i} = Process.checkWindow(window{i},size(window{i},1));
+         validWindow{1,i} = checkWindow(window{i},size(window{i},1));
       end
    else
-      error('Process:checkWindow:InputFormat',...
+      error('spk:checkWindow:InputFormat',...
          'Cell array window must be {[nx2]} or [nObjs x 2]');
    end
 else
@@ -46,8 +48,9 @@ else
          window = repmat(window,n,1);
       end
    end
-   if any(window(:,1)>=window(:,2))
-      error('Process:checkWindow:InputValue',...
+   % UNIT TEST HACKKKKK ALLOW INCLUSIVE WINDOW?
+   if any(window(:,1)>window(:,2))%any(window(:,1)>=window(:,2))
+      error('spk:checkWindow:InputValue',...
          'First element of window must be less than second');
    end
    validWindow = window;

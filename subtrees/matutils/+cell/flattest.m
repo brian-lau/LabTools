@@ -1,5 +1,7 @@
 function flattened = flattest(nested,flattenStr)
 
+import cell.*
+
 if nargin < 2
    flattenStr = false;
 end

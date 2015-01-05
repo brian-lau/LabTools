@@ -10,7 +10,7 @@
 %
 %     INPUTS
 %     fun           - Function handle
-%     map           - containers.Map object
+%     m             - containers.Map object
 %  
 %     OPTIONAL
 %     C             - Cell array of parameters to pass through to FUN. These
@@ -35,24 +35,25 @@
 %     keys          - Cell array of keys that FUN was applied to. 
 %
 %     EXAMPLES
+%     import map.*
 %     % Does map contain a value
-%     map = containers.Map({1 2 3},{'a' 'b' -1:1})
-%     mapfun(@(x)isequal(x,'a'),map)
-%     mapfun(@(x)isequal(x,-1:1),map)
-%     mapfun(@(x)isequal(x,'a'),map,'keys',{1 3})
+%     m = containers.Map({1 2 3},{'a' 'b' -1:1})
+%     mapfun(@(x)isequal(x,'a'),m)
+%     mapfun(@(x)isequal(x,-1:1),m)
+%     mapfun(@(x)isequal(x,'a'),m,'keys',{1 3})
 %     % Passing inputs to FUN
-%     out = mapfun(@(x,y) x<y,map,{1},'UniformOutput',false)
+%     out = mapfun(@(x,y) x<y,m,{1},'UniformOutput',false)
 %     out{3}
-%     map(3)
-%     out = mapfun(@(x,y,z) (x<y)&(x>z),map,{1},{-1},'UniformOutput',false)
+%     m(3)
+%     out = mapfun(@(x,y,z) (x<y)&(x>z),m,{1},{-1},'UniformOutput',false)
 %     out{3}
-%     map(3)
+%     m(3)
 %     %
-%     map = containers.Map({1 2 3},{'a' 'b' 'rain'});
-%     mapfun(@(x,y) fprintf(1,'key %i \t has value %s\n',y,x),map,map.keys);
+%     m = containers.Map({1 2 3},{'a' 'b' 'rain'});
+%     mapfun(@(x,y) fprintf(1,'key %i \t has value %s\n',y,x),m,m.keys);
 %     % NaN elements where FUN doesn't work
-%     map = containers.Map({1 2 3},{'a' 'b' struct('name','foo','value',100)})
-%     out = mapfun(@(x,y) x.value>y,map,{10})
+%     m = containers.Map({1 2 3},{'a' 'b' struct('name','foo','value',100)})
+%     out = mapfun(@(x,y) x.value>y,m,{10},'UniformOutput',false)
 %     out{1}
 %     out{2}
 %
@@ -78,16 +79,18 @@
 %     brian 12.11.12 written based on idea from Jochen Rau's foreach
 %
 
-function [out,keys] = mapfun(fun,map,varargin)
+function [out,keys] = mapfun(fun,m,varargin)
+
+import map.*
 
 % Multiple maps passed in
-if iscell(map)
-   n = length(map);
+if iscell(m)
+   n = length(m);
    for i = 1:n
       if nargout == 1
-         out{i} = mapfun(fun,map{i},varargin{:});
+         out{i} = mapfun(fun,m{i},varargin{:});
       else
-         [out{i},keys{i}] = mapfun(fun,map{i},varargin{:});
+         [out{i},keys{i}] = mapfun(fun,m{i},varargin{:});
       end
    end
    return
@@ -122,10 +125,10 @@ p = inputParser;
 p.KeepUnmatched= false; 
 p.FunctionName = 'mapfun';
 p.addRequired('fun',@(x) isa(fun,'function_handle') );
-p.addRequired('map',@(x) isa(x,'containers.Map') );
-p.addParamValue('keys',map.keys,@iscell);
+p.addRequired('m',@(x) isa(x,'containers.Map') );
+p.addParamValue('keys',m.keys,@iscell);
 p.addParamValue('UniformOutput',true,@islogical);
-p.parse(fun,map,varargin{:});
+p.parse(fun,m,varargin{:});
 
 keys = p.Results.keys;
 if p.Results.UniformOutput
@@ -161,7 +164,7 @@ else
    params = {};
 end
 
-values = map.values(keys);
+values = m.values(keys);
 try
    if isempty(params)
       out = cellfun(fun,values,'UniformOutput',p.Results.UniformOutput,'ErrorHandler',@errorfun);

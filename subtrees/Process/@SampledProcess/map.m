@@ -19,14 +19,14 @@
 % 
 % % Teager-Kaiser energy operator (assumes column arrangement)
 % tkeo = @(x) x.^2 - circshift(x,1).*circshift(x,-1);
-% 
 % s.map(@(x) tkeo(x))
+
 function self = map(self,func,varargin)
 
 p = inputParser;
 p.KeepUnmatched = true;
 addRequired(p,'func',@(x) isa(x,'function_handle'));
-addParamValue(p,'a',1,@isnumeric);
+%addParamValue(p,'a',1,@isnumeric);
 addParamValue(p,'fix',false,@islogical);
 parse(p,func,varargin{:});
 
