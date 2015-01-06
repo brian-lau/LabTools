@@ -52,6 +52,7 @@ if ~isempty(files)
    if exist(fullfile(p.savedir,[fname '.mat']),'file') && ~p.overwrite
       fprintf('File found, skipping\n');
       return;
+      
    end
    
    switch lower(p.task)

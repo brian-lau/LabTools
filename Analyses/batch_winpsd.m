@@ -1,6 +1,6 @@
 basedir = '/Volumes/Data/Human/STN/MATLAB';
 savedir = '/Volumes/Data/Human/STN/MATLAB';
-overwrite = false;
+overwrite = true;
 conditions = {'OFF' 'ON'};
 tasks = {'BASELINEASSIS' 'BASELINEDEBOUT'};
 %tasks = {'BASELINEASSIS' 'BASELINEDEBOUT' 'MSUP' 'REACH'};
@@ -15,6 +15,9 @@ for i = 1:numel(labels)
    [info(1:n).(labels{i})] = deal(RAW{:,i});
 end
 
+[a,b] = intersect({info.PATIENTID}, {'CANFr'});
+info = info(b);
+
 %% Calculate spectra
 for i = 1:numel(info)
    i
@@ -28,21 +31,7 @@ for i = 1:numel(info)
             'f',f,'overwrite',overwrite,'data',temp,'dataName','clinic');
       end
       plotwinpsd('patient',info(i).PATIENTID,'basedir',basedir,'savedir',savedir,...
+         'ylim',[-2 25],...
          'task',tasks{j},'overwrite',overwrite);
    end
 end
-
-
-% for i = 1:numel(info)
-%    i
-%    for j = 1:numel(tasks)
-%          plotwinpsd('patient',info(i).PATIENTID,'basedir',basedir,'savedir',savedir,...
-%             'task',tasks{j},'overwrite',overwrite);
-%    end
-% end
-% 
-%          plotwinpsd('patient','RICDi','basedir',basedir,'savedir',savedir,...
-%             'task','BASELINEASSIS','overwrite',overwrite);
-%          plotwinpsd('patient','RICDi','basedir',basedir,'savedir',savedir,...
-%             'task','BASELINEDEBOUT','overwrite',overwrite);
-%          

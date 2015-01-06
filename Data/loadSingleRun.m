@@ -15,10 +15,10 @@ addParamValue(par,'deline',false,@islogical);
 addParamValue(par,'M',5,@isscalar);
 addParamValue(par,'B',[50 .2 4],@(x) isnumeric(x) && (numel(x)==3));
 addParamValue(par,'P',[0.01 4 4],@(x) isnumeric(x) && (numel(x)==3));
-% addParamValue(par,'M',3,@isscalar);
-% addParamValue(par,'B',[50 .2 1],@(x) isnumeric(x) && (numel(x)==3));
-% addParamValue(par,'P',[0.1 4 1],@(x) isnumeric(x) && (numel(x)==3));
 addParamValue(par,'W',2,@isscalar);
+
+% threshold
+addParamValue(par,'threshold',300,@isscalar);
 
 % Highpass filter cutoff, 0 skips highpass filtering
 addParamValue(par,'highpass',1.5,@isscalar);
@@ -88,12 +88,19 @@ switch lower(ext)
       error('Unknown file type');
 end
 
+if par.Results.threshold
+   fprintf('Thresholding\n');
+   %f = @(x) x.*(abs(x)<=par.Results.threshold);
+   f = @(x) x.*(abs(x)<=par.Results.threshold) + par.Results.threshold.*(abs(x)>par.Results.threshold);
+   s.map(@(x) f(x),'fix',true);
+end
+
 if par.Results.highpass
    fprintf('Highpass filtering\n');
    if isempty(par.Results.highpass_order)
-      highpass(s,par.Results.highpass,'tbw',par.Results.highpass_tbw,'fix',true);
+      highpass(s,par.Results.highpass,'order',s.Fs,'tbw',par.Results.highpass_tbw,'fix',true);      
    else
-      highpass(s,par.Results.highpass,'order',order,'tbw',par.Results.highpass_tbw,'fix',true);
+      highpass(s,par.Results.highpass,'order',par.Results.highpass_order,'tbw',par.Results.highpass_tbw,'fix',true);
    end
 end
 
