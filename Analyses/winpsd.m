@@ -43,7 +43,7 @@ files = buildFilename(info);
 
 if ~isempty(files)
    % Savename
-   ind = findstr(files{1},'_PRE');
+   ind = findstr(files{1},'_PRE.');
    [~,fname] = fileparts(files{1}(1:ind-1));
    fname = [fname '_WINPSD'];
    
