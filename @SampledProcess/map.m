@@ -30,21 +30,20 @@ addRequired(p,'func',@(x) isa(x,'function_handle'));
 addParamValue(p,'fix',false,@islogical);
 parse(p,func,varargin{:});
 
-for i = 1:numel(self)
-   values = cellfun(func,self(i).values,'uni',false);
-   
-   % Check dimensions
-   match = cellfun(@(x,y) size(x) == size(y),self(i).values,values,'uni',false);
-   if any(~cat(1,match{:}))
-      error('SampledProcess:map:InputFormat','func must output same size');
-   end
+for i = 1:numel(self)   
+%    % Check dimensions
+%    match = cellfun(@(x,y) size(x) == size(y),self(i).values,values,'uni',false);
+%    if any(~cat(1,match{:}))
+%       error('SampledProcess:map:InputFormat','func must output same size');
+%    end
    
    if p.Results.fix
+      % FIXME, this should work on windowed data?
       self(i).values_ = func(self(i).values_);
       oldOffset = self(i).offset;
       applyWindow(self(i));
       self(i).offset = oldOffset;
    else
-      self(i).values = values;
+      self(i).values = cellfun(func,self(i).values,'uni',false);
    end
 end
