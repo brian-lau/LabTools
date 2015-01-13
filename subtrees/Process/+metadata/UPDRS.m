@@ -306,7 +306,7 @@ classdef UPDRS < metadata.Exam
          fprintf(fid,'---------------------------------------------------------------------------\n');
          fprintf(fid,'PatientID:\t%s\n',self.name);
          fprintf(fid,'Exam:\t\t%s\n',self.type);
-         fprintf(fid,'Date:\t\t%s, %s',datestr(self.date,self.dateFormat),self.description);
+         fprintf(fid,'Date:\t\t%s, %s',self.date,self.description);
          
          fprintf(fid,'\n-------------------- PART I -----------------------------------------------\n');
          for i = 1:4
@@ -436,11 +436,6 @@ classdef UPDRS < metadata.Exam
                   else
                      error('UPDRS:InputValue','Invalid value');
                   end
-%                   assert((x.(fn{i})>=0)&&(x.(fn{i})<=4),...
-%                      'UPDRS:InputValue','Invalid value');
-%                   y(count) = x.(fn{i});
-%                   fv{count} = fn{i};
-%                   count = count + 1;
                end
             end
          end
@@ -466,12 +461,6 @@ classdef UPDRS < metadata.Exam
                         else
                            error('UPDRS:InputValue','Invalid value');
                         end
-%                         assert((x.(fn1{i}).(fn2{j})>=0)&&(x.(fn1{i}).(fn2{j})<=4),...
-%                            'UPDRS:InputValue','Invalid value');
-%                         y(count) = x.(fn1{i}).(fn2{j});
-%                         fv1{count} = fn1{i};
-%                         fv2{count} = fn2{j};
-%                         count = count + 1;
                      end
                   end
                end
