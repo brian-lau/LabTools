@@ -84,10 +84,17 @@ classdef UPDRS < metadata.Exam
       item41
       item42
       
-      HoehnYahr
-      SchwabEngland
+      HoehnYahr = struct('on',[],'off',[]);
+      SchwabEngland = struct('on',[],'off',[]);
    end
    properties(SetAccess = private, Dependent = true, Transient = true)
+      I
+      II
+      III
+      IV
+      axial
+      dyskinesia
+      complications
       akinesia
       bradykinesia
       tremor
@@ -222,6 +229,195 @@ classdef UPDRS < metadata.Exam
             self.item18.(fn1{i}).(fn2{i}) = y(i);
          end
       end
+      
+      function I = get.I(self)
+         I = 0;
+         for i = 1:4
+            I = I + self.(['item' num2str(i)]);
+         end
+      end
+      
+      function II = get.II(self)
+         II.on = 0;
+         II.off = 0;
+         for i = 5:17
+            II.off = II.off + self.(['item' num2str(i)]).off;
+            II.on = II.on + self.(['item' num2str(i)]).on;
+         end
+      end
+      
+      function III = get.III(self)
+         fn = properties(self);
+         ind1 = find(strcmp('item18',fn));
+         ind2 = find(strcmp('item31',fn));
+         III = struct('offStim',struct('onMed',0,'offMed',0),...
+                      'onStim',struct('onMed',0,'offMed',0));
+         for i = ind1:ind2
+            III.onStim.offMed = III.onStim.offMed + self.(fn{i}).onStim.offMed;
+            III.offStim.offMed = III.offStim.offMed + self.(fn{i}).offStim.offMed;
+            III.offStim.onMed = III.offStim.onMed + self.(fn{i}).offStim.onMed;
+            III.onStim.onMed = III.onStim.onMed + self.(fn{i}).onStim.onMed;
+         end
+      end
+      
+      function IV = get.IV(self)
+         IV = 0;
+         for i = 32:42
+            IV = IV + self.(['item' num2str(i)]);
+         end
+      end
+      
+      function axial = get.axial(self)
+         axial = struct('offStim',struct('onMed',0,'offMed',0),...
+                      'onStim',struct('onMed',0,'offMed',0));
+         axial.onStim.offMed = self.item18.onStim.offMed + self.item27.onStim.offMed +...
+            self.item28.onStim.offMed + self.item29.onStim.offMed + self.item30.onStim.offMed;
+         axial.offStim.offMed = self.item18.offStim.offMed + self.item27.offStim.offMed +...
+            self.item28.offStim.offMed + self.item29.offStim.offMed + self.item30.offStim.offMed;
+         axial.offStim.onMed = self.item18.offStim.onMed + self.item27.offStim.onMed +...
+            self.item28.offStim.onMed + self.item29.offStim.onMed + self.item30.offStim.onMed;
+         axial.onStim.onMed = self.item18.onStim.onMed + self.item27.onStim.onMed +...
+            self.item28.onStim.onMed + self.item29.onStim.onMed + self.item30.onStim.onMed;
+      end
+      
+      function dyskinesia = get.dyskinesia(self)
+         dyskinesia = self.item32 + self.item33 + self.item34 + self.item35;
+      end
+      
+      function complications = get.complications(self)
+         complications = self.item40 + self.item41 + self.item42;
+      end
+     
+      function disp(self,fid)
+         
+         if numel(self) > 1
+            for i = 1:numel(self)
+               fprintf('\n');
+               disp(self(i));
+            end
+            return;
+         end
+         
+         if nargin == 1
+            fid = 1;
+         end
+         fn = properties(self);
+
+         fprintf(fid,'---------------------------------------------------------------------------\n');
+         fprintf(fid,'PatientID:\t%s\n',self.name);
+         fprintf(fid,'Exam:\t\t%s\n',self.type);
+         fprintf(fid,'Date:\t\t%s, %s',datestr(self.date,self.dateFormat),self.description);
+         
+         fprintf(fid,'\n-------------------- PART I -----------------------------------------------\n');
+         for i = 1:4
+            fprintf(fid,'Item %s\t\t%g\n',num2str(i),self.(['item' num2str(i)]));
+         end
+         fprintf(fid,'TOTAL\t\t%g',self.I);
+         
+         fprintf(fid,'\n-------------------- PART II ----------------------------------------------\n');
+         fprintf(fid,'\t\tOFF\tON\n');
+         fprintf(fid,'---------------------------------------------------------------------------\n');
+         for i = 5:17
+            fprintf(fid,'Item %s\t\t%g\t%g\n',num2str(i),self.(['item' num2str(i)]).off,self.(['item' num2str(i)]).on);
+         end
+         fprintf(fid,'TOTAL\t\t%g\t%g',self.II.off,self.II.on);
+         
+         fprintf(fid,'\n-------------------- PART III ---------------------------------------------\n');
+         fprintf(fid,'\t\tONS-OFFM\tOFFS-OFFM\tOFFS-ONM\tONS-ONM\n');
+         fprintf(fid,'---------------------------------------------------------------------------\n');
+         ind1 = find(strcmp('item18',fn));
+         ind2 = find(strcmp('item31',fn));
+         for i = ind1:ind2
+            if numel(fn{i}(5:end)) == 2
+               fprintf(fid,'Item %s\t\t',fn{i}(5:end));
+            else
+               fprintf(fid,'Item %s\t',fn{i}(5:end));
+            end
+            
+            temp = self.(fn{i}).onStim.offMed;
+            if isempty(temp)
+               fprintf(fid,'-\t\t');
+            else
+               fprintf(fid,'%g\t\t',temp);
+            end
+            temp = self.(fn{i}).offStim.offMed;
+            if isempty(temp)
+               fprintf(fid,'-\t\t');
+            else
+               fprintf(fid,'%g\t\t',temp);
+            end
+            temp = self.(fn{i}).offStim.onMed;
+            if isempty(temp)
+               fprintf(fid,'-\t\t');
+            else
+               fprintf(fid,'%g\t\t',temp);
+            end
+            temp = self.(fn{i}).onStim.onMed;
+            if isempty(temp)
+               fprintf(fid,'-\n');
+            else
+               fprintf(fid,'%g\n',temp);
+            end
+         end
+         fprintf(fid,'TOTAL\t\t');
+         if isempty(self.III.onStim.offMed)
+            fprintf(fid,'-\t\t');
+         else
+            fprintf(fid,'%g\t\t',self.III.onStim.offMed);
+         end
+         if isempty(self.III.offStim.offMed)
+            fprintf(fid,'-\t\t');
+         else
+            fprintf(fid,'%g\t\t',self.III.offStim.offMed);
+         end
+         if isempty(self.III.offStim.onMed)
+            fprintf(fid,'-\t\t');
+         else
+            fprintf(fid,'%g\t\t',self.III.offStim.onMed);
+         end
+         if isempty(self.III.onStim.onMed)
+            fprintf(fid,'-\t\t');
+         else
+            fprintf(fid,'%g\t\t',self.III.onStim.onMed);
+         end
+         fprintf(fid,'\nAXIAL\t\t');
+         if isempty(self.axial.onStim.offMed)
+            fprintf(fid,'-\t\t');
+         else
+            fprintf(fid,'%g\t\t',self.axial.onStim.offMed);
+         end
+         if isempty(self.axial.offStim.offMed)
+            fprintf(fid,'-\t\t');
+         else
+            fprintf(fid,'%g\t\t',self.axial.offStim.offMed);
+         end
+         if isempty(self.axial.offStim.onMed)
+            fprintf(fid,'-\t\t');
+         else
+            fprintf(fid,'%g\t\t',self.axial.offStim.onMed);
+         end
+         if isempty(self.axial.onStim.onMed)
+            fprintf(fid,'-\t\t');
+         else
+            fprintf(fid,'%g\t\t',self.axial.onStim.onMed);
+         end
+         
+         fprintf(fid,'\n-------------------- PART IV ----------------------------------------------\n');
+         for i = 32:42
+            fprintf(fid,'Item %s\t\t%g\n',num2str(i),self.(['item' num2str(i)]));
+         end
+         fprintf(fid,'TOTAL\t\t%g\n',self.IV);
+         fprintf(fid,'DYSKINESIA\t%g\n',self.dyskinesia);
+         fprintf(fid,'COMPLICATIONS\t%g',self.complications);
+         
+         fprintf(fid,'\n-------------------- PART V/VI --------------------------------------------\n');
+         fprintf(fid,'\t\tONS-OFFM\tONS-ONM\n');
+         fprintf(fid,'---------------------------------------------------------------------------\n');
+         fprintf(fid,'Hoehn&Yahr\t%g\t\t%g\n',self.HoehnYahr.off,self.HoehnYahr.on);
+         fprintf(fid,'Schwab&England\t%g\t\t%g\n',self.SchwabEngland.off,self.SchwabEngland.on);
+         
+         fprintf(fid,'---------------------------------------------------------------------------\n');
+      end
    end
    
    methods(Static)
@@ -233,11 +429,18 @@ classdef UPDRS < metadata.Exam
          for i = 1:numel(fn)
             if any(strcmp(fn{i},{'on' 'off'}))
                if ~isempty(x.(fn{i}))
-                  assert((x.(fn{i})>=0)&&(x.(fn{i})<=4),...
-                     'UPDRS:InputValue','Invalid value');
-                  y(count) = x.(fn{i});
-                  fv{count} = fn{i};
-                  count = count + 1;
+                  if ((x.(fn{i})>=0) && (x.(fn{i})<=4)) || isnan(x.(fn{i}))
+                     y(count) = x.(fn{i});
+                     fv{count} = fn{i};
+                     count = count + 1;
+                  else
+                     error('UPDRS:InputValue','Invalid value');
+                  end
+%                   assert((x.(fn{i})>=0)&&(x.(fn{i})<=4),...
+%                      'UPDRS:InputValue','Invalid value');
+%                   y(count) = x.(fn{i});
+%                   fv{count} = fn{i};
+%                   count = count + 1;
                end
             end
          end
@@ -255,12 +458,20 @@ classdef UPDRS < metadata.Exam
                for j = 1:numel(fn2)
                   if any(strcmp(fn2{j},{'offMed' 'onMed'}))
                      if ~isempty(x.(fn1{i}).(fn2{j}))
-                        assert((x.(fn1{i}).(fn2{j})>=0)&&(x.(fn1{i}).(fn2{j})<=4),...
-                           'UPDRS:InputValue','Invalid value');
-                        y(count) = x.(fn1{i}).(fn2{j});
-                        fv1{count} = fn1{i};
-                        fv2{count} = fn2{j};
-                        count = count + 1;
+                        if ((x.(fn1{i}).(fn2{j})>=0)&&(x.(fn1{i}).(fn2{j})<=4)) || isnan(x.(fn1{i}).(fn2{j}))
+                           y(count) = x.(fn1{i}).(fn2{j});
+                           fv1{count} = fn1{i};
+                           fv2{count} = fn2{j};
+                           count = count + 1;
+                        else
+                           error('UPDRS:InputValue','Invalid value');
+                        end
+%                         assert((x.(fn1{i}).(fn2{j})>=0)&&(x.(fn1{i}).(fn2{j})<=4),...
+%                            'UPDRS:InputValue','Invalid value');
+%                         y(count) = x.(fn1{i}).(fn2{j});
+%                         fv1{count} = fn1{i};
+%                         fv2{count} = fn2{j};
+%                         count = count + 1;
                      end
                   end
                end
