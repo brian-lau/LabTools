@@ -2,11 +2,11 @@ function plotwinpsd(varargin)
 
 p = inputParser;
 p.KeepUnmatched = true;
-addParamValue(p,'basedir','/Volumes/Data/Human',@ischar);
+addParamValue(p,'basedir',pwd,@ischar);
 addParamValue(p,'savedir',pwd,@ischar);
-addParamValue(p,'area','STN',@ischar);
+addParamValue(p,'area','',@ischar);
 addParamValue(p,'patient','',@ischar);
-addParamValue(p,'recording','Postop',@ischar);
+addParamValue(p,'recording','',@ischar);
 addParamValue(p,'protocol','',@ischar);
 addParamValue(p,'task','',@ischar);
 addParamValue(p,'condition','',@ischar);
@@ -18,7 +18,7 @@ addParamValue(p,'normalize_range',[100 200],@isnumeric);
 
 % plotting
 addParamValue(p,'xlim',[1 250],@(x) isnumeric(x) && (numel(x)==2));
-addParamValue(p,'ylim',[-30 5],@(x) isnumeric(x) && (numel(x)==2));
+addParamValue(p,'ylim',[-5 30],@(x) isnumeric(x) && (numel(x)==2));
 addParamValue(p,'xlog',false,@islogical);
 addParamValue(p,'ylog',false,@islogical);
 
@@ -61,7 +61,7 @@ for i = 1:numel(fnames)
       ind2 = (f>=par.normalize_range(1)) & (f<=par.normalize_range(2));
       % trim out potential line noise frequencies
       bw = 2.5;
-      lf = [100 150 200];
+      lf = [50 100 150 200];
       for j = 1:numel(lf)
          ind2 = ind2 & ((f<=(lf(j)-bw)) | (f>=(lf(j)+bw)));
       end
@@ -86,7 +86,7 @@ for i = 1:numel(fnames)
       ind2 = (f>=par.normalize_range(1)) & (f<=par.normalize_range(2));
       % trim out potential line noise frequencies
       bw = 2.5;
-      lf = [100 150 200];
+      lf = [50 100 150 200];
       for j = 1:numel(lf)
          ind2 = ind2 & ((f<=(lf(j)-bw)) | (f>=(lf(j)+bw)));
       end

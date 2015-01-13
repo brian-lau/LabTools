@@ -16,7 +16,7 @@ addParamValue(p,'condition','',@ischar);
 % Spectrum parameters
 addParamValue(p,'nw',5,@isscalar);
 addParamValue(p,'winsize',4,@isscalar); % seconds
-addParamValue(p,'f',[0:.25:100]',@isnumeric);
+addParamValue(p,'f',[0:.25:250]',@isnumeric);
 
 % Rejection
 addParamValue(p,'detectArtifacts',true,@islogical);
