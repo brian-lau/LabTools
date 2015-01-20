@@ -7,7 +7,24 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
    methods
       %% Constructor
       function self = EventProcess(varargin)
-         self = self@PointProcess(varargin{:});
+         p = inputParser;
+         p.KeepUnmatched= true;
+         p.FunctionName = 'EventProcess constructor';
+         p.addParamValue('events',[],@(x) isa(x,'metadata.Event') );
+         p.parse(varargin{:});
+
+         args = p.Unmatched;
+         if ~isempty(p.Results.events)
+            %keyboard
+            times = vertcat(p.Results.events.time);
+            times = [times , times+vertcat(p.Results.events.duration)];
+            args.times = times;
+            args.values = p.Results.events;
+         end
+         self = self@PointProcess(args);
+         
+         % Should be able to handle case where metadata is directly passed
+         % in
          
          % check that each event has start and end time
       end
