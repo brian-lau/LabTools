@@ -28,6 +28,7 @@ end
 %cellfun(@(x) disp(x),log.groups)
 
 trialInfo = log.getAllItemsFromGroupAsStruct('trialInfo');
+
 % Trial start and finish
 start = log.getAllItemsFromGroupAsStruct('traverse states:start');
 ind = cellfun(@(x) isfield(x,'fevalName'),{start.item});
@@ -50,7 +51,7 @@ tTargetOn = [target.mnemonic];
 % cueOn
 cue = log.getAllItemsFromGroupAsStruct('traverse states:enter:cue2');
 tCueOn = [cue.mnemonic];
-% cueOff, subject leave fix window
+% cueOff, subject leave fix window, this is also fixOff
 cue = log.getAllItemsFromGroupAsStruct('traverse states:exit:cue2');
 tCueOff = [cue.mnemonic];
 % tarAcquireEnter, subject enters state checking target entry
@@ -63,12 +64,46 @@ tTarAcquire2 = [tar.mnemonic];
 % stopOff, subject leaves hold (stop) or hold (stop) finishes
 stop = log.getAllItemsFromGroupAsStruct('traverse states:exit:stop hold');
 tStopHoldOff = [stop.mnemonic];
-keyboard
+
+success = log.getAllItemsFromGroupAsStruct('traverse states:enter:success');
+tSuccess = [success.mnemonic];
+success2 = log.getAllItemsFromGroupAsStruct('traverse states:enter:success2');
+tSuccess2 = [success2.mnemonic];
+failure = log.getAllItemsFromGroupAsStruct('traverse states:enter:failure');
+tFailure = [failure.mnemonic];
+abort = log.getAllItemsFromGroupAsStruct('traverse states:enter:abort');
+tAbort = [abort.mnemonic];
+
 % parse timing into struct array with trial information
 % Note that trialInfo gets logged after the tFinish because it occurs for
 % the during the finish state.
-% CHECK
-%length(start) == length(finish) == length(trialInfo)
+
+for i = 1:numel(trialInfo)
+   meta_trial(i) = metadata.trial.Msup(trialInfo(i).item);
+   
+   % Recall that there can be multiple fixOnsets for a given 'trial' if the
+   % subject leaves fix before cue.
+   ind = (tFixOn > tStart(i)) & (tFixOn < tFinish(i));
+   temp = tFixOn(ind);
+   
+   shift = temp(1);
+
+   if numel(temp) == 1
+      % normal start
+      
+   elseif numel(temp)> 1
+      keyboard
+      ind = (tSuccess > tStart(i)) & (tSuccess < tFinish(i));
+   end
+
+   % CUE
+   tOn = tCueOn((tCueOn > tStart(i)) & (tCueOn < tFinish(i))) - shift;
+   tOff = tCueOff((tCueOff > tStart(i)) & (tCueOff < tFinish(i))) - shift;
+   meta_cue(i) = metadata.event.Stimulus('name','cue','time',tOn,...
+      'duration',tOff-tOn);
+
+end
+
 info = [trialInfo.item];
 for i = 1:length(trialInfo)
    % Recall that there can be multiple fixOnsets for a given 'trial' if the
@@ -163,22 +198,22 @@ if size(datac,1) < size(temp,1)
    end
 end
 
-s = SampledProcess('values',temp,...
-   'Fs',signal.fs,...
-   'tStart',0,...
-   'labels',labels(2:end));
-
-%s.highpass(3,1000,true);
-highpass(s,1.5,s.Fs*2,true);
-% interpFreq(s,[50 100],2,10);
-if s.Fs ~= 512
-   resample(s,512);
-   s = SampledProcess('values',s.values{1},...
-   'Fs',512,...
-   'tStart',0,...
-   'labels',labels(2:end));
-end
-detrend(s);
+% s = SampledProcess('values',temp,...
+%    'Fs',signal.fs,...
+%    'tStart',0,...
+%    'labels',labels(2:end));
+% 
+% %s.highpass(3,1000,true);
+% highpass(s,1.5,s.Fs*2,true);
+% % interpFreq(s,[50 100],2,10);
+% if s.Fs ~= 512
+%    resample(s,512);
+%    s = SampledProcess('values',s.values{1},...
+%    'Fs',512,...
+%    'tStart',0,...
+%    'labels',labels(2:end));
+% end
+% detrend(s);
 
 window = [events(:,1) , [events(2:end,1) ; events(end,1)+15]];
 %window = [events(:,2) , [events(2:end,2) ; events(end,2)+15]];
@@ -226,7 +261,7 @@ for i = 1:numel(s)
    if any(ind)
       q(ind>0) = q(ind>0) + 2^7;
    end
-   ind = sum(bsxfun(@gt,s(i).values{1},8*stdv));
+   ind = sum(bsxfun(@gt,s(i).values{1},8*stdv));   
    if any(ind)
       disp(i)
       q(ind>0) = q(ind>0) + 2^8;
