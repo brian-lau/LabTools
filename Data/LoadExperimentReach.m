@@ -15,7 +15,7 @@
 % 
 % temp2 = linq(temp)...
 %    .select(@(x) x.values{1}).toArray();
-function [data] = LoadExperimentReach(matfile,lfpfile,lineParam)
+function [data] = LoadExperimentReach(matfile,lfpfile)
 
 
 %% Load the topsData
@@ -63,7 +63,7 @@ tTarAcquire2 = [tar.mnemonic];
 % stopOff, subject leaves hold (stop) or hold (stop) finishes
 stop = log.getAllItemsFromGroupAsStruct('traverse states:exit:stop hold');
 tStopHoldOff = [stop.mnemonic];
-
+keyboard
 % parse timing into struct array with trial information
 % Note that trialInfo gets logged after the tFinish because it occurs for
 % the during the finish state.
@@ -154,22 +154,6 @@ labels = linq(signal.description)...
    .select(@(x) x(6:end)).toList();
 
 temp = temp(:,2:end);
-if ~isempty(lineParam)
-   for i = 1:size(temp,2)
-      datac(:,i) = rmlinesmovingwinc(temp(:,i),...
-         lineParam,...
-         10,...
-         struct('Fs',signal.fs,'pad',3,'fpass',[0 100],'tapers',[1.5 2]),...
-         [],'n',50);
-   end
-%    for i = 1:size(temp,2)
-%       datac(:,i) = rmlinesmovingwinc(datac(:,i),...
-%          [4 1],...
-%          10,...
-%          struct('Fs',signal.fs,'pad',3,'fpass',[0 100],'tapers',[1.5 2]),...
-%          [],'y',[64]);
-%    end
-end
 
 if size(datac,1) < size(temp,1)
    n = size(temp,1);
