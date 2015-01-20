@@ -276,7 +276,7 @@ if numel(data.Nom) > 1
    %error('ID does not specify unique DB entry');
 end
 
-updrs = metadata.UPDRS();
+updrs = UPDRS();
 if iscell(id)
    updrs.name = [id{1}(1:min(3,numel(id{1}))) id{2}(1:min(2,numel(id{2})))];
 else
