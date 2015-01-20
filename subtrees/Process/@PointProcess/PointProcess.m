@@ -32,7 +32,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
             return;
          end
 
-         if nargin == 1
+         if (nargin==1) && ~isstruct(varargin{1})
             times = varargin{1};
             assert(isnumeric(times) || iscell(times),...
                'PointProcess:Constructor:InputFormat',...
@@ -63,7 +63,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          p.addParamValue('tStart',[],@isnumeric);
          p.addParamValue('tEnd',[],@isnumeric);
          p.parse(varargin{:});
-         
+
          self.info = p.Results.info;
          
          if ~isempty(p.Results.times)
