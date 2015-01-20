@@ -1,9 +1,9 @@
 basedir = '/Volumes/Data/Human/STN/MATLAB';
 savedir = '/Volumes/Data/Human/STN/MATLAB';
-overwrite = true;
+overwrite = false;
 conditions = {'OFF' 'ON'};
-tasks = {'BASELINEASSIS' 'BASELINEDEBOUT'};
-%tasks = {'BASELINEASSIS' 'BASELINEDEBOUT' 'MSUP' 'REACH'};
+%tasks = {'BASELINEASSIS' 'BASELINEDEBOUT'};
+tasks = {'MSUP' 'REACH'};
 
 f = [0:.25:250]';
 
@@ -15,8 +15,8 @@ for i = 1:numel(labels)
    [info(1:n).(labels{i})] = deal(RAW{:,i});
 end
 
-[a,b] = intersect({info.PATIENTID}, {'CANFr'});
-info = info(b);
+% [a,b] = intersect({info.PATIENTID}, {'CANFr'});
+% info = info(b);
 
 %% Calculate spectra
 for i = 1:numel(info)

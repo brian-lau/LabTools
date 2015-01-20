@@ -4,8 +4,8 @@ area = 'STN';
 recording = 'Postop';
 overwrite = true;
 conditions = {'OFF' 'ON'};
-tasks = {'BASELINEASSIS' 'BASELINEDEBOUT'};
-%tasks = {'BASELINEASSIS' 'BASELINEDEBOUT' 'MSUP' 'REACH'};
+%tasks = {'BASELINEASSIS' 'BASELINEDEBOUT'};
+tasks = {'MSUP' 'REACH'};
 
 [NUM,TXT,RAW] = xlsread(fullfile(savedir,'PatientInfo.xlsx'));
 labels = RAW(1,:);
@@ -15,8 +15,8 @@ for i = 1:numel(labels)
    [info(1:n).(labels{i})] = deal(RAW{:,i});
 end
 
-[a,b] = intersect({info.PATIENTID}, {'CANFr'});
-info = info(b);
+% [a,b] = intersect({info.PATIENTID}, {'CANFr'});
+% info = info(b);
 
 for i = 1:numel(info)
    for j = 1:numel(tasks)

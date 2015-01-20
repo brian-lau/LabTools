@@ -36,7 +36,7 @@ p = p.Results;
 %% Matching files
 info = filterFilename(fullfile(p.basedir,p.area,p.patient,p.recording));
 info = filterFilename(info,'protocol',p.protocol,'task',...
-   p.task,'condition',p.condition,'run',p.run);
+   p.task,'condition',p.condition,'run',p.run,'filetype',{'.edf' '.Poly5'});
 if isempty(info)
    fprintf('No files matching conditions\n');
    return;
@@ -52,11 +52,10 @@ if ~isempty(files)
    if exist(fullfile(p.savedir,[fname '.mat']),'file') && ~p.overwrite
       fprintf('File found, skipping\n');
       return;
-      
    end
    
    switch lower(p.task)
-      case {'msup'} 
+      case 'nothing'%{'msup'} 
             
       otherwise
       % load each run, keep as separate object
