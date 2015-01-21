@@ -88,20 +88,24 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
             end
             
             % Create the values cell array
-            % FIXME not sorting values yet
             if isempty(p.Results.values)
                values = cellfun(@(x) ones(size(x,1),1),eventTimes,'uni',0);
             else
                if ~iscell(p.Results.values)
-                  values = {p.Results.values(:)};
-               else
+                  % vector times, missing cell wrapper on values
                   values = p.Results.values;
-                  if size(eventTimes{1},1) == numel(values)
-                     % vector times, missing cell wrapper on values
-                     values = {values};
+                  if isrow(values)
+                     values = values';
                   end
+                  if size(eventTimes{1},1) == numel(values)
+                     values = {values(tInd)};
+                  end
+               else
+                  % FIXME better validation
+                  keyboard
+                  values = p.Results.values;
                   for i = 1:numel(values)
-                     values{i} = reshape(values{i},size(eventTimes{i},1),1);
+                     values{i} = reshape(values{i}(tInd{i}),size(eventTimes{i},1),1);
                   end
                end
                assert(all(cellfun(@(x,y) numel(x)==size(y,1),...
