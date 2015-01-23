@@ -31,8 +31,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          p.KeepUnmatched= false;
          p.FunctionName = 'Segment constructor';
          p.addParamValue('info',containers.Map('KeyType','char','ValueType','any'));
-         p.addParamValue('PointProcesses',[]);
-         p.addParamValue('SampledProcesses',[]);
+         p.addParamValue('PointProcesses',[],@(x) all(isa(x,'PointProcess')) );
+         p.addParamValue('SampledProcesses',[],@(x) all(isa(x,'SampledProcess')));
+         p.addParamValue('EventProcesses',[],@(x) all(isa(x,'EventProcess')));
          p.addParamValue('labels',{},@(x) iscell(x) || ischar(x));
          p.parse(varargin{:});
 
@@ -50,6 +51,13 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
                self.data = cat(2,self.data,p.Results.SampledProcesses);
             else
                self.data = cat(2,self.data,{p.Results.SampledProcesses});
+            end
+         end
+         if ~isempty(p.Results.EventProcesses)
+            if iscell(p.Results.EventProcesses)
+               self.data = cat(2,self.data,p.Results.EventProcesses);
+            else
+               self.data = cat(2,self.data,{p.Results.EventProcesses});
             end
          end
          

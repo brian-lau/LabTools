@@ -60,15 +60,22 @@ tTarAcquire1 = [tar.mnemonic];
 % tarAcquireExit, subject hits target window
 tar = log.getAllItemsFromGroupAsStruct('traverse states:exit:tar acquire');
 tTarAcquire2 = [tar.mnemonic];
+% tarHoldExit, subject  target window
+tar = log.getAllItemsFromGroupAsStruct('traverse states:exit:target hold');
+tTarHold = [tar.mnemonic];
 
 % stopOff, subject leaves hold (stop) or hold (stop) finishes
 stop = log.getAllItemsFromGroupAsStruct('traverse states:exit:stop hold');
 tStopHoldOff = [stop.mnemonic];
 
 success = log.getAllItemsFromGroupAsStruct('traverse states:enter:success');
-tSuccess = [success.mnemonic];
+tSuccessEnter = [success.mnemonic];
+success = log.getAllItemsFromGroupAsStruct('traverse states:exit:success');
+tSuccessExit = [success.mnemonic];
 success2 = log.getAllItemsFromGroupAsStruct('traverse states:enter:success2');
-tSuccess2 = [success2.mnemonic];
+tSuccess2Enter = [success2.mnemonic];
+success2 = log.getAllItemsFromGroupAsStruct('traverse states:exit:success2');
+tSuccess2Exit = [success2.mnemonic];
 failure = log.getAllItemsFromGroupAsStruct('traverse states:enter:failure');
 tFailure = [failure.mnemonic];
 abort = log.getAllItemsFromGroupAsStruct('traverse states:enter:abort');
@@ -80,209 +87,281 @@ tAbort = [abort.mnemonic];
 
 for i = 1:numel(trialInfo)
    meta_trial(i) = metadata.trial.Msup(trialInfo(i).item);
-   
+   if isempty(meta_trial(i).stopTrial)
+      meta_trial(i).stopTrial = false;
+   end
    % Recall that there can be multiple fixOnsets for a given 'trial' if the
    % subject leaves fix before cue.
    ind = (tFixOn > tStart(i)) & (tFixOn < tFinish(i));
-   temp = tFixOn(ind);
+   tOn = tFixOn(ind);
    
-   shift = temp(1);
-
-   if numel(temp) == 1
-      % normal start
-      
-   elseif numel(temp)> 1
-      keyboard
-      ind = (tSuccess > tStart(i)) & (tSuccess < tFinish(i));
+   shift = tOn(1); % Beginning of trial
+   %% Fix point
+   tOn = tOn - shift;   
+   if meta_trial(i).stopTrial
+      meta_trial(i).isSuccess = true;
+      meta_trial(i).isFailure = false;
+      meta_trial(i).isAbort = false;
+      if meta_trial(i).isCorrect
+         ind = (tSuccess2Exit > tStart(i)) & (tSuccess2Exit < tFinish(i));
+         tOff = tSuccess2Exit(ind) - shift;
+      else
+         ind = (tStopHoldOff > tStart(i)) & (tStopHoldOff < tFinish(i));
+         tOff = tStopHoldOff(ind) - shift;         
+      end
+   else
+      if numel(tOn) >= 1
+         % if success
+         ind = (tSuccessEnter > tStart(i)) & (tSuccessEnter < tFinish(i));
+         if sum(ind) == 1
+            tOff = tCueOff((tCueOff > tStart(i)) & (tCueOff < tFinish(i))) - shift;
+            meta_trial(i).isSuccess = true;
+            meta_trial(i).isFailure = false;
+            meta_trial(i).isAbort = false;
+         elseif sum(ind) > 1
+            error('should not happen');
+         else
+            % else failure or abort, in which case all stim off here
+            indF = (tFailure > tStart(i)) & (tFailure < tFinish(i));
+            indA = (tAbort > tStart(i)) & (tAbort < tFinish(i));
+            if sum(indF) == 1
+               tOff = tFailure(indF) - shift;
+               meta_trial(i).isSuccess = false;
+               meta_trial(i).isFailure = true;
+               meta_trial(i).isAbort = false;
+            elseif sum(indA) == 1
+               tOff = tAbort(indF) - shift;
+               meta_trial(i).isSuccess = false;
+               meta_trial(i).isFailure = false;
+               meta_trial(i).isAbort = true;
+            else
+               error('should not happen');
+            end
+         end
+      end
    end
-
-   % CUE
-   tOn = tCueOn((tCueOn > tStart(i)) & (tCueOn < tFinish(i))) - shift;
-   tOff = tCueOff((tCueOff > tStart(i)) & (tCueOff < tFinish(i))) - shift;
-   meta_cue(i) = metadata.event.Stimulus('name','cue','time',tOn,...
+   if numel(tOn) > 1
+      meta_trial(i).isRepeat = numel(tOn);
+      tOn = tOn(end);
+   else
+      meta_trial(i).isRepeat = 0;
+   end
+   meta_fixation(i) = metadata.event.Stimulus('name','fix','time',tOn,...
       'duration',tOff-tOn);
 
+   %% TARGET
+   tOn = tTargetOn((tTargetOn > tStart(i)) & (tTargetOn < tFinish(i))) - shift;
+   if numel(tOn) >= 1
+      if meta_trial(i).stopTrial
+         if meta_trial(i).isCorrect
+            ind = (tSuccess2Enter > tStart(i)) & (tSuccess2Enter < tFinish(i));
+            tOff = tSuccess2Enter(ind) - shift;
+         else
+            ind = (tStopHoldOff > tStart(i)) & (tStopHoldOff < tFinish(i));
+            tOff = tStopHoldOff(ind) - shift;
+         end
+      else
+         if meta_trial(i).isSuccess
+            tOff = tTarHold((tTarHold > tStart(i)) & (tTarHold < tFinish(i))) - shift;
+         elseif meta_trial(i).isFailure
+            indF = (tFailure > tStart(i)) & (tFailure < tFinish(i));
+            tOff = tFailure(indF) - shift;
+         elseif meta_trial(i).isAbort
+            indA = (tAbort > tStart(i)) & (tAbort < tFinish(i));
+            tOff = tAbort(indF) - shift;
+         end
+      end
+      if meta_trial(i).isRepeat
+         tOn = tOn(end);
+      end
+      meta_target(i) = metadata.event.Stimulus('name','target','time',tOn,...
+         'duration',tOff-tOn);
+   else % targets never displayed
+      meta_target(i) = metadata.event.Stimulus('name','target','time',NaN,...
+         'duration',NaN);
+   end
+   
+   %% FEEDBACK?
+   if meta_trial(i).stopTrial
+      tOn = tSuccess2Enter((tSuccess2Enter > tStart(i)) & (tSuccess2Enter < tFinish(i))) - shift;
+   else
+      tOn = tSuccessEnter((tSuccessEnter > tStart(i)) & (tSuccessEnter < tFinish(i))) - shift;
+   end
+   if numel(tOn) >= 1
+      if meta_trial(i).stopTrial
+         if meta_trial(i).isCorrect
+            ind = (tSuccess2Exit > tStart(i)) & (tSuccess2Exit < tFinish(i));
+            tOff = tSuccess2Exit(ind) - shift;
+         else
+            ind = (tStopHoldOff > tStart(i)) & (tStopHoldOff < tFinish(i));
+            tOff = tStopHoldOff(ind) - shift;
+         end
+      else
+         if meta_trial(i).isSuccess
+            tOff = tSuccessExit((tSuccessExit > tStart(i)) & (tSuccessExit < tFinish(i))) - shift;
+         elseif meta_trial(i).isFailure
+            indF = (tFailure > tStart(i)) & (tFailure < tFinish(i));
+            tOff = tFailure(indF) - shift;
+         elseif meta_trial(i).isAbort
+            indA = (tAbort > tStart(i)) & (tAbort < tFinish(i));
+            tOff = tAbort(indF) - shift;
+         end
+      end
+      if meta_trial(i).isRepeat
+         tOn = tOn(end);
+      end
+      meta_feedback(i) = metadata.event.Stimulus('name','feedback','time',tOn,...
+         'duration',tOff-tOn);
+   else % targets never displayed
+      meta_feedback(i) = metadata.event.Stimulus('name','feedback','time',NaN,...
+         'duration',NaN);
+   end
+   
+   %% CUE
+   tOn = tCueOn((tCueOn > tStart(i)) & (tCueOn < tFinish(i))) - shift;
+   if numel(tOn) >= 1
+      tOff = tCueOff((tCueOff > tStart(i)) & (tCueOff < tFinish(i))) - shift;
+      if meta_trial(i).isRepeat
+         tOn = tOn(end);
+      end
+      meta_cue(i) = metadata.event.Stimulus('name','cue','time',tOn,...
+         'duration',tOff-tOn);
+   else
+      meta_cue(i) = metadata.event.Stimulus('name','cue','time',NaN,...
+         'duration',NaN);
+   end
+   
+   %% fix touch
+   tOn = tFixAcquire((tFixAcquire > tStart(i)) & (tFixAcquire < tFinish(i))) - shift;
+   if (numel(tOn) >= 1) && meta_trial(i).isSuccess
+      tOff = tCueOff((tCueOff > tStart(i)) & (tCueOff < tFinish(i))) - shift;
+      if meta_trial(i).isRepeat
+         tOn = tOn(end);
+      end
+      meta_fixTouch(i) = metadata.event.Response('name','fix','modality','touch',...
+         'time',tOn,'duration',tOff-tOn);
+   else
+      meta_fixTouch(i) = metadata.event.Response('name','fix','modality','touch',...
+         'time',NaN,'duration',NaN);
+   end
+    
+   %% target touch
+   tOn = tTarAcquire2((tTarAcquire2 > tStart(i)) & (tTarAcquire2 < tFinish(i))) - shift;
+   if numel(tOn) >= 1
+      tOff = tTarHold((tTarHold > tStart(i)) & (tTarHold < tFinish(i))) - shift;
+      if meta_trial(i).isRepeat
+         tOn = tOn(end);
+      end
+      meta_tarTouch(i) = metadata.event.Response('name','target','modality','touch',...
+         'time',tOn,'duration',tOff-tOn);
+   else
+      meta_tarTouch(i) = metadata.event.Response('name','target','modality','touch',...
+         'time',NaN,'duration',NaN);
+   end
+   
 end
 
-info = [trialInfo.item];
-for i = 1:length(trialInfo)
-   % Recall that there can be multiple fixOnsets for a given 'trial' if the
-   % subject leaves fix before cue.
-   ind = (tFixOn > tStart(i)) & (tFixOn < tFinish(i));
-   info(i).tFixOn = tFixOn(ind);
-
-   shift = info(i).tFixOn(1);
-   info(i).tFixOn = info(i).tFixOn - shift;
-   
-   ind = (tFixAcquire > tStart(i)) & (tFixAcquire < tFinish(i));
-   if ~any(ind)
-      info(i).tFixAcquire = NaN;
-   else
-      info(i).tFixAcquire = tFixAcquire(ind) - shift;
-   end
-   
-   ind = (tTargetOn > tStart(i)) & (tTargetOn < tFinish(i));
-   if ~any(ind)
-      info(i).tTargetOn = NaN;
-   else
-      info(i).tTargetOn = tTargetOn(ind) - shift;
-   end
-
-   ind = (tCueOn > tStart(i)) & (tCueOn < tFinish(i));
-   if ~any(ind)
-      info(i).tCueOn = NaN;
-   else
-      info(i).tCueOn = tCueOn(ind) - shift;
-   end
-
-   ind = (tCueOff > tStart(i)) & (tCueOff < tFinish(i));
-   if ~any(ind)
-      info(i).tCueOff = NaN;
-   else
-      info(i).tCueOff = tCueOff(ind) - shift;
-   end
-
-   ind = (tTarAcquire1 > tStart(i)) & (tTarAcquire1 < tFinish(i));
-   if ~any(ind)
-      info(i).tTarAcquire1 = NaN;
-   else
-      info(i).tTarAcquire1 = tTarAcquire1(ind) - shift;
-   end
-   
-   ind = (tTarAcquire2 > tStart(i)) & (tTarAcquire2 < tFinish(i));
-   if ~any(ind)
-      info(i).tTarAcquire2 = NaN;
-   else
-      info(i).tTarAcquire2 = tTarAcquire2(ind) - shift;
-   end
-   
-   ind = (tStopHoldOff > tStart(i)) & (tStopHoldOff < tFinish(i));
-   if ~any(ind)
-      info(i).tStopHoldOff = NaN;
-   else
-      info(i).tStopHoldOff = tStopHoldOff(ind) - shift;
-   end
-   
-   info(i).tStart = tStart(i) - shift;
-   info(i).tFinish = tFinish(i) - shift;
-   info(i).tTrialInfo = trialInfo(i).mnemonic - shift;
-end
-
-%% add field if missing
-if ~isfield(info,'stopTrial')
-   info(end).stopTrial = 0;
-   [info.stopTrial] = deal(0);
-end
+% info = [trialInfo.item];
+% for i = 1:length(trialInfo)
+%    % Recall that there can be multiple fixOnsets for a given 'trial' if the
+%    % subject leaves fix before cue.
+%    ind = (tFixOn > tStart(i)) & (tFixOn < tFinish(i));
+%    info(i).tFixOn = tFixOn(ind);
+% 
+%    shift = info(i).tFixOn(1);
+%    info(i).tFixOn = info(i).tFixOn - shift;
+%    
+%    ind = (tFixAcquire > tStart(i)) & (tFixAcquire < tFinish(i));
+%    if ~any(ind)
+%       info(i).tFixAcquire = NaN;
+%    else
+%       info(i).tFixAcquire = tFixAcquire(ind) - shift;
+%    end
+%    
+%    ind = (tTargetOn > tStart(i)) & (tTargetOn < tFinish(i));
+%    if ~any(ind)
+%       info(i).tTargetOn = NaN;
+%    else
+%       info(i).tTargetOn = tTargetOn(ind) - shift;
+%    end
+% 
+%    ind = (tCueOn > tStart(i)) & (tCueOn < tFinish(i));
+%    if ~any(ind)
+%       info(i).tCueOn = NaN;
+%    else
+%       info(i).tCueOn = tCueOn(ind) - shift;
+%    end
+% 
+%    ind = (tCueOff > tStart(i)) & (tCueOff < tFinish(i));
+%    if ~any(ind)
+%       info(i).tCueOff = NaN;
+%    else
+%       info(i).tCueOff = tCueOff(ind) - shift;
+%    end
+% 
+%    ind = (tTarAcquire1 > tStart(i)) & (tTarAcquire1 < tFinish(i));
+%    if ~any(ind)
+%       info(i).tTarAcquire1 = NaN;
+%    else
+%       info(i).tTarAcquire1 = tTarAcquire1(ind) - shift;
+%    end
+%    
+%    ind = (tTarAcquire2 > tStart(i)) & (tTarAcquire2 < tFinish(i));
+%    if ~any(ind)
+%       info(i).tTarAcquire2 = NaN;
+%    else
+%       info(i).tTarAcquire2 = tTarAcquire2(ind) - shift;
+%    end
+%    
+%    ind = (tStopHoldOff > tStart(i)) & (tStopHoldOff < tFinish(i));
+%    if ~any(ind)
+%       info(i).tStopHoldOff = NaN;
+%    else
+%       info(i).tStopHoldOff = tStopHoldOff(ind) - shift;
+%    end
+%    
+%    info(i).tStart = tStart(i) - shift;
+%    info(i).tFinish = tFinish(i) - shift;
+%    info(i).tTrialInfo = trialInfo(i).mnemonic - shift;
+% end
+% 
+% %% add field if missing
+% if ~isfield(info,'stopTrial')
+%    info(end).stopTrial = 0;
+%    [info.stopTrial] = deal(0);
+% end
 
 %% parse lfp file
-%s = loadSingleFile(lfpfile);
-signal = tms_read(lfpfile);
+[s,t] = loadSingleRun(lfpfile);
 
-temp = cell2mat(signal.data(1:end))';
 % Events are on the Trigger channel, and should be 100 ms. Note that the
 % trigger to the LFP system is sent after trialInfo is logged on the MATLAB
 % side.
-events = detectEvents(signal.data{1},1/signal.fs);
-labels = linq(signal.description)...
-   .select(@(x) x.SignalName')...
-   .where(@(x) strncmp(x,'(Lo)',4))...
-   .select(@(x) x(6:end)).toList();
-
-temp = temp(:,2:end);
-
-if size(datac,1) < size(temp,1)
-   n = size(temp,1);
-   temp = [datac ; temp(size(datac,1)+1:end,:)];
-   if size(temp,1) ~= n
-      error('shwat');
-   end
-end
-
-% s = SampledProcess('values',temp,...
-%    'Fs',signal.fs,...
-%    'tStart',0,...
-%    'labels',labels(2:end));
-% 
-% %s.highpass(3,1000,true);
-% highpass(s,1.5,s.Fs*2,true);
-% % interpFreq(s,[50 100],2,10);
-% if s.Fs ~= 512
-%    resample(s,512);
-%    s = SampledProcess('values',s.values{1},...
-%    'Fs',512,...
-%    'tStart',0,...
-%    'labels',labels(2:end));
-% end
-% detrend(s);
+events = sig.detectEvents(t.values{1},1/t.Fs);
 
 window = [events(:,1) , [events(2:end,1) ; events(end,1)+15]];
-%window = [events(:,2) , [events(2:end,2) ; events(end,2)+15]];
-
 s.window = window;
 s.chop();
 
-% Crude artifact detection
-values = linq(s).select(@(x) x.values{1}).toList();
-values = values{:};
-mv = mean(values);
-stdv = std(values);
-kurt = kurtosis(values);
-for i = 1:numel(s)
-   q = zeros(size(s(i).quality));
-   ind = sum(bsxfun(@gt,s(i).values{1},100));
-   if any(ind)
-      q(ind>0) = q(ind>0) + 2^0;
-   end
-   ind = sum(bsxfun(@gt,s(i).values{1},4*kurt));
-   if any(ind)
-      q(ind>0) = q(ind>0) + 2^1;
-   end
-   ind = sum(bsxfun(@gt,s(i).values{1},5*kurt));
-   if any(ind)
-      q(ind>0) = q(ind>0) + 2^2;
-   end
-   ind = sum(bsxfun(@gt,s(i).values{1},6*kurt));
-   if any(ind)
-      q(ind>0) = q(ind>0) + 2^3;
-   end
-   ind = sum(bsxfun(@gt,s(i).values{1},7*kurt));
-   if any(ind)
-      q(ind>0) = q(ind>0) + 2^4;
-   end
-   ind = sum(bsxfun(@gt,s(i).values{1},5*stdv));
-   if any(ind)
-      q(ind>0) = q(ind>0) + 2^5;
-   end
-   ind = sum(bsxfun(@gt,s(i).values{1},6*stdv));
-   if any(ind)
-      q(ind>0) = q(ind>0) + 2^6;
-   end
-   ind = sum(bsxfun(@gt,s(i).values{1},7*stdv));
-   if any(ind)
-      q(ind>0) = q(ind>0) + 2^7;
-   end
-   ind = sum(bsxfun(@gt,s(i).values{1},8*stdv));   
-   if any(ind)
-      disp(i)
-      q(ind>0) = q(ind>0) + 2^8;
-   end
-   s(i).quality = q;
-end
-
-% numel(info) == numel(s) % CHECK
 t1 = [info.tTrialInfo];
 t2 = [s.tEnd];
 n = min(numel(t1),numel(t2));
 c = corr(t1(1:n-1)',t2(1:n-1)')
 
 if c < 0.9
-   keyboard
    error('Problem aligning files!');
 end
+% numel(info) == numel(s) % CHECK
 if abs(numel(t1)-numel(t2)) > 2
    error('Problem aligning files!');
 end
+keyboard
+% Pack into Segment
 for i = 1:min(numel(s),numel(info))
-   temp = containers.Map(fieldnames(info(i)),struct2cell(info(i)));
-   data(i) = Segment('info',temp,'sampledProcesses',s(i));
+   temp = containers.Map('trial',meta_trial(i));
+   events = EventProcess('events',[meta_fixation(i) meta_target(i) meta_cue(i)...
+      meta_feedback(i) meta_fixTouch(i) meta_tarTouch(i)]);
+   data(i) = Segment('info',temp,'SampledProcesses',s(i),'EventProcesses',events);
 end
+
+

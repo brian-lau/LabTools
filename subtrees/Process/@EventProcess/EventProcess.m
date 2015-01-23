@@ -47,6 +47,12 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
                self.times,{self.window},'uni',0);
          end
       end
+      
+%       function plot(self)
+%          figure(2);
+%          plot(randn(10,1),randn(10,1),'ro');
+%       end
+      
    end
 end
 
