@@ -29,7 +29,7 @@ plot(sig{2})
 % Segment container
 for i = 1:numel(sig)
    temp = containers.Map(fieldnames(info(i)),struct2cell(info(i)));
-   data(i) = Segment('info',temp,'SampledProcesses',sig{i});
+   data(i) = Segment('info',temp,'SampledProcess',sig{i});
 end
 
 %
@@ -43,19 +43,18 @@ out.apply(@(x) nanstd(x))
 
 %%
 
-data(1) = Segment('SampledProcesses',...
+data(1) = Segment('SampledProcess',...
    {SampledProcess(randn(5,2)) SampledProcess(randn(5,2))},...
-   'PointProcesses',...
-   PointProcess(1:5));
-data(2) = Segment('SampledProcesses',...
-   {SampledProcess(randn(10,2)) SampledProcess(randn(10,2))},...
-   'PointProcesses',...
+   'PointProcess',PointProcess(1:5));
+data(2) = Segment('SampledProcess',...
+   [SampledProcess(randn(10,2)) SampledProcess(randn(10,2))],...
+   'PointProcess',...
    PointProcess(1:10));
 
 proc = data.extract('pid3')
 proc{1}{1}
 proc{2}{1}
 
-proc = data.extract('pointprocess','datatype')
+proc = data.extract('pointprocess','type')
 proc{1}{1}
 proc{2}{1}

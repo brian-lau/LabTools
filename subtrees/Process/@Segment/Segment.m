@@ -1,21 +1,28 @@
-% collection of processes defined by common start and end time
+% Class for collecting Sampled, Point and EventProcesses with common start
+% and end time.
 % o Probably should place tStart/tEnd
 % o must check for common start and end times!
 
 % o methods for 
 %   o adding processes
 %   o 
+% 
 classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & matlab.mixin.Copyable
    properties
       info@containers.Map % Information about segment
    end
    properties
       labels
-      data % FIXME: rename this to processes, validate through setter
+      processes
    end
    properties(SetAccess = private, Dependent = true)
-      dataType
-      %window
+      type
+      
+      tStart
+      tEnd
+      window
+      offset
+      
       sameWindow
       sameOffset
    end
@@ -31,48 +38,64 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          p.KeepUnmatched= false;
          p.FunctionName = 'Segment constructor';
          p.addParamValue('info',containers.Map('KeyType','char','ValueType','any'));
-         p.addParamValue('PointProcesses',[],@(x) all(isa(x,'PointProcess')) );
-         p.addParamValue('SampledProcesses',[],@(x) all(isa(x,'SampledProcess')));
-         p.addParamValue('EventProcesses',[],@(x) all(isa(x,'EventProcess')));
+         p.addParamValue('PointProcess',[],@(x) iscell(x) || all(isa(x,'PointProcess')) );
+         p.addParamValue('SampledProcess',[],@(x) iscell(x) || all(isa(x,'SampledProcess')));
+         p.addParamValue('EventProcess',[],@(x) iscell(x) || all(isa(x,'EventProcess')));
          p.addParamValue('labels',{},@(x) iscell(x) || ischar(x));
+%          p.addParamValue('window',[],@isnumeric);
+%          p.addParamValue('offset',0,@isnumeric);
+%          p.addParamValue('tStart',[],@isnumeric);
+%          p.addParamValue('tEnd',[],@isnumeric);
          p.parse(varargin{:});
-
-         self.info = p.Results.info;
-         self.data = {};
-         if ~isempty(p.Results.PointProcesses)
-            if iscell(p.Results.PointProcesses)
-               self.data = cat(2,self.data,p.Results.PointProcesses);
-            else
-               self.data = cat(2,self.data,{p.Results.PointProcesses});
+         par = p.Results;
+keyboard
+         self.info = par.info;
+         self.processes = {};
+         
+         validProcess = {'PointProcess' 'SampledProcess' 'EventProcess'};
+         for i = 1:numel(validProcess)
+            if ~isempty(par.(validProcess{i}))
+               if iscell(par.(validProcess{i}))
+                  self.processes = cat(2,self.processes,par.(validProcess{i}));
+               else
+                  self.processes = cat(2,self.processes,{par.(validProcess{i})});
+               end
             end
          end
-         if ~isempty(p.Results.SampledProcesses)
-            if iscell(p.Results.SampledProcesses)
-               self.data = cat(2,self.data,p.Results.SampledProcesses);
+         
+         if ~isempty(par.PointProcess)
+            if iscell(par.PointProcess)
+               self.processes = cat(2,self.processes,par.PointProcess);
             else
-               self.data = cat(2,self.data,{p.Results.SampledProcesses});
+               self.processes = cat(2,self.processes,{par.PointProcess});
             end
          end
-         if ~isempty(p.Results.EventProcesses)
-            if iscell(p.Results.EventProcesses)
-               self.data = cat(2,self.data,p.Results.EventProcesses);
+         if ~isempty(par.SampledProcess)
+            if iscell(p.Results.SampledProcess)
+               self.processes = cat(2,self.processes,par.SampledProcess);
             else
-               self.data = cat(2,self.data,{p.Results.EventProcesses});
+               self.processes = cat(2,self.processes,{par.SampledProcess});
+            end
+         end
+         if ~isempty(par.EventProcess)
+            if iscell(par.EventProcess)
+               self.processes = cat(2,self.processes,par.EventProcess);
+            else
+               self.processes = cat(2,self.processes,{par.EventProcess});
             end
          end
          
          % Create labels
          self.labels = p.Results.labels;
-         
-      end% constructor
+      end
       
-      function list = get.dataType(self)
-         list = cellfun(@(x) class(x),self.data,'uni',0);
+      function list = get.type(self)
+         list = cellfun(@(x) class(x),self.processes,'uni',0);
       end
       
       function bool = get.sameWindow(self)
          % FIXME: this assumes each segment has single window
-         window = cellfun(@(x) x.window,self.data,'uni',0);
+         window = cellfun(@(x) x.window,self.processes,'uni',0);
          window = unique(vertcat(window{:}),'rows');
          if size(window,1) == 1
             bool = true;
@@ -83,7 +106,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       
       function bool = get.sameOffset(self)
          % FIXME: this assumes each segment has single offset
-         offset = cellfun(@(x) x.offset,self.data,'uni',0);
+         offset = cellfun(@(x) x.offset,self.processes,'uni',0);
          offset = unique(vertcat(offset{:}),'rows');
          if size(offset,1) == 1
             bool = true;
@@ -95,7 +118,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       function set.labels(self,labels)
          % FIXME, prevent clashes with attribute names
          % FIXME, should check that labels are unique
-         n = numel(self.data);
+         n = numel(self.processes);
          if isempty(labels)
             for i = 1:n
                labels{1,i} = ['pid' num2str(i)];
