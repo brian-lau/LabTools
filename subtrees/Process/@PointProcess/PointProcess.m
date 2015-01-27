@@ -17,16 +17,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
    methods
       %% Constructor
       function self = PointProcess(varargin)
-         % Constructor, arguments are taken as name/value pairs
-         % info     - Information about point process
-         %            containers.Map
-         %            cell array, converted to map with generic keys
-         % times    - Vector of event times
-         % values   - Data corresponding to each event time
-         % window   - Defaults to window that includes all event times,
-         %            If a smaller window is passed in, event times outside
-         %            the window will be DISCARDED.
-         
          self = self@Process;
          if nargin == 0
             return;
@@ -63,24 +53,22 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          p.addParamValue('tStart',[],@isnumeric);
          p.addParamValue('tEnd',[],@isnumeric);
          p.parse(varargin{:});
-
-         self.info = p.Results.info;
+         par = p.Results;
          
-         if ~isempty(p.Results.times)
-            if isnumeric(p.Results.times) % one PointProcess
-               if isrow(p.Results.times)
-                  % FIXME, this should probably check EventProcess in case
-                  % we have one event
-                  [eventTimes{1},tInd] = sortrows(p.Results.times');
-               else
-                  [eventTimes{1},tInd] = sortrows(p.Results.times);
+         self.info = par.info;
+         
+         if ~isempty(par.times)
+            times = par.times;
+            if isnumeric(times) % one PointProcess
+               if isrow(times) && ...
+                     ~(isa(self,'EventProcess')&&(numel(times)==2))
+                  times = par.times';
                end
+               [eventTimes{1},tInd] = sortrows(times);
             else
-               times = p.Results.times;
                for i = 1:numel(times);
-                  if isrow(times{i})
-                  % FIXME, this should probably check EventProcess in case
-                  % we have one event
+                  if isrow(times{i}) && ...
+                     ~(isa(self,'EventProcess')&&(numel(times{i})==2))
                      times{i} = times{i}';
                   end
                end
@@ -88,12 +76,25 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
             end
             
             % Create the values cell array
-            if isempty(p.Results.values)
+            if isempty(par.values)
                values = cellfun(@(x) ones(size(x,1),1),eventTimes,'uni',0);
+            elseif iscell(par.values)
+               
             else
-               if ~iscell(p.Results.values)
+               % vector times, missing cell wrapper on values
+               values = par.values;
+               if isrow(values)
+                  values = values';
+               end
+               if size(eventTimes{1},1) == numel(values)
+                  values = {values(tInd)};
+               end
+            end
+   %%%%%            
+            else
+               if ~iscell(par.values)
                   % vector times, missing cell wrapper on values
-                  values = p.Results.values;
+                  values = par.values;
                   if isrow(values)
                      values = values';
                   end
@@ -103,9 +104,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
                else
                   % FIXME better validation
                   keyboard
-                  values = p.Results.values;
+                  values = par.values;
                   for i = 1:numel(values)
-                     values{i} = reshape(values{i}(tInd{i}),size(eventTimes{i},1),1);
+                     values{i} = reshape(values{i}(tInd(i)),size(eventTimes{i},1),1);
                   end
                end
                assert(all(cellfun(@(x,y) numel(x)==size(y,1),...
@@ -113,7 +114,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
                   '# of ''times'' must equal # of ''values''');
             end
          else
-            if ~isempty(p.Results.values)
+            if ~isempty(par.values)
                warning('PointProcess:Constructor:InputCount',...
                   'Values ignored without event times');
             end
@@ -125,35 +126,35 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          self.values_ = values;
                   
          % Define the start and end times of the process
-         if isempty(p.Results.tStart)
+         if isempty(par.tStart)
             self.tStart = min([cellfun(@(x) min(x(:)),eventTimes) 0]);
          else
-            self.tStart = p.Results.tStart;
+            self.tStart = par.tStart;
          end
-         if isempty(p.Results.tEnd)
+         if isempty(par.tEnd)
             self.tEnd = max( max(cellfun(@(x) max(x(:)),eventTimes)) , self.tStart );
          else
-            self.tEnd = p.Results.tEnd;
+            self.tEnd = par.tEnd;
          end
 
          % Set the window
-         if isempty(p.Results.window)
+         if isempty(par.window)
             self.setInclusiveWindow();
          else
-            self.window = self.checkWindow(p.Results.window,size(p.Results.window,1));
+            self.window = self.checkWindow(par.window,size(par.window,1));
          end
          
          % Set the offset
-         if isempty(p.Results.offset)
+         if isempty(par.offset)
             self.offset = 0;
          else
-            self.offset = self.checkOffset(p.Results.offset,size(p.Results.offset,1));
+            self.offset = self.checkOffset(par.offset,size(par.offset,1));
          end         
 
          % Create labels
-         self.labels = p.Results.labels;
+         self.labels = par.labels;
 
-         self.quality = p.Results.quality;
+         self.quality = par.quality;
 
          % Store original window and offset for resetting
          self.window_ = self.window;
