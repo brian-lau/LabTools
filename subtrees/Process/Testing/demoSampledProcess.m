@@ -49,8 +49,10 @@ s(2) = SampledProcess('values',x,'Fs',Fs,'tStart',0);
 window = [-51 51]./Fs;
 offset = [50 25.5]./Fs;
 
-out = sync(s,offset,'window',window);
-stem(out.times,out.values)
+out = extract(sync(s,offset,'window',window));
+hold on;
+stem(out(1).times,out(1).values)
+stem(out(2).times,out(2).values,'r')
 % s.setWindow({window+offset(1) window+offset(2)});
 % s.setOffset(-offset);
 % [times,values] = arrayfun(@(x) deal(x.times{1},x.values{1}),s,'uni',false);

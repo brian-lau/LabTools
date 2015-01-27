@@ -29,7 +29,7 @@ plot(sig{2})
 % Segment container
 for i = 1:numel(sig)
    temp = containers.Map(fieldnames(info(i)),struct2cell(info(i)));
-   data(i) = Segment('info',temp,'SampledProcess',sig{i});
+   data(i) = Segment('info',temp,'process',sig{i});
 end
 
 %

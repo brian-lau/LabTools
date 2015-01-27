@@ -17,15 +17,24 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    end
    properties(SetAccess = private, Dependent = true)
       type
-      
+            
+      sameWindow
+      sameOffset
+   end
+   properties
       tStart
       tEnd
       window
       offset
-      
-      sameWindow
-      sameOffset
    end
+   properties(SetAccess = protected, Hidden = true)
+      window_  % Original window
+      offset_  % Original offset
+   end
+   properties(SetAccess = protected)
+      version = '0.0.0'
+   end
+   
    
    methods
       %% Constructor
@@ -40,10 +49,10 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          p.addParamValue('info',containers.Map('KeyType','char','ValueType','any'));
          p.addParamValue('process',[],@(x) iscell(x) || all(isa(x,'Process')) );
          p.addParamValue('labels',{},@(x) iscell(x) || ischar(x));
-%          p.addParamValue('window',[],@isnumeric);
-%          p.addParamValue('offset',0,@isnumeric);
-%          p.addParamValue('tStart',[],@isnumeric);
-%          p.addParamValue('tEnd',[],@isnumeric);
+         p.addParamValue('window',[],@isnumeric);
+         p.addParamValue('offset',0,@isnumeric);
+         p.addParamValue('tStart',[],@isnumeric);
+         p.addParamValue('tEnd',[],@isnumeric);
          p.parse(varargin{:});
          par = p.Results;
 
@@ -56,44 +65,34 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
             else
                self.processes = cat(2,self.processes,{par.process});
             end
+            if isempty(par.tStart)
+               self.tStart = min([cellfun(@(x) x.tStart,self.processes) 0]);
+            else
+               self.tStart = par.tStart;
+            end
+            if isempty(par.tEnd)
+               self.tEnd = max([max(cellfun(@(x) x.tEnd,self.processes))  self.tStart]);
+            else
+               self.tEnd = par.tEnd;
+            end
+                        
+            if isempty(par.window)
+               self.window = [self.tStart self.tEnd];
+            else
+               self.window = par.offset;
+            end
+            if isempty(par.offset)
+               self.offset = min(cellfun(@(x) x.offset,self.processes));
+            else
+               self.offset = par.offset;
+            end
          end
-keyboard
-%          self.processes = {};
-%          validProcess = {'PointProcess' 'SampledProcess' 'EventProcess'};
-%          for i = 1:numel(validProcess)
-%             if ~isempty(par.(validProcess{i}))
-%                if iscell(par.(validProcess{i}))
-%                   self.processes = cat(2,self.processes,par.(validProcess{i}));
-%                else
-%                   self.processes = cat(2,self.processes,{par.(validProcess{i})});
-%                end
-%             end
-%          end
-%          
-%          if ~isempty(par.PointProcess)
-%             if iscell(par.PointProcess)
-%                self.processes = cat(2,self.processes,par.PointProcess);
-%             else
-%                self.processes = cat(2,self.processes,{par.PointProcess});
-%             end
-%          end
-%          if ~isempty(par.SampledProcess)
-%             if iscell(p.Results.SampledProcess)
-%                self.processes = cat(2,self.processes,par.SampledProcess);
-%             else
-%                self.processes = cat(2,self.processes,{par.SampledProcess});
-%             end
-%          end
-%          if ~isempty(par.EventProcess)
-%             if iscell(par.EventProcess)
-%                self.processes = cat(2,self.processes,par.EventProcess);
-%             else
-%                self.processes = cat(2,self.processes,{par.EventProcess});
-%             end
-%          end
-         
-         % Create labels
+
          self.labels = p.Results.labels;
+         
+         % Store original window and offset for resetting
+         self.window_ = self.window;
+         self.offset_ = self.offset;
       end
       
       function list = get.type(self)
@@ -120,6 +119,34 @@ keyboard
          else
             bool = false;
          end
+      end
+      
+      function set.tStart(self,tStart)
+         for i = 1:numel(self.processes)
+            self.processes{i}.tStart = tStart;
+         end
+         self.tStart = tStart;
+      end
+
+      function set.tEnd(self,tEnd)
+         for i = 1:numel(self.processes)
+            self.processes{i}.tEnd = tEnd;
+         end
+         self.tEnd = tEnd;
+      end
+      
+      function set.offset(self,offset)
+         for i = 1:numel(self.processes)
+            self.processes{i}.offset = offset;
+         end
+         self.offset = offset;
+      end
+
+      function set.window(self,window)
+         for i = 1:numel(self.processes)
+            self.processes{i}.window = window;
+         end
+         self.window = window;
       end
       
       function set.labels(self,labels)
@@ -149,11 +176,7 @@ keyboard
       end
       
       self = sync(self,event,varargin)
-      
       proc = extract(self,request,flag)
-      % reset
-      % window
-      % offset
+      self = reset(self)
    end
-   
 end
