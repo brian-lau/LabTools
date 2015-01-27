@@ -130,28 +130,21 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Process < hgsetget & ma
       self = setOffset(self,offset)
       
       function set.labels(self,labels)
-         % FIXME, prevent clashes with attribute names
-         % FIXME, should check that labels are unique
          n = size(self.values_,2);
          if isempty(labels)
-            for i = 1:n
-               labels{1,i} = ['id' num2str(i)];
-            end
-            self.labels = labels;
+            self.labels = arrayfun(@(x) ['id' num2str(x)],1:n,'uni',0);
          elseif iscell(labels)
-            if numel(labels) == n
-               if all(cellfun(@isstr,labels))
-                  self.labels = labels;
-               else
-                  error('bad label');
-               end
-            else
-               error('mismatch');
-            end
+            assert(all(cellfun(@ischar,labels)),'Process:labels:InputType',...
+               'Labels must be strings');
+            assert(numel(labels)==numel(unique(labels)),'Process:labels:InputType',...
+               'Labels must be unique');
+            assert(numel(labels)==n,'Process:labels:InputFormat',...
+               '# labels does not match # of signals');
+            self.labels = labels;
          elseif (n==1) && ischar(labels)
             self.labels = {labels};
          else
-            error('bad label');
+            error('Process:labels:InputType','Incompatible label type');
          end
       end
       
