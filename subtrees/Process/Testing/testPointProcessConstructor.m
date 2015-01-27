@@ -30,9 +30,9 @@ assertExceptionThrown(f, 'PointProcess:Constructor:InputFormat');
 function testNoTimes
 p = PointProcess('info',containers.Map({'cat'},{'dog'}));
 assertEqual(p.count,0);
-assertEqual(p.times_,[]);
+assertEqual(p.times_,{});
 assertEqual(p.times,[]);
-assertEqual(p.values_,[]);
+assertEqual(p.values_,{});
 assertEqual(p.values,[]);
 
 %%

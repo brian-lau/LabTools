@@ -57,14 +57,21 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          
          self.info = par.info;
          
-         if ~isempty(par.times)
+         if isempty(par.times)
+            if ~isempty(par.values)
+               warning('PointProcess:Constructor:InputCount',...
+                  'Values ignored without event times');
+            end
+            eventTimes = {};
+            values = {};
+         else
             times = par.times;
             if isnumeric(times) % one PointProcess
                if isrow(times) && ...
                      ~(isa(self,'EventProcess')&&(numel(times)==2))
                   times = par.times';
                end
-               [eventTimes{1},tInd] = sortrows(times);
+               [eventTimes{1},tInd{1}] = sortrows(times);
             else
                for i = 1:numel(times);
                   if isrow(times{i}) && ...
@@ -74,57 +81,43 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
                end
                [eventTimes,tInd] = cellfun(@(x) sortrows(x),times,'uni',0);
             end
-            
-            % Create the values cell array
+
+
             if isempty(par.values)
                values = cellfun(@(x) ones(size(x,1),1),eventTimes,'uni',0);
-            elseif iscell(par.values)
-               
             else
-               % vector times, missing cell wrapper on values
                values = par.values;
-               if isrow(values)
-                  values = values';
-               end
-               if size(eventTimes{1},1) == numel(values)
-                  values = {values(tInd)};
-               end
-            end
-   %%%%%            
-            else
-               if ~iscell(par.values)
-                  % vector times, missing cell wrapper on values
-                  values = par.values;
-                  if isrow(values)
-                     values = values';
+               if iscell(values)
+                  assert(numel(values) == numel(eventTimes),...
+                     'PointProcess:constuctor:InputSize',...
+                     'Incorrect # of cell arrays, # of ''times'' must equal # of ''values''');
+                  assert(all(cellfun(@(x,y) numel(x)==size(y,1),...
+                     values,eventTimes)),'PointProcess:constuctor:InputSize',...
+                     'Cell arrays not matched in dims, # of ''times'' must equal # of ''values''');
+                  for i = 1:numel(values)
+                     values{i} = reshape(values{i}(tInd{i}),size(eventTimes{i},1),1);
                   end
-                  if size(eventTimes{1},1) == numel(values)
-                     values = {values(tInd)};
+               elseif ismatrix(values) % one PointProcess
+                  if isrow(values) && ...
+                        ~(isa(self,'EventProcess')&&(numel(values)==2)) && ...
+                        (numel(values) == numel(eventTimes{1}))
+                     values = {values(tInd{1})'};
+                  elseif (numel(values) == numel(eventTimes{1}))
+                     values = {values(tInd{1})};
+                  else
+                     error('incorrect number of values');
                   end
                else
-                  % FIXME better validation
-                  keyboard
-                  values = par.values;
-                  for i = 1:numel(values)
-                     values{i} = reshape(values{i}(tInd(i)),size(eventTimes{i},1),1);
-                  end
+                  error('PointProcess:tStart:InputType',...
+                     'Invalid data type for values');
                end
-               assert(all(cellfun(@(x,y) numel(x)==size(y,1),...
-                  values,eventTimes)),'PointProcess:constuctor:InputSize',...
-                  '# of ''times'' must equal # of ''values''');
             end
-         else
-            if ~isempty(par.values)
-               warning('PointProcess:Constructor:InputCount',...
-                  'Values ignored without event times');
-            end
-            return;
          end
          
          % If we have event times
          self.times_ = eventTimes;
          self.values_ = values;
-                  
+
          % Define the start and end times of the process
          if isempty(par.tStart)
             self.tStart = min([cellfun(@(x) min(x(:)),eventTimes) 0]);
@@ -132,7 +125,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
             self.tStart = par.tStart;
          end
          if isempty(par.tEnd)
-            self.tEnd = max( max(cellfun(@(x) max(x(:)),eventTimes)) , self.tStart );
+            self.tEnd = max([max(cellfun(@(x) max(x(:)),eventTimes))  self.tStart]);
          else
             self.tEnd = par.tEnd;
          end
@@ -151,9 +144,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
             self.offset = self.checkOffset(par.offset,size(par.offset,1));
          end         
 
-         % Create labels
          self.labels = par.labels;
-
          self.quality = par.quality;
 
          % Store original window and offset for resetting
