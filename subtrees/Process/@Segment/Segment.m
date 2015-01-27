@@ -38,9 +38,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          p.KeepUnmatched= false;
          p.FunctionName = 'Segment constructor';
          p.addParamValue('info',containers.Map('KeyType','char','ValueType','any'));
-         p.addParamValue('PointProcess',[],@(x) iscell(x) || all(isa(x,'PointProcess')) );
-         p.addParamValue('SampledProcess',[],@(x) iscell(x) || all(isa(x,'SampledProcess')));
-         p.addParamValue('EventProcess',[],@(x) iscell(x) || all(isa(x,'EventProcess')));
+         p.addParamValue('process',[],@(x) iscell(x) || all(isa(x,'Process')) );
          p.addParamValue('labels',{},@(x) iscell(x) || ischar(x));
 %          p.addParamValue('window',[],@isnumeric);
 %          p.addParamValue('offset',0,@isnumeric);
@@ -48,42 +46,51 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
 %          p.addParamValue('tEnd',[],@isnumeric);
          p.parse(varargin{:});
          par = p.Results;
-keyboard
+
          self.info = par.info;
+         
          self.processes = {};
-         
-         validProcess = {'PointProcess' 'SampledProcess' 'EventProcess'};
-         for i = 1:numel(validProcess)
-            if ~isempty(par.(validProcess{i}))
-               if iscell(par.(validProcess{i}))
-                  self.processes = cat(2,self.processes,par.(validProcess{i}));
-               else
-                  self.processes = cat(2,self.processes,{par.(validProcess{i})});
-               end
-            end
-         end
-         
-         if ~isempty(par.PointProcess)
-            if iscell(par.PointProcess)
-               self.processes = cat(2,self.processes,par.PointProcess);
+         if ~isempty(par.process)
+            if iscell(par.process)
+               self.processes = cat(2,self.processes,par.process);
             else
-               self.processes = cat(2,self.processes,{par.PointProcess});
+               self.processes = cat(2,self.processes,{par.process});
             end
          end
-         if ~isempty(par.SampledProcess)
-            if iscell(p.Results.SampledProcess)
-               self.processes = cat(2,self.processes,par.SampledProcess);
-            else
-               self.processes = cat(2,self.processes,{par.SampledProcess});
-            end
-         end
-         if ~isempty(par.EventProcess)
-            if iscell(par.EventProcess)
-               self.processes = cat(2,self.processes,par.EventProcess);
-            else
-               self.processes = cat(2,self.processes,{par.EventProcess});
-            end
-         end
+keyboard
+%          self.processes = {};
+%          validProcess = {'PointProcess' 'SampledProcess' 'EventProcess'};
+%          for i = 1:numel(validProcess)
+%             if ~isempty(par.(validProcess{i}))
+%                if iscell(par.(validProcess{i}))
+%                   self.processes = cat(2,self.processes,par.(validProcess{i}));
+%                else
+%                   self.processes = cat(2,self.processes,{par.(validProcess{i})});
+%                end
+%             end
+%          end
+%          
+%          if ~isempty(par.PointProcess)
+%             if iscell(par.PointProcess)
+%                self.processes = cat(2,self.processes,par.PointProcess);
+%             else
+%                self.processes = cat(2,self.processes,{par.PointProcess});
+%             end
+%          end
+%          if ~isempty(par.SampledProcess)
+%             if iscell(p.Results.SampledProcess)
+%                self.processes = cat(2,self.processes,par.SampledProcess);
+%             else
+%                self.processes = cat(2,self.processes,{par.SampledProcess});
+%             end
+%          end
+%          if ~isempty(par.EventProcess)
+%             if iscell(par.EventProcess)
+%                self.processes = cat(2,self.processes,par.EventProcess);
+%             else
+%                self.processes = cat(2,self.processes,{par.EventProcess});
+%             end
+%          end
          
          % Create labels
          self.labels = p.Results.labels;
