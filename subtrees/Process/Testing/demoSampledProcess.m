@@ -1,18 +1,25 @@
-
+%% Scalar SampledProcess
 x = repmat(cos(2*pi*(0:.001:1-.001))',1,3);
 s = SampledProcess('values',x,'Fs',1000,'tStart',0);
+plot(s);
 
+%% Scalar SampledProcess with multiple signals
+clear
 % signals sampled at same Fs, tStart, numel
 dt = 0.00001;
 x(:,1) = cos(2*pi*(0:dt:(1-dt)))';
 x(:,2) = cos(2*pi*(0:dt:(1-dt))+pi/2)';
 x(:,3) = cos(2*pi*(0:dt:(1-dt))+pi)';
 s = SampledProcess('values',x,'Fs',1/dt,'tStart',0);
+plot(s);
 
+%% Vector SampledProcess
+clear
 x = cos(2*pi*(0:.001:1-.001))';
 s(1) = SampledProcess('values',x,'Fs',1000,'tStart',0);
 x = cos(2*pi*(0:.001:.5-.001)+pi/2)';
 s(2) = SampledProcess('values',x,'Fs',1000,'tStart',0);
+plot(s);
 
 %% ALIGNMENT
 Fs = 1;
