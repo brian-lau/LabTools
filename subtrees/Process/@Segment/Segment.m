@@ -150,28 +150,21 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       end
       
       function set.labels(self,labels)
-         % FIXME, prevent clashes with attribute names
-         % FIXME, should check that labels are unique
          n = numel(self.processes);
          if isempty(labels)
-            for i = 1:n
-               labels{1,i} = ['pid' num2str(i)];
-            end
-            self.labels = labels;
+            self.labels = arrayfun(@(x) ['pid' num2str(x)],1:n,'uni',0);
          elseif iscell(labels)
-            if numel(labels) == n
-               if all(cellfun(@isstr,labels))
-                  self.labels = labels;
-               else
-                  error('bad label');
-               end
-            else
-               error('mismatch');
-            end
+            assert(all(cellfun(@ischar,labels)),'Segment:labels:InputType',...
+               'Labels must be strings');
+            assert(numel(labels)==numel(unique(labels)),'Segment:labels:InputType',...
+               'Labels must be unique');
+            assert(numel(labels)==n,'Segment:labels:InputFormat',...
+               '# labels does not match # of processes');
+            self.labels = labels;
          elseif (n==1) && ischar(labels)
             self.labels = {labels};
          else
-            error('bad label');
+            error('Segment:labels:InputType','Incompatible label type');
          end
       end
       
