@@ -5,7 +5,7 @@ function self = sync(self,event,varargin)
 p = inputParser;
 p.KeepUnmatched= false;
 p.FunctionName = 'SampledProcess sync';
-p.addRequired('event',@(x) isnumeric(x));
+p.addRequired('event',@(x) isnumeric(x) || isa(x,'EventProcess') || isa(x,'metadata.Event'));
 p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
 p.addOptional('commonTime',true,@(x) islogical(x));
 p.addOptional('interpMethod','linear',@(x) ischar(x));
