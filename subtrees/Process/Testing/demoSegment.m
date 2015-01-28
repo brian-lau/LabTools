@@ -58,3 +58,25 @@ proc{2}{1}
 proc = data.extract('pointprocess','type')
 proc{1}{1}
 proc{2}{1}
+
+
+%%
+clear
+% signals sampled at same Fs, different tStart
+dt = 0.00001;
+x = cos(2*pi*(0:dt:(1-dt)))';
+s(1) = SampledProcess('values',x,'Fs',1/dt,'tStart',0);
+x = cos(2*pi*(-1:dt:(1-dt))+pi/2)';
+s(2) = SampledProcess('values',x,'Fs',1/dt,'tStart',-1);
+x = cos(2*pi*(-2:dt:(1-dt))+pi)';
+s(3) = SampledProcess('values',x,'Fs',1/dt,'tStart',-2);
+plot(s);
+
+S = Segment('process',mat2cell(s,1,[1 1 1]));
+
+window = [-2 2];
+offset = [0.5 .25 1];
+sync(S,offset,'window',window);
+
+sync(s,offset,'window',window);
+plot(s);

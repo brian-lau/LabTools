@@ -9,7 +9,7 @@ p.addRequired('event',@(x) isnumeric(x));
 p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
 p.addOptional('commonTime',true,@(x) islogical(x));
 p.addOptional('interpMethod','linear',@(x) ischar(x));
-%p.addParamValue('resample',[]);
+p.addParamValue('resample',[],@(x) isscalar(x));
 p.parse(event,varargin{:});
 
 if numel(event) == 1
@@ -26,6 +26,7 @@ if isempty(p.Results.window)
    temp = bsxfun(@minus,temp,event(:));
    window = [min(temp(:,1)) max(temp(:,2))];
    window = self.checkWindow(window,size(window,1));
+   clear temp;
 else
    window = self.checkWindow(p.Results.window,size(p.Results.window,1));
 end
@@ -42,9 +43,10 @@ self.setOffset(-event);
 
 [times,values] = arrayfun(@(x) deal(x.times{1},x.values{1}),self,'uni',false);
 
-if isequal(times{:})
+if ~isempty(p.Results.resample)
+   % isequal(times{:})
    % Resample here if requested
-elseif p.Results.commonTime && isequal(self.Fs)
+elseif p.Results.commonTime && (numel(unique([self.Fs]))==1)
    % Interpolate to common sampling grid defined by window
    n = max(cellfun('prodofsize',times));
    dt = 1/self(1).Fs;
@@ -52,7 +54,7 @@ elseif p.Results.commonTime && isequal(self.Fs)
       n = n + 1;
    end
    t = SampledProcess.tvec(origWindow(1),dt,n);
-      
+
    for i = 1:numel(values)
       temp(:,i) = interp1(times{i},values{i},t,p.Results.interpMethod);
       % Replace times & values in SampledProcess
