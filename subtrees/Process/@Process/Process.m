@@ -28,6 +28,8 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Process < hgsetget & ma
    properties
       labels
       quality
+      %timesLabel = 'Time'
+      %valuesLabel = ''
    end
    % Window-dependent, but only calculated on window change
    % http://blogs.mathworks.com/loren/2012/03/26/considering-performance-in-object-oriented-matlab-code/
