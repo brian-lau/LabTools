@@ -1,7 +1,9 @@
 % Class for collecting Sampled, Point and EventProcesses with common start
 % and end time.
-% o Probably should place tStart/tEnd
-% o must check for common start and end times!
+% x Probably should place tStart/tEnd
+% x must check for common start and end times!
+%   tStart and tEnd are fixed across processes, which could end up with
+%   problems of NaN-padding...
 
 % o methods for 
 %   o adding processes
@@ -39,9 +41,19 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    methods
       %% Constructor
       function self = Segment(varargin)
-         % TODO
-         % if all inputs are of type PointProcess or SampledProcess,
-         % cat and add (no need to pass in paramvalue)
+         if nargin == 0
+            return;
+         end
+
+         if (nargin==1) && ~isstruct(varargin{1})
+            processes = varargin{1};
+            assert(isa(processes,'Process') || iscell(processes),...
+               'Segment:Constructor:InputFormat',...
+               ['Single inputs be a Process'...
+               ', or cell array of Processes.']);
+            varargin{1} = 'process';
+            varargin{2} = processes;
+         end
          
          p = inputParser;
          p.KeepUnmatched= false;
