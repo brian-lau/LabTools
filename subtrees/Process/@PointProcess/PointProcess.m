@@ -102,7 +102,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
                         ~(isa(self,'EventProcess')&&(numel(values)==2)) && ...
                         (numel(values) == numel(eventTimes{1}))
                      values = {values(tInd{1})'};
-                  elseif (numel(values) == numel(eventTimes{1}))
+                  elseif (numel(values) == size(eventTimes{1},1))
                      values = {values(tInd{1})};
                   else
                      error('incorrect number of values');
