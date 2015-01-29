@@ -1,5 +1,18 @@
 function self = sync(self,event,varargin)
 
+% Sync to event?
+% p = inputParser;
+% p.KeepUnmatched= false;
+% p.FunctionName = 'PointProcess sync';
+% p.addRequired('event',@(x) isnumeric(x) || isa(x,'metadata.Event'));
+% p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
+% p.parse(event,varargin{:});
+% filter eventProcess?
+
+% in the case of vector Segment, metadata.Event
+% filter for Event, take start or end time as event
+% handle case of missing event?
+% 
 % Segment is scalar
 % same event for each process
 % different event for each process (where each process is scalar)

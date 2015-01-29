@@ -18,3 +18,7 @@ for i = 1:numel(self)
       proc{i} = self(i).processes(ind);
    end
 end
+
+if numel(proc) == 1
+   proc = proc{1};
+end
