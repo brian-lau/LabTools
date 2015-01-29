@@ -7,10 +7,10 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
       tStart % Start time of process
       tEnd   % End time of process
    end
-   properties(SetAccess = private)
+   properties(SetAccess = protected)
       Fs % Sampling frequency
    end
-   properties(SetAccess = private, Dependent = true, Transient = true)
+   properties(SetAccess = protected, Dependent = true, Transient = true)
       dim
       dt
    end   

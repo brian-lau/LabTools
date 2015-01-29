@@ -10,7 +10,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
       tEnd   % End time of process
    end
    % These dependent properties all apply the window property
-   properties(SetAccess = private, Dependent = true, Transient = true)
+   properties(SetAccess = protected, Dependent = true, Transient = true)
       count  % # of events in window
    end
    
