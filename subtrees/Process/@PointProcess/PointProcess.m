@@ -206,7 +206,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
       self = setInclusiveWindow(self)
       self = reset(self)
       obj = chop(self,shiftToWindow)
-      [values,times] = sync(self,event,varargin)
+      self = sync(self,event,varargin)
       [s,labels] = extract(self,reqLabels)
       %%
       output = apply(self,fun,nOpt,varargin)
