@@ -5,7 +5,7 @@ function self = sync(self,event,varargin)
 p = inputParser;
 p.KeepUnmatched= false;
 p.FunctionName = 'SampledProcess sync';
-p.addRequired('event',@(x) isnumeric(x) || isa(x,'EventProcess') || isa(x,'metadata.Event'));
+p.addRequired('event',@(x) isnumeric(x) || isa(x,'metadata.Event'));
 p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
 p.addOptional('commonTime',true,@(x) islogical(x));
 p.addOptional('interpMethod','linear',@(x) ischar(x));
@@ -17,6 +17,12 @@ if numel(event) == 1
 end
 assert(numel(event)==numel(self),'SampledProcess:sync:InputValue',...
    'numel(event) should match numel(SampledProcess)');
+
+if isa(event,'metadata.Event')
+   offset = [event.tStart]';
+else
+   offset = event(:);
+end
 
 self.setInclusiveWindow;
 
@@ -35,11 +41,11 @@ end
 origWindow = window;
 nObj = numel(self);
 window = repmat(window,nObj,1);
-window = bsxfun(@plus,window,event(:));
+window = bsxfun(@plus,window,offset);
 window = mat2cell(window,ones(nObj,1),2);
 
 self.setWindow(window);
-self.setOffset(-event);
+self.setOffset(-offset);
 
 [times,values] = arrayfun(@(x) deal(x.times{1},x.values{1}),self,'uni',false);
 
