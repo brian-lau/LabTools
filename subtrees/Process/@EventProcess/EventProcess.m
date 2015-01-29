@@ -15,11 +15,16 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
 
          args = p.Unmatched;
          if ~isempty(p.Results.events)
-            %keyboard
-            times = vertcat(p.Results.events.time);
-            times = [times , times+vertcat(p.Results.events.duration)];
-            args.times = times;
-            args.values = p.Results.events;
+            if all(isa(p.Results.events,'metadata.Event'))
+               times = vertcat(p.Results.events.time);
+               args.times = times;
+               args.values = p.Results.events(:);               
+            else
+               times = vertcat(p.Results.events.time);
+               times = [times , times+vertcat(p.Results.events.duration)];
+               args.times = times;
+               args.values = p.Results.events;
+            end
          end
          self = self@PointProcess(args);
          
