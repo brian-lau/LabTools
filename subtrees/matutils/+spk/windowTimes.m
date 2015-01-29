@@ -218,7 +218,7 @@ if iscell(p.Results.window)
 else
    if isempty(p.Results.window)
       % NEED TO TEST, HACK looks like cases where there are no events
-      temp = minmaxCell(eventTimes(:,p.Results.colIndex));
+      temp = cell.minmax(eventTimes(:,p.Results.colIndex));
       if isempty(temp) %&& isempty(eventTimes)
          winTimes = {[]};
          adjWindow = [];
@@ -299,7 +299,7 @@ end
 
 if nargout > 1
    if isempty(p.Results.window)
-      temp = minmaxCell(winTimes);
+      temp = cell.minmax(winTimes);
       adjWindow = repmat(temp,nRows,1);
    else
       if p.Results.windowThenOffset
