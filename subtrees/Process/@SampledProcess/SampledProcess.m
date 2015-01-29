@@ -103,7 +103,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
          if ~isempty(self.tEnd)
             if tStart > self.tEnd
                error('SampledProcess:tStart:InputValue',...
-                  'tStart must be less than tStart.');
+                  'tStart must be less than tEnd.');
             elseif tStart == self.tEnd
                self.tEnd = self.tEnd + eps(self.tEnd);
             end
