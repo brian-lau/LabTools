@@ -35,5 +35,5 @@ for i = 1:nWindow
    for j = 1:numel(temp)
       args{j} = repmat(temp(j),1,self.count(i));
    end
-   output{i,1} = cellfun(fun,self.values{i},args{:});
+   output{i,1} = arrayfun(fun,self.values{i},args{:});
 end
