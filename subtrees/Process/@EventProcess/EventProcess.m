@@ -52,12 +52,37 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
                self.times,{self.window},'uni',0);
          end
       end
+
+      function events = find(self,varargin)
+         p = inputParser;
+         p.KeepUnmatched= false;
+         p.FunctionName = 'EventProcess find';
+         p.addParamValue('name',[],@ischar);
+         p.addParamValue('type',[],@ischar);
+         p.parse(varargin{:});
+         p = p.Results;
+
+         query = linq(self.values{1});
+         
+         if ~isempty(p.name) && (query.count>0)
+            query.where(@(x) strcmp(x.name,p.name)).select(@(x) x);
+         end
+         if ~isempty(p.type) && (query.count>0)
+            query.ofType(p.type).select(@(x) x);
+         end
+         
+         if query.count > 0
+            events = query.toArray();
+         else
+            events = [];
+         end
+      end
       
 %       function plot(self)
 %          figure(2);
 %          plot(randn(10,1),randn(10,1),'ro');
-%       end
-      
+%       endE
+
    end
 end
 
