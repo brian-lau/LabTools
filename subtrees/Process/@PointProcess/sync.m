@@ -10,8 +10,8 @@ p.parse(event,varargin{:});
 if numel(event) == 1
    event = repmat(event,size(self));
 end
-assert(numel(event)==numel(self),'SampledProcess:sync:InputValue',...
-   'numel(event) should match numel(SampledProcess)');
+assert(numel(event)==numel(self),'PointProcess:sync:InputValue',...
+   'numel(event) should match numel(PointProcess)');
 
 if isa(event,'metadata.Event')
    offset = [event.tStart]';

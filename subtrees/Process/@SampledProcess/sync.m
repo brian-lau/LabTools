@@ -1,5 +1,6 @@
 % should allow resampling
 % should handle different Fs for object array
+% multiple events? EventProcess?
 function self = sync(self,event,varargin)
 
 p = inputParser;

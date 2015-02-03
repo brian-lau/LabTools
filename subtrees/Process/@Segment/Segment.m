@@ -183,5 +183,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       self = sync(self,event,varargin)
       proc = extract(self,request,flag)
       self = reset(self)
+      
+      %plot
    end
 end

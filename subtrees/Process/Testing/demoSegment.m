@@ -114,8 +114,8 @@ plot(s);
 S = Segment({PointProcess([1 4 4.5 5 5.5 6 10]) SampledProcess([0 0 0 0 0 1 0 0 0 0 0])});
 S.sync(5)
 
-e(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1);
-e(2) = metadata.event.Response('tStart',5,'tEnd',6);
+e(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1,'name','stimulus');
+e(2) = metadata.event.Response('tStart',5,'tEnd',6,'name','response');
 
 S = Segment({PointProcess([1 4 4.5 5 5.5 6 10]) ...
              SampledProcess([0 0 0 0 0 1 0 0 0 0 0]) ...
