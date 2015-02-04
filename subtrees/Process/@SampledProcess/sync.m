@@ -4,7 +4,7 @@
 function self = sync(self,event,varargin)
 
 p = inputParser;
-p.KeepUnmatched= false;
+p.KeepUnmatched= true;
 p.FunctionName = 'SampledProcess sync';
 p.addRequired('event',@(x) isnumeric(x) || isa(x,'metadata.Event'));
 p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
@@ -30,7 +30,7 @@ self.setInclusiveWindow;
 if isempty(p.Results.window)
    % find window that includes all data
    temp = vertcat(self.window);
-   temp = bsxfun(@minus,temp,event(:));
+   temp = bsxfun(@minus,temp,offset);
    window = [min(temp(:,1)) max(temp(:,2))];
    window = self.checkWindow(window,size(window,1));
    clear temp;
