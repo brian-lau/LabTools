@@ -19,9 +19,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    end
    properties(SetAccess = private, Dependent = true)
       type
-            
-      sameWindow
-      sameOffset
    end
    properties
       tStart
@@ -111,28 +108,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          list = cellfun(@(x) class(x),self.processes,'uni',0);
       end
       
-      function bool = get.sameWindow(self)
-         % FIXME: this assumes each segment has single window
-         window = cellfun(@(x) x.window,self.processes,'uni',0);
-         window = unique(vertcat(window{:}),'rows');
-         if size(window,1) == 1
-            bool = true;
-         else
-            bool = false;
-         end
-      end
-      
-      function bool = get.sameOffset(self)
-         % FIXME: this assumes each segment has single offset
-         offset = cellfun(@(x) x.offset,self.processes,'uni',0);
-         offset = unique(vertcat(offset{:}),'rows');
-         if size(offset,1) == 1
-            bool = true;
-         else
-            bool = false;
-         end
-      end
-      
       function set.tStart(self,tStart)
          for i = 1:numel(self.processes)
             self.processes{i}.tStart = tStart;
@@ -183,6 +158,8 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       self = sync(self,event,varargin)
       proc = extract(self,request,flag)
       self = reset(self)
+      
+      % add process
       
       %plot
    end
