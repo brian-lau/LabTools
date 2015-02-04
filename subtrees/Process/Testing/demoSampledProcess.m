@@ -95,7 +95,7 @@ clear
 % signals sampled at same Fs, different tStart
 dt = 0.00001;
 x = cos(2*pi*(0:dt:(1-dt)))';
-s(1) = SampledProcess('values',x,'Fs',1/dt,'tStart',0);
+s(1) = SampledProcess('values',[x,0.5*x],'Fs',1/dt,'tStart',0);
 x = cos(2*pi*(-1:dt:(1-dt))+pi/2)';
 s(2) = SampledProcess('values',x,'Fs',1/dt,'tStart',-1);
 x = cos(2*pi*(-2:dt:(1-dt))+pi)';
@@ -115,7 +115,7 @@ t = t0 + (0:dt:(dt*(n-1)))';
 w = cos(2*pi*t + pi)';
 
 % maximum absolute difference where signals have support
-arrayfun(@(x) max(abs(w - x.values{1}')),s)
+arrayfun(@(x) max(abs(w - x.values{1}(:,1)')),s)
 
 %%
 clear

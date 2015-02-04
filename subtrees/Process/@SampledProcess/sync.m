@@ -48,6 +48,7 @@ window = mat2cell(window,ones(nObj,1),2);
 self.setWindow(window);
 self.setOffset(-offset);
 
+% TODO: 
 [times,values] = arrayfun(@(x) deal(x.times{1},x.values{1}),self,'uni',false);
 
 if ~isempty(p.Results.resample)
@@ -63,10 +64,13 @@ elseif p.Results.commonTime && (numel(unique([self.Fs]))==1)
    t = SampledProcess.tvec(origWindow(1),dt,n);
 
    for i = 1:numel(values)
-      temp(:,i) = interp1(times{i},values{i},t,p.Results.interpMethod);
+      temp = zeros(length(times{i}),size(values{i},2));
+      for j = 1:size(values{i},2)
+         temp(:,j) = interp1(times{i},values{i}(:,j),t,p.Results.interpMethod);
+      end
       % Replace times & values in SampledProcess
       self(i).times = {t};
-      self(i).values = {temp(:,i)};
+      self(i).values = {temp};
    end
 else
    % Different sampling frequencies
