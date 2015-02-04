@@ -13,13 +13,15 @@ if isa(x,'PointProcess') && isa(y,'PointProcess')
    % reassignin to the leading variable?
 elseif isa(x,'PointProcess') && isnumeric(y)
    if numel(x) > 1
-      [x.offset] = deal(list(y));
+      y = num2cell(y);
+      [x.offset] = y{:};
    else
       [x.offset] = deal(y);
    end
 elseif isa(y,'PointProcess') && isnumeric(x)
    if numel(y) > 1
-      [y.offset] = deal(list(x));
+      x = num2cell(x);
+      [y.offset] = x{:};
    else
       [y.offset] = deal(x);
    end
