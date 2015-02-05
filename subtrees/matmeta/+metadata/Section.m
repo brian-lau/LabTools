@@ -1,5 +1,5 @@
 % Section
-classdef Section < hgsetget & matlab.mixin.Heterogeneous
+classdef Section < hgsetget & matlab.mixin.Heterogeneous & matlab.mixin.Copyable
    properties
       type
    end
