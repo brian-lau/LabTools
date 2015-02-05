@@ -116,7 +116,14 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          
          % If we have event times
          self.times_ = eventTimes;
-         self.values_ = values;
+         if all(cellfun(@(x) isa(x,'handle'),values))
+            m = cell.flatten(cellfun(@(x) methods(x),values,'uni',0));
+            assert(any(strcmp(m,'copy')),'PointProcess:constructor:InputFormat',...
+               'handle arrays must have a copy method');
+            self.values_ = cellfun(@(x) copy(x),values,'uni',0);
+         else
+            self.values_ = values;
+         end
 
          % Define the start and end times of the process
          if isempty(par.tStart)

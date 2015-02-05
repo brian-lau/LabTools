@@ -15,7 +15,11 @@ if isempty(times)
 end
 
 nTimes = size(times,2);
-values = self.values_;
+if all(cellfun(@(x) isa(x,'handle'),self.values_))
+   values = cellfun(@(x) copy(x),self.values_,'uni',0);
+else
+   values = self.values_;
+end
 window = self.window;
 windowedTimes = cell(nWindow,nTimes);
 windowedValues = cell(nWindow,nTimes);
