@@ -13,14 +13,15 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    properties
       info@containers.Map % Information about segment
    end
-   properties
-      labels
+   properties(SetAccess = private)
       processes
+      validSync
    end
    properties(SetAccess = private, Dependent = true)
       type
    end
    properties
+      labels
       tStart
       tEnd
       window
@@ -33,7 +34,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    properties(SetAccess = protected)
       version = '0.0.0'
    end
-   
    
    methods
       %% Constructor

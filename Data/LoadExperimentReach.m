@@ -282,7 +282,7 @@ end
 if abs(numel(t1)-numel(t2)) > 2
    error('Problem aligning files!');
 end
-keyboard
+
 % Pack into Segment
 for i = 1:numel(s)%min(numel(s),numel(info))
    temp = containers.Map('trial',meta_trial(i));
@@ -290,7 +290,7 @@ for i = 1:numel(s)%min(numel(s),numel(info))
       meta_feedback(i) meta_fixTouch(i) meta_tarTouch(i)];
    ind = isnan([temp2.duration]);
    events = EventProcess('events',temp2(~ind));
-   data(i) = Segment('info',temp,'process',{s(i) events});
+   data(i) = Segment('info',temp,'process',{s(i) events},'labels',{'lfp' 'events'});
 end
 
 

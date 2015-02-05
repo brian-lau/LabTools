@@ -23,7 +23,7 @@ addParamValue(p,'xlog',false,@islogical);
 addParamValue(p,'ylog',false,@islogical);
 
 % Saving
-addParamValue(p,'saveplot',true,@islogical);
+addParamValue(p,'saveplot',false,@islogical);
 addParamValue(p,'overwrite',false,@islogical);
 
 parse(p,varargin{:});
