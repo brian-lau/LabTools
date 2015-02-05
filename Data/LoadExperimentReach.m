@@ -17,6 +17,24 @@
 %    .select(@(x) x.values{1}).toArray();
 function [data] = LoadExperimentReach(matfile,lfpfile)
 
+if nargin < 2
+   if isempty(str2num(matfile(end)))
+      d = dir([matfile '*.Poly5']);
+      lfpfile = {d.name};
+      d = dir([matfile '*.mat']);
+      matfile = {d.name};
+      if numel(matfile) == numel(lfpfile)
+         data = [];
+         for i = 1:numel(matfile)
+            temp = LoadExperimentReach(matfile{i},lfpfile{i});
+            data = cat(2,data,temp);
+         end
+      end
+   else
+      
+   end
+   return;
+end
 
 %% Load the topsData
 log = topsDataLog.theDataLog;
