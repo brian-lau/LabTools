@@ -1,6 +1,6 @@
+
 function [self,validSync] = sync(self,event,varargin)
 
-% Sync to event?
 p = inputParser;
 p.KeepUnmatched= true;
 p.FunctionName = 'Segment sync';
@@ -37,6 +37,7 @@ end
 % different event for each process (where each process could be vector)
 %   sync all to same event
 
+validSync = zeros(numel(self),1);
 for i = 1:numel(self)
    if isempty(p.Results.event)
       % Pull event out of EventProcess
@@ -61,7 +62,11 @@ for i = 1:numel(self)
       else
          cellfun(@(x) x.sync(event,syncPars),self(i).processes,'uni',0);
       end
+      validSync(i) = 1;
+   elseif numel(event) > 1
+      % pick according to policy
+      validSync = numel(event);
    else
-      error('incorrect number of events');
+      %error('incorrect number of events');
    end
 end

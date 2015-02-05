@@ -64,10 +64,7 @@ elseif p.Results.commonTime && (numel(unique([self.Fs]))==1)
    t = SampledProcess.tvec(origWindow(1),dt,n);
 
    for i = 1:numel(values)
-      temp = zeros(length(times{i}),size(values{i},2));
-      for j = 1:size(values{i},2)
-         temp(:,j) = interp1(times{i},values{i}(:,j),t,p.Results.interpMethod);
-      end
+      temp = interp1(times{i},values{i},t,p.Results.interpMethod);
       % Replace times & values in SampledProcess
       self(i).times = {t};
       self(i).values = {temp};
