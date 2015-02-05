@@ -116,25 +116,25 @@ e(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1,'name','fix');
 e(2) = metadata.event.Response('tStart',5,'tEnd',6,'name','button');
 e(3) = metadata.event.Stimulus('tStart',1.5,'tEnd',3,'name','cue');
 
-S = Segment({PointProcess([1 4 4.5 5 5.5 6 10]) ...
+S = Segment('process',{PointProcess([1 4 4.5 5 5.5 6 10]) ...
              SampledProcess([0 0 0 0 0 1 0 0 0 0 0]) ...
-             EventProcess('events',e)});
+             EventProcess('events',e)},'labels',{'point' 'sampled' 'event'});
 
 e(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1,'name','fix');
 e(2) = metadata.event.Response('tStart',5,'tEnd',6,'name','button');
 e(3) = metadata.event.Stimulus('tStart',1,'tEnd',3,'name','cue');
           
-S(2) = Segment({PointProcess([1 4 4.5 5 5.5 6 10]) ...
+S(2) = Segment('process',{PointProcess([1 4 4.5 5 5.5 6 10]) ...
              SampledProcess([0 0 0 0 0 1 0 0 0 0 0]) ...
-             EventProcess('events',e)});
+             EventProcess('events',e)},'labels',{'point' 'sampled' 'event'});
 
 e(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1,'name','fix');
 e(2) = metadata.event.Response('tStart',5,'tEnd',6,'name','button');
 e(3) = metadata.event.Stimulus('tStart',1,'tEnd',3,'name','cue2');
         
-S(3) = Segment({PointProcess([1 4 4.5 5 5.5 6 10]) ...
+S(3) = Segment('process',{PointProcess([1 4 4.5 5 5.5 6 10]) ...
              SampledProcess([0 0 0 0 0 1 0 0 0 0 0]) ...
-             EventProcess('events',e)});
+             EventProcess('events',e)},'labels',{'point' 'sampled' 'event'});
 
 S.sync('name','cue','window',[-1 5])
 

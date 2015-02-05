@@ -97,9 +97,9 @@ dt = 0.00001;
 x = cos(2*pi*(0:dt:(1-dt)))';
 s(1) = SampledProcess('values',[x,0.5*x],'Fs',1/dt,'tStart',0);
 x = cos(2*pi*(-1:dt:(1-dt))+pi/2)';
-s(2) = SampledProcess('values',x,'Fs',1/dt,'tStart',-1);
+s(2) = SampledProcess('values',[x,0.5*x],'Fs',1/dt,'tStart',-1);
 x = cos(2*pi*(-2:dt:(1-dt))+pi)';
-s(3) = SampledProcess('values',x,'Fs',1/dt,'tStart',-2);
+s(3) = SampledProcess('values',[x,0.5*x],'Fs',1/dt,'tStart',-2);
 plot(s);
 
 % synchronize to trough of sinusoid
