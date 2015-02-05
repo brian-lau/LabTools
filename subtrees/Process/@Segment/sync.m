@@ -9,7 +9,7 @@ p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2))
 p.addOptional('eventProcessName',[],@ischar);
 p.parse(event,varargin{:});
 
-validSyncParams = {'commonTime' 'interpMethod' 'resample'};
+validSyncParams = {'commonTime' 'interpMethod' 'resample' 'eventStart'};
 eventPars = p.Unmatched;
 
 if ~isempty(p.Results.window)
@@ -37,7 +37,6 @@ end
 % different event for each process (where each process could be vector)
 %   sync all to same event
 
-%validSync = zeros(numel(self),1);
 for i = 1:numel(self)
    if isempty(p.Results.event)
       % Pull event out of EventProcess

@@ -5,6 +5,7 @@ p.KeepUnmatched= true;
 p.FunctionName = 'PointProcess sync';
 p.addRequired('event',@(x) isnumeric(x) || isa(x,'metadata.Event'));
 p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
+p.addOptional('eventStart',true,@(x) isscalar(x) && islogical(x)); 
 p.parse(event,varargin{:});
 
 if numel(event) == 1
@@ -14,7 +15,11 @@ assert(numel(event)==numel(self),'PointProcess:sync:InputValue',...
    'numel(event) should match numel(PointProcess)');
 
 if isa(event,'metadata.Event')
-   offset = [event.tStart]';
+   if p.Results.eventStart
+      offset = [event.tStart]';
+   else
+      offset = [event.tEnd]';
+   end
 else
    offset = event(:);
 end

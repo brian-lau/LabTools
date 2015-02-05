@@ -8,6 +8,7 @@ p.KeepUnmatched= true;
 p.FunctionName = 'SampledProcess sync';
 p.addRequired('event',@(x) isnumeric(x) || isa(x,'metadata.Event'));
 p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
+p.addOptional('eventStart',true,@(x) isscalar(x) && islogical(x)); 
 p.addOptional('commonTime',true,@(x) islogical(x));
 p.addOptional('interpMethod','linear',@(x) ischar(x));
 p.addParamValue('resample',[],@(x) isscalar(x));
@@ -20,7 +21,11 @@ assert(numel(event)==numel(self),'SampledProcess:sync:InputValue',...
    'numel(event) should match numel(SampledProcess)');
 
 if isa(event,'metadata.Event')
-   offset = [event.tStart]';
+   if p.Results.eventStart
+      offset = [event.tStart]';
+   else
+      offset = [event.tEnd]';
+   end
 else
    offset = event(:);
 end
