@@ -254,10 +254,10 @@ for i = 1:numel(trialInfo)
       if meta_trial(i).isRepeat
          tOn = tOn(end);
       end
-      meta_fixTouch(i) = metadata.event.Response('name','fix','modality','touch',...
+      meta_fixTouch(i) = metadata.event.Response('name','fixTouch','modality','touch',...
          'tStart',tOn,'tEnd',tOff);
    else
-      meta_fixTouch(i) = metadata.event.Response('name','fix','modality','touch');
+      meta_fixTouch(i) = metadata.event.Response('name','fixTouch','modality','touch');
    end
     
    %% target touch
@@ -267,10 +267,10 @@ for i = 1:numel(trialInfo)
       if meta_trial(i).isRepeat
          tOn = tOn(end);
       end
-      meta_tarTouch(i) = metadata.event.Response('name','target','modality','touch',...
+      meta_tarTouch(i) = metadata.event.Response('name','targetTouch','modality','touch',...
          'tStart',tOn,'tEnd',tOff);
    else
-      meta_tarTouch(i) = metadata.event.Response('name','target','modality','touch');
+      meta_tarTouch(i) = metadata.event.Response('name','targetTouch','modality','touch');
    end
    
 end
