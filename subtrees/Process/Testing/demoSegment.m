@@ -138,3 +138,45 @@ S(3) = Segment('process',{PointProcess([1 4 4.5 5 5.5 6 10]) ...
 
 S.sync('name','cue','window',[-1 5])
 
+%%
+clear
+ntrials = 200;
+
+for i = 1:ntrials
+   
+   t1 = rand;
+   t2 = rand;
+   
+   e(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1,'name','fix');
+   e(2) = metadata.event.Stimulus('tStart',2+t1,'tEnd',3+t1,'name','cue');
+   e(3) = metadata.event.Response('tStart',5+t1+t2,'tEnd',6+t1+t2,'name','button');
+
+   dt = 0.0001;
+   t = (0:dt:(10-dt))';
+   y = normpdf(t,2+t1,.25) - normpdf(t,5+t1+t2,.25);
+   
+   data(i) = Segment('process',{SampledProcess('values',y,'Fs',1/dt) EventProcess('events',e)},...
+      'labels',{'lfp' 'events'});
+end
+
+data.sync('name','cue','window',[-2 5]);
+% data.reset
+% data.sync('name','button','window',[-5 2])
+temp = linq(data).select(@(x) x.extract('lfp'))...
+   .select(@(x) x.extract()).toArray;
+a = cat(2,temp.values);
+plot(a)
+
+temp = cell.flatten(data.extract('events'));
+events = cat(1,temp{:});
+% temp = cell.flatten(data.extract('lfp'));
+% lfp = cat(1,temp{:});
+% 
+q = linq();
+tCue = q(events)...
+   .select(@(x) x.find('name','cue').tStart).toArray;
+% tTargetOn = q(events)...
+%    .select(@(x) x.find('name','target').tStart).toArray;
+% tCueOn = q(events)...
+%    .select(@(x) x.find('name','cue').tStart).toArray;
+

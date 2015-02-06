@@ -50,6 +50,8 @@ for i = 1:numel(self)
       else
          temp = extract(self(i),p.Results.eventProcessName,'label');
       end
+      % FIXME, wrap in try/catch in case nothing matches?, default empty in
+      % find
       event = temp.find(eventPars);
    else
       event = p.Results.event;
