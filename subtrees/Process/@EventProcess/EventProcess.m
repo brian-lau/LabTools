@@ -6,7 +6,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
       duration  % # of events in window
       isValidEvent
    end
-   
+   properties
+      nullEvent = metadata.Event('tStart',NaN,'tEnd',NaN)
+   end
    methods
       %% Constructor
       function self = EventProcess(varargin)
@@ -68,9 +70,13 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
          for i = 1:numel(fn)
             if query.count>0
                if isa(args.(fn{i}),'function_handle')
-                  % This must pr
+                  % This must evaluate to a boolean
                   query.where(args.(fn{i}));
                elseif ischar(args.(fn{i}))
+%                   try
+%                      query.where(@(x) strcmp(x.(fn{i}),args.(fn{i})));
+%                   catch
+%                   end
                   query.where(@(x) isprop(x,fn{i}))...
                        .where(@(x) strcmp(x.(fn{i}),args.(fn{i})));
                else
@@ -83,7 +89,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
          if query.count > 0
             events = query.toArray();
          else
-            events = [];
+            events = self.nullEvent;
          end
       end
       
