@@ -62,7 +62,9 @@ classdef Event < metadata.Section
       end
       
       function set.tStart(self,tStart)
-         if ~isempty(tStart)
+         if isnan(tStart)
+            self.tStart = tStart;
+         elseif ~isempty(tStart)
             assert(isscalar(tStart) && isnumeric(tStart),'Event:tStart:InputFormat',...
                'tStart must be a numeric scalar.');
             if ~isempty(self.tEnd)
@@ -78,6 +80,8 @@ classdef Event < metadata.Section
             if ~isempty(self.tStart)
                self.tEnd = self.tStart;
             end
+         elseif isnan(tEnd)
+            self.tEnd = tEnd;
          else
             assert(isscalar(tEnd) && isnumeric(tEnd),'Event:tEnd:InputFormat',...
                'tEnd must be a numeric scalar.');
