@@ -7,7 +7,7 @@
 
 % o methods for 
 %   o adding processes
-%   o 
+%   o chopping
 % 
 classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & matlab.mixin.Copyable
    properties
