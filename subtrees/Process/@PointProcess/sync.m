@@ -33,7 +33,7 @@ if isempty(p.Results.window)
    window = self.checkWindow(window,size(window,1));
    clear temp;
 else
-   window = self.checkWindow(p.Results.window,size(p.Results.window,1));
+   window = p.Results.window;
 end
 
 % if (size(window,1)>1) && (nObj>1)

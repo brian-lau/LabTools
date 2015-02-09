@@ -38,7 +38,7 @@ if isempty(p.Results.window) % FIXME: not working?
    window = self.checkWindow(window,size(window,1));
    clear temp;
 else
-   window = self.checkWindow(p.Results.window,size(p.Results.window,1));
+   window = p.Results.window;
 end
 
 origWindow = window;
@@ -85,42 +85,3 @@ if p.Results.commonTime
 else
    self.setOffset(-offset);
 end
-
-
-% if p.Results.commonTime && isempty(p.Results.interpMethod)
-%    dt = 1/self(1).Fs; % FIXME, Fs uniformity check
-%    t = SampledProcess.tvec(origWindow(1),dt,diff(origWindow)/dt);
-%    
-%    if size(window,1) > 1
-%       window = bsxfun(@plus,window,offset);
-%       window = num2cell(window,2);
-%    else
-%       window = window + offset;
-%    end
-%    self.setWindow(window);
-%    
-%    offset = nearest(offset,t);
-%    self.setOffset(-offset);
-%    %self.times = {t};
-% % elseif p.Results.commonTime && (numel(unique([self.Fs]))==1)
-% %    % Interpolate to common sampling grid defined by window
-% %    n = max(cellfun('prodofsize',times));
-% %    dt = 1/self(1).Fs;
-% %    while (n*dt) <= (origWindow(2) - origWindow(1))
-% %       n = n + 1;
-% %    end
-% %    t = SampledProcess.tvec(origWindow(1),dt,n);
-% % 
-% %    for i = 1:numel(values)
-% %       temp = interp1(times{i},values{i},t,p.Results.interpMethod);
-% %       % Replace times & values in SampledProcess
-% %       self(i).times = {t};
-% %       self(i).values = {temp};
-% %    end
-% %    
-% %    % TODO, allow much faster round to nearest commonTime, round2vec(offset)
-% else
-%    % Different sampling frequencies
-% 
-%    % TODO allow resampling to common Fs?
-% end
