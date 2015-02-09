@@ -6,7 +6,7 @@ function [val,row,col] = nearest(ref,matrix)
 if isscalar(ref)
    [~,ii] = min(abs(matrix(:)-ref));
 else
-   [~,ii] = min(abs(bsxfun(@minus,matrix(:),ref)));
+   [~,ii] = min(abs(bsxfun(@minus,matrix(:),ref(:)')));
 end
 val = matrix(ii);
 
