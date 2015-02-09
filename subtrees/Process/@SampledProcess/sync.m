@@ -47,7 +47,7 @@ origWindow = window;
 % end
 % 
 % Window at original sample times
-if size(window,1) > 1
+if (size(window,1)>1) || (numel(offset)>1)
    window = bsxfun(@plus,window,offset);
    window = num2cell(window,2);
 else
