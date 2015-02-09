@@ -17,7 +17,7 @@ if n == 1
       error('Process:setOffset:InputFormat',...
          'Offset for a scalar process must be a numeric [nWin x 1] array.');
    end
-   self.offset = self.checkOffset(offset,size(self.window,1));
+   self.offset = offset;
 else
    if isscalar(offset) && isnumeric(offset)
       % single offset or offsets, same for each process

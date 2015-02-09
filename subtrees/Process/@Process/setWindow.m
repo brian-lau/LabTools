@@ -21,7 +21,7 @@ if n == 1
             'Window for a scalar process must be a numeric [nWin x 2] array.');
       end
    end
-   self.window = self.checkWindow(window,size(window,1));
+   self.window = window;
 else
    if isnumeric(window)
       % Single window or windows, same for each process
