@@ -61,7 +61,11 @@ if p.Results.commonTime
       t = SampledProcess.tvec(origWindow(1),dt,diff(origWindow)/dt);
       
       % Shift by event, rounded to nearest sample time
-      offset = nearest(offset,t);
+      if numel(offset) == 1
+         offset = nearest(offset,t+offset);
+      else
+         offset = nearest(offset,bsxfun(@plus,t,offset(:)'));
+      end
       self.setOffset(-offset);
    else
       self.setOffset(-offset);

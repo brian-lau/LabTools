@@ -1,4 +1,5 @@
 %% Scalar SampledProcess
+clear all;
 x = repmat(cos(2*pi*(0:.001:1-.001))',1,3);
 s = SampledProcess('values',x,'Fs',1000,'tStart',0);
 plot(s);
@@ -65,7 +66,7 @@ plot(s);
 
 %% 
 % signals sampled at same Fs, tStart, numel
-clear
+clear all;
 dt = 0.00001;
 x(:,1) = cos(2*pi*(0:dt:(1-dt)))';
 x(:,2) = cos(2*pi*(0:dt:(1-dt))+pi/2)';
