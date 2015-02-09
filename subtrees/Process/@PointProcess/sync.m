@@ -24,7 +24,8 @@ else
    offset = event(:);
 end
 
-self.setInclusiveWindow;
+% WHY???
+%self.setInclusiveWindow;
 
 if isempty(p.Results.window)
    % find window that includes all data
@@ -38,11 +39,10 @@ else
 end
 
 % Window at original sample times, then shift
-%origWindow = window; % don't use this yet, but should be an option?
 nObj = numel(self);
 window = repmat(window,nObj,1);
 window = bsxfun(@plus,window,offset);
-window = mat2cell(window,ones(nObj,1),2);
+window = num2cell(window,2);
 
 self.setWindow(window);
 self.setOffset(-offset);

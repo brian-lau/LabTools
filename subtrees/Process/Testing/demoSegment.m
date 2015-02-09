@@ -142,18 +142,17 @@ S.sync('name','cue','window',[-1 5])
 clear
 ntrials = 200;
 
-for i = 1:ntrials
-   
-   t1 = rand;
-   t2 = rand;
+dt = 0.0001;
+t = (0:dt:(10-dt))';
+for i = 1:ntrials  
+   t1(i) = rand;
+   t2(i) = rand;
    
    e(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1,'name','fix');
-   e(2) = metadata.event.Stimulus('tStart',2+t1,'tEnd',3+t1,'name','cue');
-   e(3) = metadata.event.Response('tStart',5+t1+t2,'tEnd',6+t1+t2,'name','button');
+   e(2) = metadata.event.Stimulus('tStart',2+t1(i),'tEnd',3+t1(i),'name','cue');
+   e(3) = metadata.event.Response('tStart',5+t1(i)+t2(i),'tEnd',6+t1(i)+t2(i),'name','button');
 
-   dt = 0.0001;
-   t = (0:dt:(10-dt))';
-   y = normpdf(t,2+t1,.25) - normpdf(t,5+t1+t2,.25);
+   y = normpdf(t,2+t1(i),.25) - normpdf(t,5+t1(i)+t2(i),.25);
    
    data(i) = Segment('process',{SampledProcess('values',y,'Fs',1/dt) EventProcess('events',e)},...
       'labels',{'lfp' 'events'});
@@ -165,7 +164,7 @@ data.sync('name','cue','window',[-2 5]);
 temp = linq(data).select(@(x) x.extract('lfp'))...
    .select(@(x) x.extract()).toArray;
 a = cat(2,temp.values);
-plot(a)
+plot(temp(1).times,a)
 
 temp = cell.flatten(data.extract('events'));
 events = cat(1,temp{:});

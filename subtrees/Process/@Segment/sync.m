@@ -54,7 +54,8 @@ for i = 1:numel(self)
       % find
       event = temp.find(eventPars);
    else
-      event = p.Results.event;
+      % FIXME, check dimensions for scalar event
+      event = p.Results.event(i);
    end
    
    if numel(event) == 1

@@ -100,11 +100,10 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
 %          figure(2);
 %          plot(randn(10,1),randn(10,1),'ro');
 %       endE
-
    end
    methods(Access = protected)
+      applyWindow(self)
       applyOffset(self,undo)
    end
-
 end
 
