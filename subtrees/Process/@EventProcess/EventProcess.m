@@ -73,12 +73,12 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
                   % This must evaluate to a boolean
                   query.where(args.(fn{i}));
                elseif ischar(args.(fn{i}))
-%                   try
-%                      query.where(@(x) strcmp(x.(fn{i}),args.(fn{i})));
-%                   catch
-%                   end
-                  query.where(@(x) isprop(x,fn{i}))...
-                       .where(@(x) strcmp(x.(fn{i}),args.(fn{i})));
+                  try
+                     query.where(@(x) strcmp(x.(fn{i}),args.(fn{i})));
+                  catch
+                  end
+%                   query.where(@(x) isprop(x,fn{i}))...
+%                        .where(@(x) strcmp(x.(fn{i}),args.(fn{i})));
                else
                   % attempt equality
                   query.where(@(x) x.(fn{i})==args.(fn{i}));

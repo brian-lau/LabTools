@@ -8,7 +8,8 @@ p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2))
 p.addOptional('eventStart',true,@(x) isscalar(x) && islogical(x)); 
 p.parse(event,varargin{:});
 
-if numel(event) == 1
+nObj = numel(self);
+if (numel(event)==1) && (nObj>1)
    event = repmat(event,size(self));
 end
 assert(numel(event)==numel(self),'PointProcess:sync:InputValue',...
@@ -24,9 +25,6 @@ else
    offset = event(:);
 end
 
-% WHY???
-%self.setInclusiveWindow;
-
 if isempty(p.Results.window)
    % find window that includes all data
    temp = vertcat(self.window);
@@ -38,11 +36,17 @@ else
    window = self.checkWindow(p.Results.window,size(p.Results.window,1));
 end
 
-% Window at original sample times, then shift
-nObj = numel(self);
-window = repmat(window,nObj,1);
-window = bsxfun(@plus,window,offset);
-window = num2cell(window,2);
+% if (size(window,1)>1) && (nObj>1)
+%    window = repmat(window,nObj,1);
+% end
+% 
+% Window at original sample times
+if size(window,1) > 1
+   window = bsxfun(@plus,window,offset);
+   window = num2cell(window,2);
+else
+   window = window + offset;
+end
 
 self.setWindow(window);
 self.setOffset(-offset);

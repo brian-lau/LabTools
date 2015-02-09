@@ -16,17 +16,10 @@ nTimes = size(self.times,2);
 for i = 1:numel(offset)
    for j = 1:nTimes
       self.times{i,j} = self.times{i,j} + offset(i);
+
+      temp = self.values{i,j};
       
-      if offset(i) > 0
-         temp = num2cell([self.values{i,j}.tEnd] + offset(i));
-         [self.values{i,j}.tEnd] = deal(temp{:});         
-         temp = num2cell([self.values{i,j}.tStart] + offset(i));
-         [self.values{i,j}.tStart] = deal(temp{:});
-      else
-         temp = num2cell([self.values{i,j}.tStart] + offset(i));
-         [self.values{i,j}.tStart] = deal(temp{:});
-         temp = num2cell([self.values{i,j}.tEnd] + offset(i));
-         [self.values{i,j}.tEnd] = deal(temp{:});         
-      end
+      [temp.tStart] = list([temp.tStart] + offset(i));
+      [temp.tEnd] = list([temp.tEnd] + offset(i));
    end
 end

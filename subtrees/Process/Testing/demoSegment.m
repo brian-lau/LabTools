@@ -140,9 +140,9 @@ S.sync('name','cue','window',[-1 5])
 
 %%
 clear
-ntrials = 200;
+ntrials = 400;
 
-dt = 0.0001;
+dt = 0.001;
 t = (0:dt:(10-dt))';
 for i = 1:ntrials  
    t1(i) = rand;
@@ -154,11 +154,12 @@ for i = 1:ntrials
 
    y = normpdf(t,2+t1(i),.25) - normpdf(t,5+t1(i)+t2(i),.25);
    
-   data(i) = Segment('process',{SampledProcess('values',y,'Fs',1/dt) EventProcess('events',e)},...
+   data(i) = Segment('process',...
+      {SampledProcess('values',y,'Fs',1/dt) EventProcess('events',e)},...
       'labels',{'lfp' 'events'});
 end
 
-data.sync('name','cue','window',[-2 5]);
+tic;data.sync('name','cue','window',[-2 5]);toc
 % data.reset
 % data.sync('name','button','window',[-5 2])
 temp = linq(data).select(@(x) x.extract('lfp'))...

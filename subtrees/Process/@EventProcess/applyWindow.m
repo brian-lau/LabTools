@@ -16,18 +16,13 @@ end
 
 nTimes = size(times,2);
 
-% keyboard
 values = self.values_;
 %cellfun(@(x) x.reset,values,'uni',0);
 for i = 1:numel(values)
-   values{i}.reset();
+   %values{i}.reset();
+   [values{i}.tStart] = list(times{i}(:,1));
+   [values{i}.tEnd] = list(times{i}(:,2));
 end
-
-% if all(cellfun(@(x) isa(x,'handle'),self.values_))
-%    values = cellfun(@(x) copy(x),self.values_,'uni',0);
-% else
-%   values = self.values_;
-% end
 
 window = self.window;
 windowedTimes = cell(nWindow,nTimes);
