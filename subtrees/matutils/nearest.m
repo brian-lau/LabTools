@@ -1,3 +1,4 @@
+% Find element in matrix closest to ref
 %http://stackoverflow.com/questions/22609192/find-the-closest-value-in-a-matrix-matlab
 function [val,row,col] = nearest(ref,matrix)
 
