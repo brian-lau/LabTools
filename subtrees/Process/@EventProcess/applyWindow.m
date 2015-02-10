@@ -17,17 +17,8 @@ end
 nTimes = size(times,2);
 
 values = self.values_;
+% Events are handles, need to reset tStart/tEnd
 cellfun(@(x) x.reset,values,'uni',0);
-% for i = 1:numel(values)
-%    %values{i}.reset();
-%    [values{i}.tStart] = list(times{i}(:,1));
-%    [values{i}.tEnd] = list(times{i}(:,2));
-% %    
-% %    for j = 1:numel(values{i})
-% %       values{i}(j).tStart = times{i}(j,1);
-% %       values{i}(j).tEnd = times{i}(j,1);
-% %    end
-% end
 
 window = self.window;
 windowedTimes = cell(nWindow,nTimes);
