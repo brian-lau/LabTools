@@ -54,7 +54,7 @@ else
     beg_idx = find(CA < local_length*sampling_rate,1,'LAST');     % finds last index within the 'local length' - incremented by one, this will result in the first index that can be evaluate.
 end
 n = beg_idx;
-mean_FR
+
 % ***** Main loop ****
 
 while n < length(ISI) - min_length_of_burst
