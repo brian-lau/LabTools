@@ -160,7 +160,7 @@ else
    h = p.Results.handle;
    axes(h);
 end
-set(h,'DrawMode','fast','NextPlot','replacechildren');
+%set(h,'DrawMode','fast','NextPlot','replacechildren');
 hold on;
 
 %% Pass through to windowTimes, any raster-specific parameters will be ignored

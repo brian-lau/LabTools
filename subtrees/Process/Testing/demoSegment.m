@@ -154,9 +154,12 @@ for i = 1:ntrials
 
    y = normpdf(t,2+t1(i),.25) - normpdf(t,5+t1(i)+t2(i),.25);
    
+   sp = 2+t1(i) + (0:.1:1);
+   sp = [sp , 5+t1(i)+t2(i) + (0:.1:1)];
+
    data(i) = Segment('process',...
-      {SampledProcess('values',[y,0.5*y],'Fs',1/dt) EventProcess('events',e)},...
-      'labels',{'lfp' 'events'});
+      {SampledProcess('values',[y,0.5*y],'Fs',1/dt) PointProcess(sp) EventProcess('events',e)},...
+      'labels',{'lfp' 'spikes' 'events'});
 end
 
 tic;data.sync('name','cue','window',[-2 5]);toc
@@ -166,6 +169,11 @@ temp = linq(data).select(@(x) x.extract('lfp'))...
    .select(@(x) x.extract()).toArray;
 a = cat(2,temp.values);
 plot(temp(1).times,a)
+
+temp = linq(data).select(@(x) x.extract('spikes'))...
+   .select(@(x) x.extract()).toArray;
+temp = cat(1,temp.times);
+spk.plotRaster(temp);
 
 temp = cell.flatten(data.extract('events'));
 events = cat(1,temp{:});

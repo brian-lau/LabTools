@@ -17,8 +17,8 @@ for i = 1:numel(offset)
    for j = 1:nTimes
       self.times{i,j} = self.times{i,j} + offset(i);
 
+      % Adjust times stored in Events
       temp = self.values{i,j};
-      
       [temp.tStart] = list([temp.tStart] + offset(i));
       [temp.tEnd] = list([temp.tEnd] + offset(i));
    end
