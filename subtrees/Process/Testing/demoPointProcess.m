@@ -5,72 +5,11 @@ help PointProcess.raster
 
 clear all;
 
-%% pointProcess class has three properties useful for identification:
-% name      - string (defaults to the time when object created)
-% info      - Dictionary. Information can be mixed types
-% These are assigned using name/value pairs in any order. 
-%
-% Name must be a string. It should be unique for data defined by a single
-% point process
-spk = PointProcess('name','neuron#10000001');
-spk.name
-
-% Example of an unique (not very informative) label
-% We passed in a cell array of information we would like to store
-% associated with this point process. Information can be mixed
-spk = pointProcess('info',{'Radar' 'OFC' 3 -1 2.111});
-% without passing in infoKeys, which defines labels for each element of
-% info, the contructor will generate generic keys
-spk.info.keys
-
-% spk.info is a container.Map object. These work like dictionaries, so if I
-% know the key, I can use it to retrieve the associated value
-spk.info('key1')
-spk.info('key5')
-
-% Use for informative labels by passing in an associated infoKeys cell
-% array.
-spk = pointProcess('infoKeys',{'subject' 'x' 'y' 'z'},'info',{'Radar' 3 -1 2.111});
-spk.info.keys
-spk.info('subject')
-spk.info('x')
-spk.info('y')
-spk.info('z')
-
-% Although location could contain enough information to uniquely identify a
-% point process, it need not. You should use the name property to uniquely
-% identify a point process. Ie, you can record two neurons in the same
-% location, and the name property allows you to always keep that
-% unambiguous.
-spk = pointProcess('name','neuron1',...
-   'info',{'backrig' 'Radar' 'amygdala' 'central' 3 -1 2.111 10},...
-   'infoKeys',{'recording booth' 'subject' 'area' 'nucleus' 'x' 'y' 'z' 'spike signal-to-noise'});
-spk.info('recording booth')
-
-% You only have to define the above properties if you want. I will not use
-% them in the examples below.
-
 clear all;
 %% Basic pointProcess object
 spk = PointProcess('times',3*rand(20,1))
 %
 % The properties provide access to the basic elements of a point process:
-%
-%              name: string identifier
-%              info: information dictionary
-%             times: ordered vector of times defining the point process
-%               map: dictionary associated with each time
-%              unit: 
-%             clock: 
-%            tStart: 
-%              tEnd: 
-%            window: time window of interest, can be multiple windows
-%            offset: time offset, one for each window
-%             count: # of events in each window
-%     windowedTimes: 
-%       windowIndex: 
-%     isValidWindow: 
-%           version: 0.1000
 %
 % window is a very important property to grasp in order to understand
 % the behavior of pointProcess methods. Window can be a [1 x 2] vector that
@@ -129,7 +68,7 @@ spk.raster
 % amounts of event times. 
 % This is easy to change. The raster calls plotRaster to do all the work,
 % so all the options available in that function can be passed in here.
-help plotRaster
+help spk.plotRaster
 spk.raster('style','line')
 
 % Now let's look at the spike times through a series of windows
@@ -249,26 +188,11 @@ stem(spk.times{1},spk.values{1});
 %% Methods - plotting
 clear all;
 close all;
-spk = pointProcess('times',3*randn(40,1));
-
-% Plot simply shows the counting process representation
-spk.plot()
-
-% You can pass a figure handle 
-clf;
-h = subplot(211);
-spk.plot('handle',h)
-
-% Setting the window changes the plot
-spk.window = [-3 0];
-spk.plot('handle',subplot(212));
-
-%
-close all;
+spk = PointProcess('times',3*randn(40,1));
 
 % Raster shows the event times in a format familiar to neuroscientists
 spk.raster();
-% Raster accepts many options (see help for plotRaster). These are name/value 
+% Raster accepts many options (see help for spk.plotRaster). These are name/value 
 % pairs that are case insensitive and can be passed in any order. This is
 % particularly useful when using collections of pointProcess objects (see
 % the class pointProcessCollection)
@@ -295,7 +219,7 @@ axis([-6 6 get(gca,'ylim')]);
 close all
 
 %% Methods - manipulating properties
-% We can always return the pointProcess object to its original state
+% We can always return the PointProcess object to its original state
 spk = spk.reset()
 clf;
 spk.raster('style','line','grpColor','r','handle',subplot(311));
@@ -332,81 +256,35 @@ spk - 5;
 spk.raster('style','line','grpColor','b','handle',subplot(313));
 axis([-15 15 get(gca,'ylim')]);
 
-% There is a method for estimate the point process intensity (PSTH). This
-% can be called with all the options for getPsth. As for raster these are 
-% name/value pairs that are case insensitive and can be passed in any order. 
-close all;
-spk = PointProcess('times',3*randn(150,1));
-% Plot raster
-spk.raster('style','line','handle',subplot(411));
-axis([-15 15 get(gca,'ylim')]);
-% The getPsth method requires one input, which is the bandwidth of the
-% estimator in milliseconds. Without further arguments, this is just a
-% histogram estimator with bin widths = bandwidth
-[r,t] = spk.getPsth(25);
-subplot(412);
-plot(t,r,'c'); 
-axis([-15 15 get(gca,'ylim')]);
-% Kernel density estimator, gaussian default
-[r,t] = spk.getPsth(25,'method','qkde');
-subplot(413);
-plot(t,r,'r'); 
-axis([-15 15 get(gca,'ylim')]);
-% Kernel density estimator, different kernel (see getPsth)
-[r,t] = spk.getPsth(100,'method','qkde','kernel','e');
-subplot(414);
-plot(t,r,'k'); 
-axis([-15 15 get(gca,'ylim')]);
+% % There is a method for estimate the point process intensity (PSTH). This
+% % can be called with all the options for getPsth. As for raster these are 
+% % name/value pairs that are case insensitive and can be passed in any order. 
+% close all;
+% spk = PointProcess('times',3*randn(150,1));
+% % Plot raster
+% spk.raster('style','line','handle',subplot(411));
+% axis([-15 15 get(gca,'ylim')]);
+% % The getPsth method requires one input, which is the bandwidth of the
+% % estimator in milliseconds. Without further arguments, this is just a
+% % histogram estimator with bin widths = bandwidth
+% [r,t] = spk.getPsth(25);
+% subplot(412);
+% plot(t,r,'c'); 
+% axis([-15 15 get(gca,'ylim')]);
+% % Kernel density estimator, gaussian default
+% [r,t] = spk.getPsth(25,'method','qkde');
+% subplot(413);
+% plot(t,r,'r'); 
+% axis([-15 15 get(gca,'ylim')]);
+% % Kernel density estimator, different kernel (see getPsth)
+% [r,t] = spk.getPsth(100,'method','qkde','kernel','e');
+% subplot(414);
+% plot(t,r,'k'); 
+% axis([-15 15 get(gca,'ylim')]);
 
 % Example with passing window in
 
 close all;
-
-%% More on the info property
-% The info property is a very powerful way to store information about the
-% point process. Imagine we have spike times recorded from a neuron, along
-% with some time events of interest (onset of visual stimuli, reaction
-% times, etc). We can use the info property to store events of interest in
-% a very simple way
-%
-spk = pointProcess('name','neuron','times',rand(100,1),'infoKeys',{'event0'},'info',{3});
-spk.info('event0')
-%
-% No information about the event itself.
-%
-% However, since if the events of interest are themselves defined by time
-% (ie they are also point processes), then we can place another
-% pointProcess in the dictionary. This is desirable because we can ensure
-% temporal consistency (ie, tAbs is the same, units are the same, etc: checks 
-% are not implemented yet)
-event = pointProcess('name','event1','times',[5 6 7],'infoKeys',{'alg' 'parameter'},'info',{'good one' 1});
-spk = pointProcess('name','neuron','times',rand(100,1),'infoKeys',{'event0' 'event1'},'info',{3 event});
-%
-%
-spk.info('event1').info.keys
-spk.info('event1').info.values
-spk.info('event1').times
-% this fails
-spk.info('event1').info('alg')
-% but this works
-temp = spk.info('event1').info;
-temp('alg')
-
-% containers.Map is a handle object, so we can use it's methods to add and
-% remove information 
-spk.info.remove('event0')
-spk.info('new info') = 'this is cool';
-spk.info('new info')
-
-% pointProcess objects are not handle objects, so the best way to modify
-% their properties is to 
-event1 = spk.info('event1');
-spk.info.remove('event1')
-% shift the event in time and add it back
-spk.info('event1') = event1 + 10;
-spk.info.keys
-spk.info.values
-spk.info('event1').times
 
 %% Arrays of pointProcess objects
 % Most of the methods for the pointProcess class work with object arrays. 
@@ -415,7 +293,7 @@ spk.info('event1').times
 
 n = 50;
 for i = 1:n
-   spk(i,1) = pointProcess('times',rand(100,1));
+   spk(i,1) = PointProcess('times',rand(100,1));
 end
 
 % TODO add note about column versus row ordering and how it affects method
@@ -433,29 +311,20 @@ spk.raster('handle',subplot(411));
 axis([-5 5 0 n]);
 
 % Addition to the object array adds to each element
-spk = spk + 1;
+spk + 1;
 spk.raster('handle',subplot(412),'grpColor','m');
-[r1,t1] = spk.getPsth(25,'method','qkde','window',[-5 5]);
-hold on
-plotyy(nan,nan,t1,r1);
 axis([-5 5 0 n]);
 
 % And subtraction subtracts from each element
-spk = spk - 1;
+spk - 1;
 spk.raster('handle',subplot(413),'grpColor','c');
-[r2,t1] = spk.getPsth(25,'method','qkde','window',[-5 5]);
-hold on
-plotyy(nan,nan,t1,r2);
 axis([-5 5 0 n]);
 
 % Vector addition and subtraction work element-wise, so that you can add or
 % subtract a different scalar for each object element
 spk = spk.reset();
-spk = spk + linspace(-1,1,n);
+spk + linspace(-1,1,n);
 spk.raster('handle',subplot(414),'grpColor','r');
-[r,t] = spk.getPsth(25,'method','qkde','window',[-5 5]);
-hold on
-plotyy(nan,nan,t,r);
 axis([-5 5 0 n]);
 
 close all;
