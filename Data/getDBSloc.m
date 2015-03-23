@@ -28,8 +28,9 @@ if isempty(text)
    dipoles = {};
    for i = 1:numel(text)
       temp = strsplit(text{i});
-      patients{i,1} = temp{2}(end-3:end);
-      
+      temp2 = strsplit(temp{2},'_');
+      patients{i,1} = temp2{end};
+
       temp2 = strsplit(temp{3},'_');
       if strcmp(temp2{1}(1),'L')
          sides{i,1} = 'G';
@@ -58,7 +59,7 @@ if nargin == 3
 end
 
 
-ind = strcmpi(patients,patient) & strcmpi(coords,coord) & strcmpi(dipoles,dipole) & strcmpi(sides,side);
+ind = strncmpi(patient,patients,numel(patient)) & strcmpi(coords,coord) & strcmpi(dipoles,dipole) & strcmpi(sides,side);
 
 if sum(ind) == 1
    x = X(ind);
