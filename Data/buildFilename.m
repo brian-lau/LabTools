@@ -12,7 +12,7 @@ if nargin == 1
       temp2 = '';
       for j = 1:numel(temp)
          if ~isempty(temp{j})
-            if isdir(temp{j})
+            if isdir(temp{j}) && (j==1)
                temp2 = [temp{j} filesep];
             elseif strcmp(temp{j}(1),'.')
                temp2 = [temp2(1:end-1) temp{j}];
