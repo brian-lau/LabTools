@@ -131,7 +131,7 @@ p.addParamValue('window',[],@(x) validateattributes(eventTimes,{'numeric' 'cell'
 p.addParamValue('windowThenOffset',true,@islogical);
 p.addParamValue('rowIndex',true(nRows,nCols),@(x) islogical(x) && (size(x,1)==nRows) );
 % Specific for plotRaster
-p.addParamValue('handle',[],@isnumeric);
+p.addParamValue('handle',[],@(x) isnumeric(x) || ishandle(x));
 p.addParamValue('skipNaN',true,@islogical);
 p.addParamValue('grpColor',[],@(x)( ... 
    (ischar(x) && (size(x,1)==1) && (size(x,2)==1)) ||... % single color str
