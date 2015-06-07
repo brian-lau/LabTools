@@ -66,5 +66,8 @@ if sum(ind) == 1
    y = Y(ind);
    z = Z(ind);
 else
-   error('missing or not unique');
+   x = NaN;
+   y = NaN;
+   z = NaN;
+   %error('missing or not unique');
 end
