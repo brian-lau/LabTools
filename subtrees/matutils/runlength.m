@@ -23,6 +23,10 @@ function [l,s] = runlength(x,R)
 sx = size(x);
 x = x(:)';                      % force x to be row vector
 
+if nargin < 2
+   R = max(sx);
+end
+   
 nanx = isnan(x);
 infx = isinf(x);
 maxx = max(x(~(nanx|infx)));	% maximum finite number in x
