@@ -3,6 +3,7 @@ classdef Msup2 < metadata.Trial
       trial
       ruleBlockTrial
       colorBlockTrial
+      currentRule
       currentColor
       rewardN_match
       reward_match
@@ -50,6 +51,7 @@ classdef Msup2 < metadata.Trial
          p.addParamValue('trial',[],@(x) isscalar(x) && isnumeric(x));
          p.addParamValue('ruleBlockTrial',[],@(x) isscalar(x) && isnumeric(x));
          p.addParamValue('colorBlockTrial',[],@(x) isscalar(x) && isnumeric(x));
+         p.addParamValue('currentRule',[],@ischar);
          p.addParamValue('currentColor',[],@ischar);
          p.addParamValue('rewardN_match',[],@(x) isscalar(x) && isnumeric(x));
          p.addParamValue('reward_match',[],@(x) isscalar(x) && isnumeric(x));
@@ -83,6 +85,7 @@ classdef Msup2 < metadata.Trial
          self.trial = par.trial;
          self.ruleBlockTrial = par.ruleBlockTrial;
          self.colorBlockTrial = par.colorBlockTrial;
+         self.currentRule = par.currentRule;
          self.currentColor = par.currentColor;
          self.rewardN_match = par.rewardN_match;
          self.reward_match = par.reward_match;
