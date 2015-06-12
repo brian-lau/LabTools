@@ -30,7 +30,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
             values = varargin{1};
             assert(isnumeric(values),...
                'SampledProcess:Constructor:InputFormat',...
-               'Single inputs must be passed in as array of values');
+               'Single inputs must be passed in as array of numeric values');
             if isnumeric(values)
                varargin{1} = 'values';
                varargin{2} = values;
