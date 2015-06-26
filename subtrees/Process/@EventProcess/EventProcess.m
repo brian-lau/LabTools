@@ -7,7 +7,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
       isValidEvent
    end
    properties
-      nullEvent = metadata.Event('tStart',NaN,'tEnd',NaN)
+      nullEvent = metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN)
    end
    methods
       %% Constructor
@@ -64,7 +64,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
          p.FunctionName = 'EventProcess find';
          p.parse(varargin{:});
          args = p.Unmatched;
-         
+
          query = linq(self.values{1});
          fn = fieldnames(args);
          for i = 1:numel(fn)
