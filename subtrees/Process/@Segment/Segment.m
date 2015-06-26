@@ -163,4 +163,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       
       %plot
    end
+   methods(Static)
+      obj = loadobj(S)
+   end
 end

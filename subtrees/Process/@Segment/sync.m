@@ -43,33 +43,39 @@ for i = 1:numel(self)
       if isempty(p.Results.eventProcessName)
          temp = extract(self(i),'EventProcess','type');
          if numel(temp) > 1
-            error('multiple matches for EventProcess');
+            error('Multiple EventProcesses in Segment, specify by name');
          else
             temp = temp{1};
          end
       else
          temp = extract(self(i),p.Results.eventProcessName,'label');
       end
-      % FIXME, wrap in try/catch in case nothing matches?, default empty in
-      % find
+      % Will return Null event defined in EventProcess if nothing found
       event = temp.find(eventPars);
-   else
+   elseif isa(p.Results.event,'metadata.Event')
       % FIXME, check dimensions for scalar event
       event = p.Results.event(i);
    end
-   
+try
    if numel(event) == 1
-      if isempty(syncPars)
-         cellfun(@(x) x.sync(event),self(i).processes,'uni',0);
+      if ~strcmp(event.name,'NULL')
+         if isempty(syncPars)
+            cellfun(@(x) x.sync(event),self(i).processes,'uni',0);
+         else
+            cellfun(@(x) x.sync(event,syncPars),self(i).processes,'uni',0);
+         end
+         self(i).validSync = true;
       else
-         cellfun(@(x) x.sync(event,syncPars),self(i).processes,'uni',0);
+         self(i).validSync = false;
       end
-      self(i).validSync = 1;
    elseif numel(event) > 1
-      % pick according to policy
+      %TODO pick according to policy
       self(i).validSync = numel(event);
    else
       %error('incorrect number of events');
       self(i).validSync = false;
    end
+catch,
+   keyboard;
+end
 end
