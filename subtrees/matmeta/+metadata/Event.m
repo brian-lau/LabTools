@@ -71,7 +71,8 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
          if isscalar(tStart)
             self.tStart = tStart;
          else
-            error('tstart');
+            %error('tstart');
+            self.tStart = NaN;
          end
 %          if isnan(tStart)
 %             self.tStart = tStart;
@@ -90,7 +91,8 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
          if isscalar(tEnd)
             self.tEnd = tEnd;
          else
-            error('tend');
+            self.tEnd = NaN;
+            %error('tend');
          end
 %          if isempty(tEnd)
 %             if ~isempty(self.tStart)
