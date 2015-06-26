@@ -19,7 +19,10 @@ for i = 1:numel(offset)
 
       % Adjust times stored in Events
       temp = self.values{i,j};
-      [temp.tStart] = list([temp.tStart] + offset(i));
-      [temp.tEnd] = list([temp.tEnd] + offset(i));
+
+      if ~isempty(temp)
+         [temp.tStart] = list([temp.tStart] + offset(i));
+         [temp.tEnd] = list([temp.tEnd] + offset(i));
+      end
    end
 end
