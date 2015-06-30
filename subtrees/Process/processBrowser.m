@@ -56,8 +56,14 @@ function processBrowser_OpeningFcn(hObject, eventdata, handles, varargin)
 
 % Choose default command line output for processBrowser
 handles.output = hObject;
+% Parse data, 
+handles = createData(handles,varargin{:});
+% Update handles structure
+guidata(hObject, handles);
+creatInterface(handles)
+updateInterface(hObject, eventdata, handles)
 
-%
+function handles = createData(handles,varargin)
 data = varargin{1};
 handles.plotS = 0;
 handles.plotP = 0;
@@ -68,54 +74,68 @@ elseif isa(data,'PointProcess')
    handles.plotP = 1;
 elseif isa(data,'Segment')
    % HACK, take the first, assume the rest are the same for now
-   handles.plotS = sum(strcmp(data(1).type,'SampledProcess'));
-   handles.plotP = sum(strcmp(data(1).type,'PointProcess'));
+   proc = cell.uniqueRows(cat(1,data.type));
+   procLabels = cell.uniqueRows(cat(1,data.labels));
+   if (size(proc,1) == 1) && (size(procLabels,1) == 1)
+      handles.plotS = sum(strcmp(data(1).type,'SampledProcess'));
+      handles.plotP = sum(strcmp(data(1).type,'PointProcess'));
+   else
+      error('Different processes in each Segment element not supported');
+   end
 end
 handles.data = data;
 
-% Update handles structure
-guidata(hObject, handles);
-
+function creatInterface(handles)
 % Put a layout in the panel
-g = uix.GridFlex( 'Parent', handles.uipanel1, ...
-    'Units', 'Normalized', 'Position', [0 0 1 1], ...
-    'Spacing', 10 );
-
+g = uix.GridFlex('Parent',handles.uipanel1,'Units','Normalized',...
+   'Position',[0 0 1 1],'Spacing',10);
 heights = [];
-for i = 1:numel(handles.plotS)
-   boxS(i) = uix.BoxPanel( 'Parent', g, 'Title', 'Sampled Process',...
+if handles.plotS
+   for i = 1:numel(handles.plotS)
+      boxS(i) = uix.BoxPanel( 'Parent', g, 'Title', 'Sampled Process',...
+         'BorderType', 'none', 'FontSize', 16, 'FontAngle', 'italic');
+      % Wrapping in uicontainer lets Position work properly
+      axS(i) = axes( 'Parent', uicontainer('Parent',boxS(i)), 'Position', [.075 .1 .9 .8],...
+         'tickdir', 'out', 'Tag', ['Sampled Process Axis ' num2str(i)],...
+         'ActivePositionProperty', 'outerposition');
+      heights = [heights -1.75];
+   end
+else
+   boxS = uix.BoxPanel( 'Parent', g, 'Title', 'Sampled Process',...
       'BorderType', 'none', 'FontSize', 16, 'FontAngle', 'italic');
-   % Wrapping in uicontainer lets Position work properly
-   axS(i) = axes( 'Parent', uicontainer('Parent',boxS(i)), 'Position', [.075 .1 .9 .8],...
-      'tickdir', 'out', 'Tag', ['Sampled Process Axis ' num2str(i)],...
-      'ActivePositionProperty', 'outerposition');
-   heights = [heights -1.75];
+   heights = [heights 0];
 end
-for i = 1:numel(handles.plotP)
-   boxP(i) = uix.BoxPanel( 'Parent', g, 'Title', 'Sampled Process',...
+if handles.plotP
+   for i = 1:numel(handles.plotP)
+      boxP(i) = uix.BoxPanel( 'Parent', g, 'Title', 'Point Process',...
+         'BorderType', 'none', 'FontSize', 16, 'FontAngle', 'italic');
+      axP(i) = axes( 'Parent', uicontainer('Parent',boxP(i)), 'Position', [.075 .2 .9 .6],...
+         'tickdir', 'out', 'Tag', ['Point Process Axis ' num2str(i)],...
+         'ActivePositionProperty', 'outerposition');
+      heights = [heights -1];
+   end
+else
+   boxP = uix.BoxPanel( 'Parent', g, 'Title', 'Point Process',...
       'BorderType', 'none', 'FontSize', 16, 'FontAngle', 'italic');
-   axP(i) = axes( 'Parent', uicontainer('Parent',boxP(i)), 'Position', [.075 .2 .9 .6],...
-      'tickdir', 'out', 'Tag', ['Point Process Axis ' num2str(i)],...
-      'ActivePositionProperty', 'outerposition');
-   heights = [heights -1];
+   heights = [heights 0];
 end
+
 g.Heights = heights;
-linkaxes([axS,axP],'x');
+if exist('axP','var')
+   linkaxes([axS,axP],'x');
+end
 
 set(handles.slider_array, 'Min', 1);
-set(handles.slider_array, 'Max', numel(data));
-set(handles.slider_array, 'SliderStep', [1 5] / max(1,(numel(data) - 1)));
+set(handles.slider_array, 'Max', numel(handles.data));
+set(handles.slider_array, 'SliderStep', [1 5] / max(1,(numel(handles.data) - 1)));
 set(handles.slider_array, 'Value', 1); % set to beginning of sequence
 
-updateInterface(hObject, eventdata, handles)
-
 function updateInterface(hObject, eventdata, handles)
-
+if handles.plotP
+   plotP(handles);
+end
 if handles.plotS
    plotS(handles);
-end
-if 0%handles.plotP
-   plotP(handles);
 end
 
 function plotS(handles)
@@ -130,6 +150,7 @@ ind = round(get(handles.slider_array,'Value'));
 ind = max(ind,1);
 ind = min(ind,numel(handles.data));
 set(handles.slider_array,'Value',ind);
+set(handles.text1,'String',['Element ' num2str(ind)]);
 
 if isa(data,'Segment')
    data = cell.flatten(extract(data,'SampledProcess','type'));
@@ -140,20 +161,40 @@ else
    t = data(ind).times{1};
 end
 
-cla;
-hold on;
+cla; hold on;
 if strips
    n = size(values,2);
    sd = nanstd(values);
    sf = (0:n-1)*3*max(sd);
    plot(t,bsxfun(@plus,values,sf));
-   plot([t(1) t(end)],[sf' , sf'],'color',[.7 .7 .7 .4]);
-   axis tight;
+   plot(repmat([t(1) t(end)]',1,n),[sf' , sf']','color',[.7 .7 .7 .4]);
 else
    plot(t,values);
-   axis tight;
 end
+axis tight;
 interactivemouse ON;
+
+function plotP(handles)
+import fig.*
+
+data = handles.data;
+ax = findobj(handles.uipanel1,'Tag','Point Process Axis 1');
+axes(ax);
+
+ind = round(get(handles.slider_array,'Value'));
+ind = max(ind,1);
+ind = min(ind,numel(handles.data));
+set(handles.slider_array,'Value',ind);
+set(handles.text1,'String',['Element ' num2str(ind)]);
+
+cla;
+if isa(data,'Segment')
+   data = cell.flatten(extract(data,'PointProcess','type'));
+   raster(data{ind},'handle',ax,'style','tick');
+else
+   values = data(ind).values{1};
+   t = data(ind).times{1};
+end
 
 % --- Outputs from this function are returned to the command line.
 function varargout = processBrowser_OutputFcn(hObject, eventdata, handles) 
