@@ -24,7 +24,7 @@ function varargout = processBrowser(varargin)
 
 % Edit the above text to modify the response to help processBrowser
 
-% Last Modified by GUIDE v2.5 30-Jun-2015 01:39:47
+% Last Modified by GUIDE v2.5 30-Jun-2015 14:33:03
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -62,6 +62,17 @@ handles = createData(handles,varargin{:});
 guidata(hObject, handles);
 creatInterface(handles)
 updateInterface(hObject, eventdata, handles)
+
+% %keyboard
+
+jModel = javax.swing.SpinnerNumberModel(3,.25,35,.25);
+jSpinner = javax.swing.JSpinner(jModel);
+%jhSpinner = javacomponent(jSpinner);
+
+p = uicomponent(jSpinner,'Parent',hObject,'position',[20,580,80,25]);
+set(p,'units','normalized');
+
+set(p, 'StateChangedCallback',  @(h,e)disp('click me'))
 
 function handles = createData(handles,varargin)
 data = varargin{1};
@@ -161,11 +172,13 @@ else
    t = data(ind).times{1};
 end
 
+sf = str2num(get(handles.edit_scale_factor,'String'))
+
 cla; hold on;
 if strips
    n = size(values,2);
    sd = nanstd(values);
-   sf = (0:n-1)*3*max(sd);
+   sf = (0:n-1)*sf*max(sd);
    plot(t,bsxfun(@plus,values,sf));
    plot(repmat([t(1) t(end)]',1,n),[sf' , sf']','color',[.7 .7 .7 .4]);
 else
@@ -224,4 +237,33 @@ function slider_array_CreateFcn(hObject, eventdata, handles)
 % Hint: slider controls usually have a light gray background.
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+
+function edit_scale_factor_Callback(hObject, eventdata, handles)
+% hObject    handle to edit_scale_factor (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+str=get(hObject,'String');
+if isempty(str2num(str))
+    set(src,'String','3');
+    warndlg('Input must be numerical');
+end
+updateInterface(hObject, eventdata, handles)
+
+% Hints: get(hObject,'String') returns contents of edit_scale_factor as text
+%        str2double(get(hObject,'String')) returns contents of edit_scale_factor as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function edit_scale_factor_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to edit_scale_factor (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
 end
