@@ -1,16 +1,27 @@
-function [hdr, record] = edfRead(fname, varargin)
+function [hdr, record] = edfread(fname, varargin)
 % Read European Data Format file into MATLAB
 %
-% [hdr, record] = edfRead(fname)
+% [hdr, record] = edfread(fname)
 %         Reads data from ALL RECORDS of file fname ('*.edf'). Header
 %         information is returned in structure hdr, and the signals
 %         (waveforms) are returned in structure record, with waveforms
 %         associated with the records returned as fields titled 'data' of
 %         structure record.
 %
-% [...] = edfRead(fname, 'assignToVariables', assignToVariables)
+% [...] = edfread(fname, 'assignToVariables', assignToVariables)
 %         Triggers writing of individual output variables, as defined by
 %         field 'labels', into the caller workspace.
+%
+% [...] = edfread(...,'desiredSignals',desiredSignals)
+%         Allows user to specify the names (or position numbers) of the
+%         subset of signals to be read. |desiredSignals| may be either a
+%         string, a cell array of comma-separated strings, or a vector of
+%         numbers. (Default behavior is to read all signals.)
+%         E.g.:
+%         data = edfread(mydata.edf,'desiredSignals','Thoracic');
+%         data = edfread(mydata.edf,'desiredSignals',{'Thoracic1','Abdominal'});
+%         or
+%         data = edfread(mydata.edf,'desiredSignals',[2,4,6:13]);
 %
 % FORMAT SPEC: Source: http://www.edfplus.info/specs/edf.html SEE ALSO:
 % http://www.dpmi.tu-graz.ac.at/~schloegl/matlab/eeg/edf_spec.htm
@@ -53,6 +64,16 @@ function [hdr, record] = edfRead(fname, varargin)
 % Coded 8/27/09 by Brett Shoelson, PhD
 % brett.shoelson@mathworks.com
 % Copyright 2009 - 2012 MathWorks, Inc.
+%
+% Modifications:
+% 5/6/13 Fixed a problem with a poorly subscripted variable. (Under certain
+% conditions, data were being improperly written to the 'records' variable.
+% Thanks to Hisham El Moaqet for reporting the problem and for sharing a
+% file that helped me track it down.)
+% 
+% 5/22/13 Enabled import of a user-selected subset of signals. Thanks to
+% Farid and Cindy for pointing out the deficiency. Also fixed the import of
+% signals that had "bad" characters (spaces, etc) in their names.
 
 % HEADER RECORD
 % 8 ascii : version of this data format (0)
@@ -83,16 +104,12 @@ function [hdr, record] = edfRead(fname, varargin)
 % ..
 % nr of samples[ns] * integer : last signal
 
-if nargin > 3
+if nargin > 5
     error('EDFREAD: Too many input arguments.');
 end
 
 if ~nargin
     error('EDFREAD: Requires at least one input argument (filename to read).');
-end
-
-if nargin == 1
-    assignToVariables = false;
 end
 
 [fid,msg] = fopen(fname,'r');
@@ -101,12 +118,18 @@ if fid == -1
 end
 
 assignToVariables = false; %Default
+targetSignals = []; %Default
 for ii = 1:2:numel(varargin)
     switch lower(varargin{ii})
         case 'assigntovariables'
             assignToVariables = varargin{ii+1};
+        case 'targetsignals'
+            targetSignals = varargin{ii+1};
+        otherwise
+            error('EDFREAD: Unrecognized parameter-value pair specified. Valid values are ''assignToVariables'' and ''targetSignals''.')
     end
 end
+
 
 % HEADER
 hdr.ver        = str2double(char(fread(fid,8)'));
@@ -123,8 +146,18 @@ hdr.duration   = str2double(fread(fid,8,'*char')');
 % Number of signals
 hdr.ns    = str2double(fread(fid,4,'*char')');
 for ii = 1:hdr.ns
-    hdr.label{ii} = fread(fid,16,'*char')';
+    hdr.label{ii} = regexprep(fread(fid,16,'*char')','\W','');
 end
+
+if isempty(targetSignals)
+    targetSignals = 1:numel(hdr.label);
+elseif iscell(targetSignals)||ischar(targetSignals)
+    targetSignals = find(ismember(hdr.label,regexprep(targetSignals,'\W','')));
+end
+if isempty(targetSignals)
+    error('EDFREAD: The signal(s) you requested were not detected.')
+end
+
 for ii = 1:hdr.ns
     hdr.transducer{ii} = fread(fid,80,'*char')';
 end
@@ -157,10 +190,10 @@ end
 for ii = 1:hdr.ns
     reserved    = fread(fid,32,'*char')';
 end
-hdr.label = deblank(hdr.label);
-hdr.units = deblank(hdr.units);
-
-
+hdr.label = hdr.label(targetSignals);
+hdr.label = regexprep(hdr.label,'\W','');
+hdr.units = regexprep(hdr.units,'\W','');
+disp('Step 1 of 2: Reading requested records. (This may take a few minutes.)...');
 if nargout > 1 || assignToVariables
     % Scale data (linear scaling)
     scalefac = (hdr.physicalMax - hdr.physicalMin)./(hdr.digitalMax - hdr.digitalMin);
@@ -170,29 +203,52 @@ if nargout > 1 || assignToVariables
     tmpdata = struct;
     for recnum = 1:hdr.records
         for ii = 1:hdr.ns
-            % Use a cell array for DATA because number of samples may vary
-            % from sample to sample
-            tmpdata(recnum).data{ii} = fread(fid,hdr.samples(ii),'int16') * scalefac(ii) + dc(ii);
-        end
-    end
-    record = zeros(hdr.ns, hdr.samples(1)*hdr.records);
-    
-    for ii = 1:numel(hdr.label)
-        ctr = 1;
-        for jj = 1:hdr.records
-            try
-                record(ii, ctr : ctr + hdr.samples - 1) = tmpdata(jj).data{ii};
+            % Read or skip the appropriate number of data points
+            if ismember(ii,targetSignals)
+                % Use a cell array for DATA because number of samples may vary
+                % from sample to sample
+                tmpdata(recnum).data{ii} = fread(fid,hdr.samples(ii),'int16') * scalefac(ii) + dc(ii);
+            else
+                fseek(fid,hdr.samples(ii)*2,0);
             end
-            ctr = ctr + hdr.samples;
         end
     end
+    hdr.units = hdr.units(targetSignals);
+    hdr.physicalMin = hdr.physicalMin(targetSignals);
+    hdr.physicalMax = hdr.physicalMax(targetSignals);
+    hdr.digitalMin = hdr.digitalMin(targetSignals);
+    hdr.digitalMax = hdr.digitalMax(targetSignals);
+    hdr.prefilter = hdr.prefilter(targetSignals);
+    hdr.transducer = hdr.transducer(targetSignals);
     
+    record = zeros(numel(hdr.label), hdr.samples(1)*hdr.records);
+    % NOTE: 5/6/13 Modified for loop below to change instances of hdr.samples to
+    % hdr.samples(ii). I think this underscored a problem with the reader.
+    
+    disp('Step 2 of 2: Parsing data...');
+    recnum = 1;
+    for ii = 1:hdr.ns
+        if ismember(ii,targetSignals)
+            ctr = 1;
+            for jj = 1:hdr.records
+                try
+                    record(recnum, ctr : ctr + hdr.samples(ii) - 1) = tmpdata(jj).data{ii};
+                end
+                ctr = ctr + hdr.samples(ii);
+            end
+            recnum = recnum + 1;
+        end
+    end
+    hdr.ns = numel(hdr.label);
+    hdr.samples = hdr.samples(targetSignals);
+
     if assignToVariables
         for ii = 1:numel(hdr.label)
             try
                 eval(['assignin(''caller'',''',hdr.label{ii},''',record(ii,:))'])
             end
         end
+        record = [];
     end
 end
 fclose(fid);
