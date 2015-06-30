@@ -80,39 +80,50 @@ guidata(hObject, handles);
 g = uix.GridFlex( 'Parent', handles.uipanel1, ...
     'Units', 'Normalized', 'Position', [0 0 1 1], ...
     'Spacing', 10 );
-box1 = uix.BoxPanel( 'Parent', g, 'Title', 'Sampled Process',...
-   'BorderType', 'none', 'FontSize', 20, 'FontAngle', 'italic');
-axes1 = axes( 'Parent', uicontainer('Parent',box1), 'Position', [.075 .1 .9 .8],...
-   'tickdir', 'out', 'Tag', 'Sampled Process Axes', 'ActivePositionProperty', 'outerposition');
-% axes1 = axes( 'Parent', box1, 'ActivePositionProperty', 'outerposition',...
-%    'tickdir', 'out', 'Tag', 'Sampled Process Axes');
-box2 = uix.BoxPanel( 'Parent', g, 'Title', 'Point Process',...
-   'BorderType', 'none', 'FontSize', 20, 'FontAngle', 'italic');
-axes2 = axes( 'Parent', uicontainer('Parent',box2), 'Position', [.075 .25 .9 .6],...
-   'tickdir', 'out', 'Tag', 'Point Process Axes', 'ActivePositionProperty', 'outerposition');
-% axes2 = axes( 'Parent', box2, 'ActivePositionProperty', 'outerposition',...
-%    'tickdir', 'out', 'Tag', 'Point Process Axes');
-g.Heights = [-1.75 -1];
 
-linkaxes([axes1,axes2],'x');
+heights = [];
+for i = 1:numel(handles.plotS)
+   boxS(i) = uix.BoxPanel( 'Parent', g, 'Title', 'Sampled Process',...
+      'BorderType', 'none', 'FontSize', 16, 'FontAngle', 'italic');
+   % Wrapping in uicontainer lets Position work properly
+   axS(i) = axes( 'Parent', uicontainer('Parent',boxS(i)), 'Position', [.075 .1 .9 .8],...
+      'tickdir', 'out', 'Tag', ['Sampled Process Axis ' num2str(i)],...
+      'ActivePositionProperty', 'outerposition');
+   heights = [heights -1.75];
+end
+for i = 1:numel(handles.plotP)
+   boxP(i) = uix.BoxPanel( 'Parent', g, 'Title', 'Sampled Process',...
+      'BorderType', 'none', 'FontSize', 16, 'FontAngle', 'italic');
+   axP(i) = axes( 'Parent', uicontainer('Parent',boxP(i)), 'Position', [.075 .2 .9 .6],...
+      'tickdir', 'out', 'Tag', ['Point Process Axis ' num2str(i)],...
+      'ActivePositionProperty', 'outerposition');
+   heights = [heights -1];
+end
+g.Heights = heights;
+linkaxes([axS,axP],'x');
 
-set(handles.slider_array,'Value',1);
-set(handles.slider_array,'Max',numel(data));
+set(handles.slider_array, 'Min', 1);
+set(handles.slider_array, 'Max', numel(data));
+set(handles.slider_array, 'SliderStep', [1 5] / max(1,(numel(data) - 1)));
+set(handles.slider_array, 'Value', 1); % set to beginning of sequence
 
 updateInterface(hObject, eventdata, handles)
-% UIWAIT makes processBrowser wait for user response (see UIRESUME)
-% uiwait(handles.figure1);
 
 function updateInterface(hObject, eventdata, handles)
 
-plotS(handles)
+if handles.plotS
+   plotS(handles);
+end
+if 0%handles.plotP
+   plotP(handles);
+end
 
 function plotS(handles)
 import fig.*
 
 strips = get(handles.button_strips,'Value');
 data = handles.data;
-ax = findobj(handles.uipanel1,'Tag','Sampled Process Axes');
+ax = findobj(handles.uipanel1,'Tag','Sampled Process Axis 1');
 axes(ax);
 
 ind = round(get(handles.slider_array,'Value'));
@@ -120,18 +131,26 @@ ind = max(ind,1);
 ind = min(ind,numel(handles.data));
 set(handles.slider_array,'Value',ind);
 
+if isa(data,'Segment')
+   data = cell.flatten(extract(data,'SampledProcess','type'));
+   values = data{ind}.values{1};
+   t = data{ind}.times{1};
+else
+   values = data(ind).values{1};
+   t = data(ind).times{1};
+end
+
 cla;
 hold on;
 if strips
-   temp = data(ind).values{1};
-   n = size(temp,2);
-   sd = nanstd(temp);
+   n = size(values,2);
+   sd = nanstd(values);
    sf = (0:n-1)*3*max(sd);
-   plot(data(ind).times{1},bsxfun(@plus,temp,sf));
-   plot([data(ind).times{1}(1) data(ind).times{1}(end)],[sf' , sf'],'color',[.7 .7 .7 .4]);
+   plot(t,bsxfun(@plus,values,sf));
+   plot([t(1) t(end)],[sf' , sf'],'color',[.7 .7 .7 .4]);
    axis tight;
 else
-   plot(data(ind).times{1},data(ind).values{1});
+   plot(t,values);
    axis tight;
 end
 interactivemouse ON;
