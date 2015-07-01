@@ -1,5 +1,4 @@
-function processViewer(p)
-
+function gui = processViewer(p)
 % Data is shared between all child functions by declaring the variables
 % here (they become global to the function). We keep things tidy by putting
 % all GUI stuff in one structure and all data stuff in another. As the app
@@ -8,11 +7,7 @@ data = createData(p);
 gui = createInterface();
 
 % Now update the GUI with the current data
-updateInterface();
-%redrawDemo();
-
-% Explicitly call the demo display so that it gets included if we deploy
-%displayEndOfDemoMessage('')
+updateViews();
 
 %-------------------------------------------------------------------------%
    function data = createData(p)
@@ -58,52 +53,15 @@ updateInterface();
       uimenu( gui.FileMenu, 'Label', 'Exit', 'Callback', @onExit );
       
       % + Create the panels
-      b = uix.HBox( 'Parent', gui.Window, 'Spacing', 5, 'Padding', 5 );
-      controlPanel = uix.BoxPanel( 'Parent', b );
+      gui.HBox = uix.HBox( 'Parent', gui.Window, 'Spacing', 5, 'Padding', 5 );
+      controlPanel = uix.BoxPanel('Parent',gui.HBox);
       
-      gui.ViewGrid = uix.GridFlex( 'Parent', b, 'Spacing', 5 );
-      heights = [];
-      if data.plotS
-         for i = 1:data.plotS
-            gui.ViewPanelS(i) = uix.BoxPanel( 'Parent', gui.ViewGrid,...
-               'Title','Sampled Process','TitleColor',[.5 .5 .5],...
-               'BorderType', 'beveledout', 'FontSize', 16, 'FontAngle', 'italic');
-            axS(i) = axes( 'Parent', uicontainer('Parent',gui.ViewPanelS(i)), 'Position', [.075 .1 .9 .8],...
-               'tickdir', 'out', 'Tag', ['Sampled Process Axis ' num2str(i)],...
-               'ActivePositionProperty', 'outerposition');
-            heights = [heights -1.75];
-         end
-      else
-         gui.ViewPanelS = uix.BoxPanel( 'Parent', gui.ViewGrid,...
-            'Title','Sampled Process','TitleColor',[.5 .5 .5],...
-            'BorderType', 'beveledout', 'FontSize', 16, 'FontAngle', 'italic');
-         heights = [heights 0];
-      end
-      if data.plotP
-         for i = 1:data.plotP
-            gui.ViewPanelP(i) = uix.BoxPanel( 'Parent', gui.ViewGrid,...
-               'Title','Point Process','TitleColor',[.5 .5 .5],...
-               'BorderType', 'beveledout', 'FontSize', 16, 'FontAngle', 'italic');
-            axP(i) = axes( 'Parent', uicontainer('Parent',gui.ViewPanelP(i)), 'Position', [.075 .2 .9 .6],...
-               'tickdir', 'out', 'Tag', ['Point Process Axis ' num2str(i)],...
-               'ActivePositionProperty', 'outerposition');
-            heights = [heights -1];
-         end
-      else
-         gui.ViewPanelP = uix.BoxPanel( 'Parent', gui.ViewGrid,...
-            'Title','Point Process','TitleColor',[.5 .5 .5],...
-            'BorderType', 'beveledout', 'FontSize', 16, 'FontAngle', 'italic');
-         heights = [heights 0];
-      end
+      % Panels and axes for data
+      [gui.ViewGrid,gui.ViewPanelS,gui.ViewPanelP] = createViewPanels(gui.HBox,data);
       
-      set(gui.ViewGrid, 'Heights', heights );
       % set HBox elements sizes, fix control panel
-      set( b, 'Widths', [175 -1] );
-      
-      if exist('axS','var') && exist('axP','var')
-         linkaxes([axS,axP],'x');
-      end
-      
+      set(gui.HBox, 'Widths', [175 -1] );
+            
       figHeight = get(gui.Window,'Position');
       figHeight = figHeight(end);
       
@@ -115,9 +73,9 @@ updateInterface();
          'String','Plot Events','Fontsize', 14,...
          'Position',[35,figHeight-210,110,35],'Callback', @onEventsButton);
 
-      gui.StripsButton = uicontrol('parent',gui.Window,'style','radio',...
+      gui.StackButton = uicontrol('parent',gui.Window,'style','radio',...
          'position',[20,figHeight-50,80,25], 'Fontsize', 14,...
-         'String','Strips','Callback', @onStripsButton);
+         'String','Stack','Callback', @onStackButton);
       
       gui.ScaleSlider = uicontrol('parent',gui.Window,'style','slider',...
          'position',[43,figHeight-100,125-23,25]);
@@ -125,7 +83,7 @@ updateInterface();
       set(gui.ScaleSlider,'Callback', @onScaleSlider);
 
       gui.ScaleSliderTxt = uicontrol('parent',gui.Window,'Style','text',...
-         'String','Strips separation 0 SD','HorizontalAlignment','Left',...
+         'String','Stack separation 0 SD','HorizontalAlignment','Left',...
          'Position',[43,figHeight-75,125,25],'Fontsize',10);
       
       gui.MousePanButton = uicontrol('parent',gui.Window,'style','radio',...
@@ -144,26 +102,71 @@ updateInterface();
          'Position',[25,figHeight-375,125,25],'Fontsize',14);
       
       n = size(data.p(1).window,1);
-      gui.WinSlider = uicontrol('parent',gui.Window,'style','slider',...
+      gui.WindowSlider = uicontrol('parent',gui.Window,'style','slider',...
          'position',[25,figHeight-350,125,25]);
-      set(gui.WinSlider,'Min',1,'Max',n);
-      set(gui.WinSlider,'SliderStep', [1 5] / max(1,n - 1),'Value', 1);
-      set(gui.WinSlider, 'Callback', @(h,e)disp('slide me'));
+      set(gui.WindowSlider,'Min',1,'Max',n);
+      set(gui.WindowSlider,'SliderStep', [1 5] / max(1,n - 1),'Value', 1);
+      set(gui.WindowSlider, 'Callback', @(h,e)disp('slide me'));
       
-      gui.WinSliderTxt = uicontrol('parent',gui.Window,'Style','text',...
-         'String',['Win 1/' num2str(n)],...
+      gui.WindowSliderTxt = uicontrol('parent',gui.Window,'Style','text',...
+         'String',['Window 1/' num2str(n)],...
          'Position',[25,figHeight-325,125,25],'Fontsize',14);
              
       set(gui.Window,'Visible', 'on');
       set(gui.Window,'SizeChangedFcn', @onResize)
    end % createInterface
 %-------------------------------------------------------------------------%
+   function [ViewGrid,ViewPanelS,ViewPanelP] = createViewPanels(hbox,data)
+      ViewGrid = uix.GridFlex('Parent',hbox,'Spacing',5);
+      heights = [];
+      if data.plotS
+         for i = 1:data.plotS
+            ViewPanelS(i) = uix.BoxPanel( 'Parent', ViewGrid,...
+               'Title','Sampled Process','TitleColor',[.5 .5 .5],...
+               'BorderType', 'beveledout', 'FontSize', 16, 'FontAngle', 'italic');
+            axS(i) = axes( 'Parent', uicontainer('Parent',ViewPanelS(i)),...
+               'Position', [.075 .1 .9 .8],...
+               'tickdir', 'out', 'Tag', ['Sampled Process Axis ' num2str(i)],...
+               'ActivePositionProperty', 'outerposition');
+            heights = [heights -1.75];
+         end
+      else
+         ViewPanelS = uix.BoxPanel( 'Parent', ViewGrid,...
+            'Title','Sampled Process','TitleColor',[.5 .5 .5],...
+            'BorderType', 'beveledout', 'FontSize', 16, 'FontAngle', 'italic');
+         heights = [heights 0];
+      end
+      if data.plotP
+         for i = 1:data.plotP
+            ViewPanelP(i) = uix.BoxPanel( 'Parent', ViewGrid,...
+               'Title','Point Process','TitleColor',[.5 .5 .5],...
+               'BorderType', 'beveledout', 'FontSize', 16, 'FontAngle', 'italic');
+            axP(i) = axes( 'Parent', uicontainer('Parent',ViewPanelP(i)),...
+               'Position', [.075 .2 .9 .6],...
+               'tickdir', 'out', 'Tag', ['Point Process Axis ' num2str(i)],...
+               'ActivePositionProperty', 'outerposition');
+            heights = [heights -1];
+         end
+      else
+         ViewPanelP = uix.BoxPanel( 'Parent', ViewGrid,...
+            'Title','Point Process','TitleColor',[.5 .5 .5],...
+            'BorderType', 'beveledout', 'FontSize', 16, 'FontAngle', 'italic');
+         heights = [heights 0];
+      end
+      
+      set(ViewGrid, 'Heights', heights);
+      
+      if exist('axS','var') && exist('axP','var')
+         linkaxes([axS,axP],'x');
+      end
+   end
+%-------------------------------------------------------------------------%
    function onResize( ~, ~ )
       figHeight = get(gui.Window,'Position');
       figHeight = figHeight(end);
       
-      temp = get(gui.StripsButton,'Position');
-      set(gui.StripsButton,'Position',[temp(1) figHeight-50 temp(3) temp(4)]);
+      temp = get(gui.StackButton,'Position');
+      set(gui.StackButton,'Position',[temp(1) figHeight-50 temp(3) temp(4)]);
       temp = get(gui.ScaleSlider,'Position');
       set(gui.ScaleSlider,'Position',[temp(1) figHeight-100 temp(3) temp(4)]);
       temp = get(gui.ScaleSliderTxt,'Position');
@@ -174,30 +177,39 @@ updateInterface();
       set(gui.ArraySlider,'Position',[temp(1) figHeight-400 temp(3) temp(4)]);
       temp = get(gui.ArraySliderTxt,'Position');
       set(gui.ArraySliderTxt,'Position',[temp(1) figHeight-375 temp(3) temp(4)]);
-      temp = get(gui.WinSlider,'Position');
-      set(gui.WinSlider,'Position',[temp(1) figHeight-350 temp(3) temp(4)]);
-      temp = get(gui.WinSliderTxt,'Position');
-      set(gui.WinSliderTxt,'Position',[temp(1) figHeight-325 temp(3) temp(4)]);
+      temp = get(gui.WindowSlider,'Position');
+      set(gui.WindowSlider,'Position',[temp(1) figHeight-350 temp(3) temp(4)]);
+      temp = get(gui.WindowSliderTxt,'Position');
+      set(gui.WindowSliderTxt,'Position',[temp(1) figHeight-325 temp(3) temp(4)]);
 
    end % onResize
 
 %-------------------------------------------------------------------------%
-   function updateInterface()
-      if data.plotP
-         plotP();
-      end
+   function updateViews()
+      updateViewPanelP();
+      updateViewPanelS();
+      updateEvents();
+   end % updateViews
+%-------------------------------------------------------------------------%
+   function updateViewPanelS()
       if data.plotS
          plotS();
       end
+   end
+%-------------------------------------------------------------------------%
+   function updateViewPanelP()
+      if data.plotP
+         plotP();
+      end
+   end
+%-------------------------------------------------------------------------%
+   function updateEvents()
       if get(gui.EventsButton,'Value')
          plotE();
       end
-   end % updateInterface
+   end
 %-------------------------------------------------------------------------%
    function plotS()
-      strips = get(gui.StripsButton,'Value');
-      ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
-      axes(ax);
       ind = get(gui.ArraySlider,'Value');
       
       if isa(data.p,'Segment')
@@ -208,9 +220,12 @@ updateInterface();
          values = data.p(ind).values{1};
          t = data.p(ind).times{1};
       end
-
+      
+      ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
+      axes(ax);
       cla(ax); hold on;
-      if strips
+
+      if get(gui.StackButton,'Value')
          n = size(values,2);
          sf = (0:n-1)*get(gui.ScaleSlider,'Value')*data.sd;
          plot(t,bsxfun(@plus,values,sf));
@@ -238,16 +253,17 @@ updateInterface();
 %-------------------------------------------------------------------------%
    function plotE()
       if isa(data.p,'Segment')
-         ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
-         axes(ax);
          ind = get(gui.ArraySlider,'Value');
          ep = extract(data.p(ind),'EventProcess','type');
          ep = ep{1};
-         
          values = ep.values{1};
-         ylim = get(ax,'ylim');
          
          c = fig.distinguishable_colors(numel(values));
+
+         ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
+         axes(ax);
+         ylim = get(ax,'ylim');
+         
          for i = 1:numel(values)
             left = values(i).time(1);
             right = values(i).time(2);
@@ -264,7 +280,7 @@ updateInterface();
    end
 %-------------------------------------------------------------------------%
    function onRedrawButton(~,~)
-      updateInterface();
+      updateViews();
    end % redrawDemo
 %-------------------------------------------------------------------------%
    function onEventsButton(~,~)
@@ -286,10 +302,10 @@ updateInterface();
       set(gui.ArraySliderTxt,'String',...
          ['Array ' num2str(get(gui.ArraySlider,'Value')) '/'...
          num2str(numel(data.p))])
-      updateInterface()
+      updateViews();
    end % onHelp
 %-------------------------------------------------------------------------%
-   function onStripsButton( ~, ~ )
+   function onStackButton( ~, ~ )
       if data.plotS
          set(gui.MousePanButton,'Value',0);
          fig.interactivemouse('OFF');
@@ -303,26 +319,28 @@ updateInterface();
          end
          data.sd = max(nanstd(values));
          
-         if get(gui.StripsButton,'Value')
+         if get(gui.StackButton,'Value')
             set(gui.ScaleSlider,'Value',3);
-            set(gui.ScaleSliderTxt,'String','Strips separation 3 SD');
+            set(gui.ScaleSliderTxt,'String','Stack separation 3 SD');
          else
             set(gui.ScaleSlider,'Value',0);
-            set(gui.ScaleSliderTxt,'String','Strips separation 0 SD');
+            set(gui.ScaleSliderTxt,'String','Stack separation 0 SD');
          end
          
-         plotS();
+         updateViewPanelS();
+         updateEvents();
       end
    end % onHelp
 %-------------------------------------------------------------------------%
    function onScaleSlider( ~, ~ )
-      if get(gui.StripsButton,'Value')
+      if get(gui.StackButton,'Value')
          set(gui.ScaleSliderTxt,'String',...
-            ['Strips separation ' sprintf('%1.1f',(get(gui.ScaleSlider,'Value'))) ' SD']);
-         plotS();
+            ['Stack separation ' sprintf('%1.1f',(get(gui.ScaleSlider,'Value'))) ' SD']);
+         updateViewPanelS();
+         updateEvents();
       else
          set(gui.ScaleSlider,'Value',0);
-         set(gui.ScaleSliderTxt,'String','Strips separation 0 SD');
+         set(gui.ScaleSliderTxt,'String','Stack separation 0 SD');
       end
    end % onExit
 
