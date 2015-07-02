@@ -180,7 +180,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
       dat = convert2Fieldtrip(self)
       
       % Visualization
-      plot(self,varargin)
+      [h,yOffset] = plot(self,varargin)
    end
    
    methods(Access = protected)
