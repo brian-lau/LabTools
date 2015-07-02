@@ -4,6 +4,9 @@ function gui = processViewer(p)
 % all GUI stuff in one structure and all data stuff in another. As the app
 % grows, we might consider making these objects rather than structures.
 data = createData(p);
+if data.plotS
+   data.sd = getCurrentSD(1);
+end
 gui = createInterface();
 
 % Now update the GUI with the current data
@@ -67,11 +70,11 @@ updateViews();
       
       gui.RedrawButton = uicontrol('parent',gui.Window,'Style','pushbutton',...
          'String','Redraw','Fontsize', 14,...
-         'Position',[35,figHeight-175,110,35],'Callback', @onRedrawButton);
+         'Position',[35,figHeight-250,110,35],'Callback', @onRedrawButton);
 
       gui.EventsButton = uicontrol('parent',gui.Window,'Style','radio',...
          'String','Plot Events','Fontsize', 14,...
-         'Position',[35,figHeight-210,110,35],'Callback', @onEventsButton);
+         'Position',[20,figHeight-150,110,35],'Callback', @onEventsButton);
 
       gui.StackButton = uicontrol('parent',gui.Window,'style','radio',...
          'position',[20,figHeight-50,80,25], 'Fontsize', 14,...
@@ -211,35 +214,26 @@ updateViews();
 %-------------------------------------------------------------------------%
    function plotS()
       ind = get(gui.ArraySlider,'Value');
-      
-      if isa(data.p,'Segment')
-         s = cell.flatten(extract(data.p,'SampledProcess','type'));
-         values = s{ind}.values{1};
-         t = s{ind}.times{1};
-      else
-         values = data.p(ind).values{1};
-         t = data.p(ind).times{1};
-      end
-      
       ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
       axes(ax);
-      cla(ax); hold on;
-
-      if get(gui.StackButton,'Value')
-         n = size(values,2);
-         sf = (0:n-1)*get(gui.ScaleSlider,'Value')*data.sd;
-         plot(t,bsxfun(@plus,values,sf));
-         plot(repmat([t(1) t(end)]',1,n),[sf' , sf']','color',[.7 .7 .7 .4]);
+      
+      if isa(data.p,'Segment')
+         s = cell.flatten(extract(data.p(ind),'SampledProcess','type'));
+         s = s{1};
       else
-         plot(t,values);
+         s = data.p(ind);
       end
+      
+      cla(ax); hold on;
+      plot(s,'handle',ax,'stack',get(gui.StackButton,'Value'),...
+         'sep',get(gui.ScaleSlider,'Value')*data.sd);
       axis tight;
    end
 %-------------------------------------------------------------------------%
    function plotP()
+      ind = get(gui.ArraySlider,'Value');
       ax = findobj(gui.ViewPanelP,'Tag','Point Process Axis 1');
       axes(ax);
-      ind = get(gui.ArraySlider,'Value');
       
       cla(ax);
       if isa(data.p,'Segment')
@@ -256,30 +250,15 @@ updateViews();
          ind = get(gui.ArraySlider,'Value');
          ep = extract(data.p(ind),'EventProcess','type');
          ep = ep{1};
-         values = ep.values{1};
-         
-         c = fig.distinguishable_colors(numel(values));
 
          ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
-         axes(ax);
-         ylim = get(ax,'ylim');
-         
-         for i = 1:numel(values)
-            left = values(i).time(1);
-            right = values(i).time(2);
-            bottom = ylim(1);
-            top = ylim(2);
-            eFill(i) = fill([left left right right],[bottom top top bottom],...
-               c(i,:),'FaceAlpha',0.15,'EdgeColor','none');
-            set(eFill(i),'Tag','Event');
-            eText(i) = text(left,top,values(i).name,'VerticalAlignment','bottom',...
-               'FontAngle','italic');
-            set(eText(i),'Tag','Event');
-         end
+         plot(ep,'handle',ax);
       end
    end
 %-------------------------------------------------------------------------%
    function onRedrawButton(~,~)
+      fig.interactivemouse('OFF');
+      set(gui.MousePanButton,'Value',0);
       updateViews();
    end % redrawDemo
 %-------------------------------------------------------------------------%
@@ -311,13 +290,7 @@ updateViews();
          fig.interactivemouse('OFF');
          
          ind = get(gui.ArraySlider,'Value');
-         if isa(data.p,'Segment')
-            s = cell.flatten(extract(data.p,'SampledProcess','type'));
-            values = s{ind}.values{1};
-         else
-            values = data.p(ind).values{1};
-         end
-         data.sd = max(nanstd(values));
+         data.sd = getCurrentSD(ind);
          
          if get(gui.StackButton,'Value')
             set(gui.ScaleSlider,'Value',3);
@@ -331,6 +304,16 @@ updateViews();
          updateEvents();
       end
    end % onHelp
+%-------------------------------------------------------------------------%
+   function sd = getCurrentSD(ind)
+      if isa(data.p,'Segment')
+         s = cell.flatten(extract(data.p,'SampledProcess','type'));
+         values = s{ind}.values{1};
+      else
+         values = data.p(ind).values{1};
+      end
+      sd = max(nanstd(values));
+   end
 %-------------------------------------------------------------------------%
    function onScaleSlider( ~, ~ )
       if get(gui.StackButton,'Value')
