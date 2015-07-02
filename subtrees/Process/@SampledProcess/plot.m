@@ -27,7 +27,7 @@ if p.Results.stack
    n = size(values,2);
    sf = (0:n-1)*p.Results.sep;
    plot(t,bsxfun(@plus,values,sf));
-   plot(repmat([t(1) t(end)]',1,n),[sf' , sf']','color',[.7 .7 .7 .4]);
+   plot(repmat([t(1) t(end)]',1,n),[sf' , sf']','--','color',[.7 .7 .7 .4]);
 else
    plot(t,values);
 end

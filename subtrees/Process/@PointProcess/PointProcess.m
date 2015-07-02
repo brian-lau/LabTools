@@ -127,12 +127,12 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
 
          % Define the start and end times of the process
          if isempty(par.tStart)
-            self.tStart = min([cellfun(@(x) min(x(:)),eventTimes) 0]);
+            self.tStart = min([min(cat(1,eventTimes{:})) 0]);
          else
             self.tStart = par.tStart;
          end
          if isempty(par.tEnd)
-            self.tEnd = max([max(cellfun(@(x) max(x(:)),eventTimes))  self.tStart]);
+            self.tEnd = max([max(cat(1,eventTimes{:}))  self.tStart]);
          else
             self.tEnd = par.tEnd;
          end

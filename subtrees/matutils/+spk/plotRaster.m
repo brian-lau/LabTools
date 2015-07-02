@@ -203,11 +203,7 @@ end
 
 %% Assign colors
 if isempty(p.Results.grpColor)
-   if exist('distinguishable_colors') == 2
-      c = distinguishable_colors(nGrps);
-   else
-      c = get(0,'DefaultAxesColorOrder');
-   end
+   c = get(0,'DefaultAxesColorOrder');
    count = 1;
    for i = grpInd
       col{i} = c(count,:);
@@ -231,31 +227,54 @@ elseif isnumeric(p.Results.grpColor)
 end
 
 %% Plot
+
 for i = grpInd % groups
-   for j = 1:nRows % rows
-      if ~(isempty(eventTimes{j,i}) || any(isnan(eventTimes{j,i})))
-         if strcmp(p.Results.style,'marker')
-            plot(eventTimes{j,i}(:) , yOffset*ones(size(eventTimes{j,i}(:))), ...
-               'color',col{i},'marker',p.Results.markerStyle,'linestyle','none', ...
-               'Markersize',p.Results.markerSize,plotParams);
+   if 1
+%       if strcmp(p.Results.style,'marker')
+%          plot(x,yOffset+y-1,'color',col{i},'marker',p.Results.markerStyle,...
+%             'linestyle','none','Markersize',p.Results.markerSize,plotParams);
+%       else
+         %nSpikes = sum(cellfun(@numel,eventTimes(:,i)));
+         x = [];
+         y = [];
+         for j = 1:nRows
+            spk = eventTimes{j,i}(:)';
+            nSpk = numel(spk);
+            N = NaN(1,nSpk);
+            
+            tempx = [spk ; spk ; N];
+            tempy = [j*ones(1,nSpk)-p.Results.tickHeight ; j*ones(1,nSpk)+p.Results.tickHeight ; N];
+            x = [x ; tempx(:)];
+            y = [y ; tempy(:)];
+         end
+         line(x,yOffset+y-1,'color',col{i},'Linewidth',p.Results.tickWidth,plotParams);
+%       end
+      yOffset = yOffset + j;
+   else
+      for j = 1:nRows % rows
+         if ~(isempty(eventTimes{j,i}) || any(isnan(eventTimes{j,i})))
+            if strcmp(p.Results.style,'marker')
+               plot(eventTimes{j,i}(:) , yOffset*ones(size(eventTimes{j,i}(:))), ...
+                  'color',col{i},'marker',p.Results.markerStyle,'linestyle','none', ...
+                  'Markersize',p.Results.markerSize,plotParams);
+            else
+               line([eventTimes{j,i}(:) , eventTimes{j,i}(:)]', ...
+                  [(yOffset*ones(size(eventTimes{j,i}(:))) - p.Results.tickHeight),...
+                  (yOffset*ones(size(eventTimes{j,i}(:))) + p.Results.tickHeight)]',...
+                  'color',col{i},'Linewidth',p.Results.tickWidth,plotParams);
+            end
+         end
+         if p.Results.skipNaN
+            if isempty(eventTimes{j,i})
+               yOffset = yOffset + 1;
+            elseif ~isnan(eventTimes{j,i})
+               yOffset = yOffset + 1;
+            end
          else
-            line([eventTimes{j,i}(:) , eventTimes{j,i}(:)]', ...
-               [(yOffset*ones(size(eventTimes{j,i}(:))) - p.Results.tickHeight),...
-               (yOffset*ones(size(eventTimes{j,i}(:))) + p.Results.tickHeight)]',...
-               'color',col{i},'Linewidth',p.Results.tickWidth,plotParams);
-         end
-      end
-      if p.Results.skipNaN
-         if isempty(eventTimes{j,i})
-            yOffset = yOffset + 1;
-         elseif ~isnan(eventTimes{j,i})
             yOffset = yOffset + 1;
          end
-      else
-         yOffset = yOffset + 1;
       end
    end
-   
    if p.Results.grpBorder
       plot(xLim, [yOffset yOffset] - p.Results.tickHeight,'-','color',col{i});
    end
