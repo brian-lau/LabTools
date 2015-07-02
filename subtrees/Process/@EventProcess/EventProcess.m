@@ -96,10 +96,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
       % add event
       % remove event
       
-%       function plot(self)
-%          figure(2);
-%          plot(randn(10,1),randn(10,1),'ro');
-%       endE
+      %% Display
+      [h,yOffset] = plot(self,varargin)
+
    end
    methods(Access = protected)
       applyWindow(self)
