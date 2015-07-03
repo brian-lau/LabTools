@@ -139,7 +139,7 @@ p.addParamValue('grpColor',[],@(x)( ...
    iscell(x)) ... % cell array of str or RGB values
    );
 validStyles = {'tick' 'line' 'marker'};
-p.addParamValue('style','marker',@(x)any(strcmp(x,validStyles)));
+p.addParamValue('style','tick',@(x)any(strcmp(x,validStyles)));
 p.addParamValue('markerStyle','.',@ischar);
 p.addParamValue('markerSize',3,@(x)(x>0)&&isnumeric(x));
 p.addParamValue('tickHeight',0.5,@(x)(x>0)&&(x<=0.5));
