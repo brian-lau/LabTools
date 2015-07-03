@@ -266,7 +266,9 @@ for i = grpInd % groups
                shift = zeros(size(offset));
             end
             
-            if ~isempty(eventTemp)
+            if isempty(eventTemp)
+               winTimes{j,grpCount} = [];
+            elseif ~all(isnan(eventTemp))
                ind = (eventTemp >= tStart) & (eventTemp <= tEnd);
                if ~isempty(ind)
                   % Rows index windows for the same set of eventTimes
@@ -285,13 +287,15 @@ for i = grpInd % groups
             shift = zeros(size(offset));
          end
          
-         if ~isempty(eventTemp)
+         if isempty(eventTemp)
+            winTimes{j,grpCount} = [];
+         elseif ~all(isnan(eventTemp))
             ind = (eventTemp >= tStart) & (eventTemp <= tEnd);
             if ~isempty(ind)
                % Rows index windows for each individual set of eventTimes
                winTimes{j,grpCount} = eventTemp(ind) + shift(j);
             end
-         end         
+         end
       end
    end
    grpCount = grpCount + 1;
