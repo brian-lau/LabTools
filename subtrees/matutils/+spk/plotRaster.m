@@ -229,52 +229,37 @@ end
 %% Plot
 
 for i = grpInd % groups
-   if 1
-%       if strcmp(p.Results.style,'marker')
-%          plot(x,yOffset+y-1,'color',col{i},'marker',p.Results.markerStyle,...
-%             'linestyle','none','Markersize',p.Results.markerSize,plotParams);
-%       else
-         %nSpikes = sum(cellfun(@numel,eventTimes(:,i)));
-         x = [];
-         y = [];
-         for j = 1:nRows
-            spk = eventTimes{j,i}(:)';
-            nSpk = numel(spk);
-            N = NaN(1,nSpk);
-            
+   x = [];
+   y = [];
+   count = 1;
+   for j = 1:nRows
+      spk = eventTimes{j,i}(:)';
+      nSpk = numel(spk);
+      N = NaN(1,nSpk);
+      
+      if isempty(spk)
+         count = count + 1;
+      elseif all(isnan(spk)) && p.Results.skipNaN
+      else
+         if strcmp(p.Results.style,'tick')
             tempx = [spk ; spk ; N];
-            tempy = [j*ones(1,nSpk)-p.Results.tickHeight ; j*ones(1,nSpk)+p.Results.tickHeight ; N];
-            x = [x ; tempx(:)];
-            y = [y ; tempy(:)];
-         end
-         line(x,yOffset+y-1,'color',col{i},'Linewidth',p.Results.tickWidth,plotParams);
-%       end
-      yOffset = yOffset + j;
-   else
-      for j = 1:nRows % rows
-         if ~(isempty(eventTimes{j,i}) || any(isnan(eventTimes{j,i})))
-            if strcmp(p.Results.style,'marker')
-               plot(eventTimes{j,i}(:) , yOffset*ones(size(eventTimes{j,i}(:))), ...
-                  'color',col{i},'marker',p.Results.markerStyle,'linestyle','none', ...
-                  'Markersize',p.Results.markerSize,plotParams);
-            else
-               line([eventTimes{j,i}(:) , eventTimes{j,i}(:)]', ...
-                  [(yOffset*ones(size(eventTimes{j,i}(:))) - p.Results.tickHeight),...
-                  (yOffset*ones(size(eventTimes{j,i}(:))) + p.Results.tickHeight)]',...
-                  'color',col{i},'Linewidth',p.Results.tickWidth,plotParams);
-            end
-         end
-         if p.Results.skipNaN
-            if isempty(eventTimes{j,i})
-               yOffset = yOffset + 1;
-            elseif ~isnan(eventTimes{j,i})
-               yOffset = yOffset + 1;
-            end
+            tempy = [count*ones(1,nSpk)-p.Results.tickHeight ; count*ones(1,nSpk)+p.Results.tickHeight ; N];
          else
-            yOffset = yOffset + 1;
+            tempx = spk;
+            tempy = count*ones(1,nSpk);
          end
+         x = [x ; tempx(:)];
+         y = [y ; tempy(:)];
+         count = count + 1;
       end
    end
+   if strcmp(p.Results.style,'tick')
+      line(x,yOffset+y-1,'color',col{i},'Linewidth',p.Results.tickWidth,plotParams);
+   else
+      plot(x,yOffset+y-1,'color',col{i},'marker',p.Results.markerStyle,...
+         'linestyle','none','Markersize',p.Results.markerSize,plotParams);
+   end
+   yOffset = yOffset + count - 1;
    if p.Results.grpBorder
       plot(xLim, [yOffset yOffset] - p.Results.tickHeight,'-','color',col{i});
    end
