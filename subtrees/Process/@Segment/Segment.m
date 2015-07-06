@@ -21,6 +21,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       type
    end
    properties
+      sampledProcess
+      pointProcess
+      eventProcess
       labels
       tStart
       tEnd
@@ -108,6 +111,18 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          list = cellfun(@(x) class(x),self.processes,'uni',0);
       end
       
+      function proc = get.sampledProcess(self)
+         proc = extract(self,'SampledProcess','type');
+      end
+      
+      function proc = get.pointProcess(self)
+         proc = extract(self,'PointProcess','type');
+      end
+      
+      function proc = get.eventProcess(self)
+         proc = extract(self,'EventProcess','type');
+      end
+     
       function set.tStart(self,tStart)
          for i = 1:numel(self.processes)
             self.processes{i}.tStart = tStart;
@@ -139,7 +154,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       function set.labels(self,labels)
          n = numel(self.processes);
          if isempty(labels)
-            self.labels = arrayfun(@(x) ['pid' num2str(x)],1:n,'uni',0);
+            self.labels = arrayfun(@(x) ['sid' num2str(x)],1:n,'uni',0);
          elseif iscell(labels)
             assert(all(cellfun(@ischar,labels)),'Segment:labels:InputType',...
                'Labels must be strings');
@@ -154,7 +169,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
             error('Segment:labels:InputType','Incompatible label type');
          end
       end
-      
+            
       self = sync(self,event,varargin)
       proc = extract(self,request,flag)
       self = reset(self)
