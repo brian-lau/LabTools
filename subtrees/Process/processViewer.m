@@ -1,10 +1,10 @@
-function gui = processViewer(p)
+function gui = processViewer(seg)
 % Data is shared between all child functions by declaring the variables
 % here (all functions are nested). We keep things tidy by putting
 % all GUI stuff in one structure and all data stuff in another. As the app
 % grows, we might consider making these objects rather than structures.
 
-data = createData(p);
+data = createData(seg);
 if data.plotS
    data.sd = getCurrentSD(1);
 end
@@ -14,27 +14,33 @@ gui = createInterface();
 updateViews();
 
 %-------------------------------------------------------------------------%
-   function data = createData(p)
-      data.p = p;
-      data.plotS = 0;
-      data.plotP = 0;
-      data.plotE = 0;
-      if isa(p,'SampledProcess')
-         data.plotS = 1;
-      elseif isa(p,'PointProcess')
-         data.plotP = 1;
-      elseif isa(p,'Segment')
-         % HACK, take the first, assume the rest are the same for now
-         proc = cell.uniqueRows(cat(1,p.type));
-         procLabels = cell.uniqueRows(cat(1,p.labels));
-         if (size(proc,1) == 1) && (size(procLabels,1) == 1)
-            data.plotS = sum(strcmp(p(1).type,'SampledProcess'));
-            data.plotP = sum(strcmp(p(1).type,'PointProcess'));
-         else
-            error('Different processes in each Segment element not supported');
+   function data = createData(seg)
+      
+      if isa(seg,'SampledProcess')
+         for i = 1:numel(seg)
+            segment(i) = Segment('process',...
+               {seg(i) EventProcess()});
          end
+      elseif isa(seg,'PointProcess')
+         for i = 1:numel(seg)
+            segment(i) = Segment('process',...
+               {seg(i) EventProcess()});
+         end
+      elseif isa(seg,'Segment')
+         segment = seg;
+      else
+         error('bad input');
       end
+      
+      data.segment = segment;
+      [data.plotS,data.plotP,data.plotE] = countProcesses(seg(1));
    end % createData
+
+   function [nS,nP,nE] = countProcesses(seg)
+      nS = sum(strcmp(seg.type,'SampledProcess'));
+      nP = sum(strcmp(seg.type,'PointProcess'));
+      nE = sum(strcmp(seg.type,'EventProcess'));
+   end
 
 %-------------------------------------------------------------------------%
    function gui = createInterface()
@@ -103,7 +109,7 @@ updateViews();
          'position',[20,figHeight-125,150,25],'Fontsize',14,...
          'String','Interactive zoom','Callback',@onMousePanButton);
 
-      n = numel(data.p);
+      n = numel(data.segment);
       gui.ArraySlider = uicontrol('parent',gui.Window,'style','slider',...
          'position',[25,figHeight-400,125,25]);
       set(gui.ArraySlider,'Min',1,'Max',n);
@@ -114,7 +120,7 @@ updateViews();
          'String',['Array 1/' num2str(n)],...
          'Position',[25,figHeight-375,125,25],'Fontsize',14);
       
-      n = size(data.p(1).window,1);
+      n = size(data.segment(1).window,1);
       gui.WindowSlider = uicontrol('parent',gui.Window,'style','slider',...
          'position',[25,figHeight-350,125,25],'Callback',@(h,e)disp('slide me'));
       set(gui.WindowSlider,'Min',1,'Max',n);
@@ -229,16 +235,10 @@ updateViews();
       ind = get(gui.ArraySlider,'Value');
       ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
       axes(ax);
-      
-      if isa(data.p,'Segment')
-         s = cell.flatten(extract(data.p(ind),'SampledProcess','type'));
-         s = s{1};
-      else
-         s = data.p(ind);
-      end
-      
+            
       cla(ax); hold on;
-      plot(s,'handle',ax,'stack',get(gui.StackButton,'Value'),...
+      plot(data.segment(ind).sampledProcess,'handle',ax,...
+         'stack',get(gui.StackButton,'Value'),...
          'sep',get(gui.ScaleSlider,'Value')*data.sd);
       axis tight;
    end
@@ -249,24 +249,15 @@ updateViews();
       axes(ax);
       
       cla(ax);
-      if isa(data.p,'Segment')
-         pp = extract(data.p(ind),'PointProcess','type');
-         raster(pp{1},'handle',ax,'style','tick');
-      else
-         raster(data.p,'handle',ax,'style','tick');
-      end
+      raster(data.segment(ind).pointProcess,'handle',ax,'style','tick');
       axis([get(ax,'xlim') 0.5 max(get(ax,'ylim'))]);
    end
 %-------------------------------------------------------------------------%
    function plotE()
-      if isa(data.p,'Segment')
-         ind = get(gui.ArraySlider,'Value');
-         ep = extract(data.p(ind),'EventProcess','type');
-         ep = ep{1};
-
-         ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
-         plot(ep,'handle',ax);
-      end
+      ind = get(gui.ArraySlider,'Value');
+      
+      ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
+      plot(data.segment(ind).eventProcess,'handle',ax);
    end
 %-------------------------------------------------------------------------%
    function onRedrawButton(~,~)
@@ -285,6 +276,7 @@ updateViews();
 
 %-------------------------------------------------------------------------%
    function onMousePanButton( ~, ~ )
+      zoom off;
       fig.interactivemouse;
    end % onMenuSelection
 
@@ -293,7 +285,7 @@ updateViews();
       set(gui.ArraySlider,'Value',ceil(get(gui.ArraySlider,'Value')));
       set(gui.ArraySliderTxt,'String',...
          ['Array ' num2str(get(gui.ArraySlider,'Value')) '/'...
-         num2str(numel(data.p))])
+         num2str(numel(data.segment))])
       updateViews();
    end % onHelp
 %-------------------------------------------------------------------------%
@@ -319,12 +311,7 @@ updateViews();
    end % onHelp
 %-------------------------------------------------------------------------%
    function sd = getCurrentSD(ind)
-      if isa(data.p,'Segment')
-         s = cell.flatten(extract(data.p,'SampledProcess','type'));
-         values = s{ind}.values{1};
-      else
-         values = data.p(ind).values{1};
-      end
+      values = data.segment(ind).sampledProcess.values{1};
       sd = max(nanstd(values));
    end
 %-------------------------------------------------------------------------%
