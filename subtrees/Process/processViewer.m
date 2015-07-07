@@ -15,7 +15,6 @@ updateViews();
 
 %-------------------------------------------------------------------------%
    function data = createData(seg)
-      
       if isa(seg,'SampledProcess')
          for i = 1:numel(seg)
             segment(i) = Segment('process',...
@@ -56,12 +55,16 @@ updateViews();
          'Position',[200 200 1250 750],...
          'Visible','off',...
          'HandleVisibility','on');
+
+      figHeight = get(gui.Window,'Position');
+      figHeight = figHeight(end);
       
       % + File menu
       gui.FileMenu = uimenu(gui.Window,'Label','File');
       uimenu(gui.FileMenu,'Label','Load','Callback',@onExit);
       uimenu(gui.FileMenu,'Label','Exit','Callback',@onExit);
      
+      % + Remove some toolbar elements
       a = findall(gui.Window);
       rmTools = {'Save Figure' 'New Figure' 'Print Figure' 'Edit Plot' ...
          'Rotate 3D' 'Link Plot' 'Insert Colorbar' 'Hide Plot Tools' ...
@@ -74,64 +77,70 @@ updateViews();
       
       % + Create the panels
       gui.HBox = uix.HBox('Parent',gui.Window,'Spacing',5,'Padding',5);
-      controlPanel = uix.BoxPanel('Parent',gui.HBox);
+      %controlPanel = uix.BoxPanel('Parent',gui.HBox);
+      %gui.controlGrid = uix.GridFlex('Parent',gui.HBox,'Spacing',5);
+      gui.controlBox = uix.VBox('Parent',gui.HBox,'Spacing',5,...
+         'Units','pixels');
+      gui.controlBoxUpper = uix.BoxPanel('Parent',gui.controlBox,'Units','pixels');
+      gui.controlBoxLower = uix.BoxPanel('Parent',gui.controlBox,'Units','pixels');
+      set(gui.controlBox,'Heights',[325 -2]);
       
       % Panels and axes for data
-      [gui.ViewGrid,gui.ViewPanelS,gui.ViewPanelP] = createViewPanels(gui.HBox,data);
+      [gui.ViewGrid,gui.ViewPanelS,gui.ViewPanelP] = ...
+         createViewPanels(gui.HBox,data);
       
-      % set HBox elements sizes, fix control panel
-      set(gui.HBox,'Widths',[175 -1]);
+      % Fix control panel width
+      set(gui.HBox,'Widths',[225 -1]);
             
-      figHeight = get(gui.Window,'Position');
-      figHeight = figHeight(end);
+      h1 = uitabgroup('Parent',gui.controlBoxUpper,'Units','pixels');
+      gui.upperTab1 = uitab(h1,'title','View','Units','pixels');
+      gui.upperTab2 = uitab(h1,'title','Test');
+
+      h2 = uitabgroup('Parent',gui.controlBoxLower);
+      gui.LowerTab1 = uitab(h2,'title','Align');
+      gui.LowerTab2 = uitab(h2,'title','Select');
       
-      gui.RedrawButton = uicontrol('parent',gui.Window,'Style','pushbutton',...
-         'String','Redraw','Fontsize',14,...
-         'Position',[35,figHeight-500,110,35],'Callback',@onRedrawButton);
-
-      gui.EventsButton = uicontrol('parent',gui.Window,'Style','radio',...
-         'String','Plot Events','Fontsize',14,...
-         'Position',[20,figHeight-150,110,35],'Callback',@onEventsButton);
-
-      gui.StackButton = uicontrol('parent',gui.Window,'style','radio',...
-         'position',[20,figHeight-50,80,25],'Fontsize',14,...
+      top = 240;
+      gui.StackButton = uicontrol('parent',gui.upperTab1,'style','radio',...
+         'position',[10,top,80,25],'Fontsize',14,...
          'String','Stack','Callback',@onStackButton);
-      
-      gui.ScaleSlider = uicontrol('parent',gui.Window,'style','slider',...
-         'position',[43,figHeight-100,125-23,25],'Callback', @onScaleSlider);
+
+      gui.ScaleSliderTxt = uicontrol('parent',gui.upperTab1,'Style','text',...
+         'String','Stack separation 0 SD','HorizontalAlignment','Left',...
+         'Position',[43,top-25,125,25],'Fontsize',10);
+
+      gui.ScaleSlider = uicontrol('parent',gui.upperTab1,'style','slider',...
+         'position',[43,top-50,125-23,25],'Callback', @onScaleSlider);
       set(gui.ScaleSlider,'Min',0,'Max',6,'Value',0);
 
-      gui.ScaleSliderTxt = uicontrol('parent',gui.Window,'Style','text',...
-         'String','Stack separation 0 SD','HorizontalAlignment','Left',...
-         'Position',[43,figHeight-75,125,25],'Fontsize',10);
+      gui.EventsButton = uicontrol('parent',gui.upperTab1,'Style','radio',...
+         'String','Plot Events','Fontsize',14,...
+         'Position',[10,top-75,110,25],'Callback',@onEventsButton);
       
-      gui.MousePanButton = uicontrol('parent',gui.Window,'style','radio',...
-         'position',[20,figHeight-125,150,25],'Fontsize',14,...
+      gui.MousePanButton = uicontrol('parent',gui.upperTab1,'style','radio',...
+         'position',[10,top-100,150,25],'Fontsize',14,...
          'String','Interactive zoom','Callback',@onMousePanButton);
 
       n = numel(data.segment);
-      gui.ArraySlider = uicontrol('parent',gui.Window,'style','slider',...
-         'position',[25,figHeight-400,125,25]);
+      gui.ArraySliderTxt = uicontrol('parent',gui.upperTab1,'Style','text',...
+         'String',['Array 1/' num2str(n)],...
+         'Position',[20,top-150,150,25],'Fontsize',14);
+      gui.ArraySlider = uicontrol('parent',gui.upperTab1,'style','slider',...
+         'position',[20,top-175,150,25]);
       set(gui.ArraySlider,'Min',1,'Max',n);
       set(gui.ArraySlider,'SliderStep', [1 5] / max(1,n - 1),'Value',1);
       set(gui.ArraySlider,'Callback', @onArraySlider);
-
-      gui.ArraySliderTxt = uicontrol('parent',gui.Window,'Style','text',...
-         'String',['Array 1/' num2str(n)],...
-         'Position',[25,figHeight-375,125,25],'Fontsize',14);
       
       n = size(data.segment(1).window,1);
-      gui.WindowSlider = uicontrol('parent',gui.Window,'style','slider',...
-         'position',[25,figHeight-350,125,25],'Callback',@(h,e)disp('slide me'));
+      gui.WindowSliderTxt = uicontrol('parent',gui.upperTab1,'Style','text',...
+         'String',['Window 1/' num2str(n)],...
+         'Position',[20,top-200,150,25],'Fontsize',14);
+      gui.WindowSlider = uicontrol('parent',gui.upperTab1,'style','slider',...
+         'position',[20,top-225,150,25],'Callback',@(h,e)disp('slide me'));
       set(gui.WindowSlider,'Min',1,'Max',n);
       set(gui.WindowSlider,'SliderStep', [1 5] / max(1,n - 1),'Value', 1);
-      
-      gui.WindowSliderTxt = uicontrol('parent',gui.Window,'Style','text',...
-         'String',['Window 1/' num2str(n)],...
-         'Position',[25,figHeight-325,125,25],'Fontsize',14);
              
       set(gui.Window,'Visible','on');
-      set(gui.Window,'SizeChangedFcn',@onResize)
    end % createInterface
 %-------------------------------------------------------------------------%
    function [ViewGrid,ViewPanelS,ViewPanelP] = createViewPanels(hbox,data)
@@ -178,33 +187,7 @@ updateViews();
          linkaxes([axS,axP],'x');
       end
    end
-%-------------------------------------------------------------------------%
-   function onResize( ~, ~ )
-      figHeight = get(gui.Window,'Position');
-      figHeight = figHeight(end);
-      
-      temp = get(gui.RedrawButton,'Position');
-      set(gui.RedrawButton,'Position',[temp(1) figHeight-500 temp(3) temp(4)]);
-      temp = get(gui.StackButton,'Position');
-      set(gui.StackButton,'Position',[temp(1) figHeight-50 temp(3) temp(4)]);
-      temp = get(gui.EventsButton,'Position');
-      set(gui.EventsButton,'Position',[temp(1) figHeight-150 temp(3) temp(4)]);
-      temp = get(gui.ScaleSlider,'Position');
-      set(gui.ScaleSlider,'Position',[temp(1) figHeight-100 temp(3) temp(4)]);
-      temp = get(gui.ScaleSliderTxt,'Position');
-      set(gui.ScaleSliderTxt,'Position',[temp(1) figHeight-75 temp(3) temp(4)]);
-      temp = get(gui.MousePanButton,'Position');
-      set(gui.MousePanButton,'Position',[temp(1) figHeight-125 temp(3) temp(4)]);
-      temp = get(gui.ArraySlider,'Position');
-      set(gui.ArraySlider,'Position',[temp(1) figHeight-400 temp(3) temp(4)]);
-      temp = get(gui.ArraySliderTxt,'Position');
-      set(gui.ArraySliderTxt,'Position',[temp(1) figHeight-375 temp(3) temp(4)]);
-      temp = get(gui.WindowSlider,'Position');
-      set(gui.WindowSlider,'Position',[temp(1) figHeight-350 temp(3) temp(4)]);
-      temp = get(gui.WindowSliderTxt,'Position');
-      set(gui.WindowSliderTxt,'Position',[temp(1) figHeight-325 temp(3) temp(4)]);
 
-   end % onResize
 
 %-------------------------------------------------------------------------%
    function updateViews()
