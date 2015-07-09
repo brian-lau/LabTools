@@ -122,7 +122,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       function proc = get.eventProcess(self)
          proc = extract(self,'EventProcess','type');
       end
-     
+      
       function set.tStart(self,tStart)
          for i = 1:numel(self.processes)
             self.processes{i}.tStart = tStart;
