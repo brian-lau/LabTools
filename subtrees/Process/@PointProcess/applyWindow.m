@@ -9,17 +9,18 @@
 function applyWindow(self)
 
 nWindow = size(self.window,1);
+
 times = self.times_;
 if isempty(times)
    return;
 end
 
 nTimes = size(times,2);
-if all(cellfun(@(x) isa(x,'handle'),self.values_))
-   values = cellfun(@(x) copy(x),self.values_,'uni',0);
-else
+% if all(cellfun(@(x) isa(x,'handle'),self.values_))
+%    values = cellfun(@(x) copy(x),self.values_,'uni',0);
+% else
    values = self.values_;
-end
+% end
 window = self.window;
 windowedTimes = cell(nWindow,nTimes);
 windowedValues = cell(nWindow,nTimes);

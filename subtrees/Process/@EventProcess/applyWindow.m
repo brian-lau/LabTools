@@ -18,7 +18,11 @@ nTimes = size(times,2);
 
 values = self.values_;
 % Events are handles, need to reset tStart/tEnd
-cellfun(@(x) x.reset,values,'uni',0);
+if numel(values) == 1
+   values{1}.reset();
+else
+   cellfun(@(x) x.reset,values,'uni',0);
+end
 
 window = self.window;
 windowedTimes = cell(nWindow,nTimes);

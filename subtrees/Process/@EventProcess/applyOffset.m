@@ -21,8 +21,10 @@ for i = 1:numel(offset)
       temp = self.values{i,j};
 
       if ~isempty(temp)
-         [temp.tStart] = list([temp.tStart] + offset(i));
-         [temp.tEnd] = list([temp.tEnd] + offset(i));
+         for k = 1:numel(temp)
+            temp(k).tStart = temp(k).tStart + offset(i);
+            temp(k).tEnd = temp(k).tEnd + offset(i);
+         end
       end
    end
 end

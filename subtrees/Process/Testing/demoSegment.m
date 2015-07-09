@@ -139,8 +139,8 @@ S(3) = Segment('process',{PointProcess([1 4 4.5 5 5.5 6 10]) ...
 S.sync('name','cue','window',[-1 5])
 
 %%
-clear
-ntrials = 400;
+clear all;
+ntrials = 50;
 
 dt = 0.001;
 t = (0:dt:(10-dt))';
@@ -150,21 +150,33 @@ for i = 1:ntrials
    
    e(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1,'name','fix');
    e(2) = metadata.event.Stimulus('tStart',2+t1(i),'tEnd',3+t1(i),'name','cue');
-   e(3) = metadata.event.Response('tStart',5+t1(i)+t2(i),'tEnd',6+t1(i)+t2(i),'name','button');
+   if rem(i,2)
+      e(3) = metadata.event.Response('tStart',5+t1(i)+t2(i),'tEnd',6+t1(i)+t2(i),'name','button');
+   end
 
-   y = normpdf(t,2+t1(i),.25) - normpdf(t,5+t1(i)+t2(i),.25);
+   y = normpdf(t,2+t1(i),.25);
+   if rem(i,2)
+      y = y - normpdf(t,5+t1(i)+t2(i),.5);
+   end
    
    sp = 2+t1(i) + (0:.1:1);
-   sp = [sp , 5+t1(i)+t2(i) + (0:.1:1)];
+   if rem(i,2)
+      sp = [sp , 5+t1(i)+t2(i) + (0:.1:1)];
+   end
 
    data(i) = Segment('process',...
-      {SampledProcess('values',[y,0.5*y],'Fs',1/dt) PointProcess(sp) EventProcess('events',e)},...
+      {SampledProcess('values',[y,0.85*y,0.65*y,0.55*y,0.35*y,0.15*y],'Fs',1/dt) ...
+      PointProcess({sp sp+.01 sp+.02 sp+.03 sp+.04 sp+.05}) ...
+      EventProcess('events',e)},...
       'labels',{'lfp' 'spikes' 'events'});
+   
+   clear e;
 end
 
-tic;data.sync('name','cue','window',[-2 5]);toc
-% data.reset
-% data.sync('name','button','window',[-5 2])
+
+tic;data.sync('name','cue','window',[-4 5]);toc
+data.reset
+data.sync('name','button','window',[-5 2])
 temp = linq(data).select(@(x) x.extract('lfp'))...
    .select(@(x) x.extract()).toArray;
 a = cat(2,temp.values);
