@@ -3,8 +3,6 @@ function proc = extract(self,request,flag)
 if nargin == 2
    flag = 'label';
 end
-% FIXME, for object array
-% FIXME, handle multiple returns???
 
 proc = cell(size(self));
 for i = 1:numel(self)
@@ -14,11 +12,13 @@ for i = 1:numel(self)
       case 'type'
          ind = cellfun(@(x) sum(strcmpi(class(x),request))>0,self(i).processes);
    end
-   if any(ind)
-      proc{i} = self(i).processes(ind);
+   if ~any(ind)
+      proc = {};
+   else
+      proc{i} = horzcat(self(i).processes{ind});
    end
 end
 
-if numel(proc) == 1
+if (numel(self)==1) && any(ind)
    proc = proc{1};
 end
