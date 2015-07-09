@@ -147,13 +147,13 @@ updateAlignTab();
          'String','w/ window','Fontsize',14,'HorizontalAlignment','left',...
          'Position', [10 top-75 150 25]);
       gui.SyncWindowStart = uicontrol('Parent',gui.lowerTab1,'Style','edit',...
-         'String','-2','Value',-2,'Fontsize',12,...
+         'String','-2.5','Value',-2.5,'Fontsize',12,...
          'Position', [80 top-70 45 20],'Callback',@onSyncWindowStart);
       uicontrol('Parent',gui.lowerTab1,'Style','text',...
          'String','to','Fontsize',14,'HorizontalAlignment','left',...
          'Position', [128 top-75 15 25]);
       gui.SyncWindowEnd = uicontrol('Parent',gui.lowerTab1,'Style','edit',...
-         'String','2','Value',2,'Fontsize',12,...
+         'String','2.5','Value',2.5,'Fontsize',12,...
          'Position', [148 top-70 45 20],'Callback',@onSyncWindowEnd);
       gui.SyncButton = uicontrol('parent',gui.lowerTab1,'style','pushbutton',...
          'position',[35,top-175,125,35],'Fontsize',14,...
@@ -394,37 +394,66 @@ updateAlignTab();
    end
 %-------------------------------------------------------------------------%
    function onSyncButton(~,~)
-      oldpointer = get(gui.Window,'pointer');
-      set(gui.Window,'pointer','watch') 
-      drawnow;
+      toggleBusy(gui.Window);
       ind = get(gui.ArraySlider,'Value');
       eventName = gui.AlignEventsPopup.String{get(gui.AlignEventsPopup,'Value')};
-      data.segment(ind).reset();
+      if ~isempty(data.segment(ind).validSync)
+         data.segment(ind).reset();
+      end
       win = [get(gui.SyncWindowStart,'Value') get(gui.SyncWindowEnd,'Value')];
-      data.segment(ind).sync('name',eventName,'window',win);
+      
+      eventStart = true;
+      if strcmp(gui.SyncEdgePopup.String{get(gui.SyncEdgePopup,'Value')},'end')
+         eventStart = false;
+      end
+      data.segment(ind).sync('name',eventName,'window',win,'eventStart',eventStart);
       updateViews();
-      set(gui.Window,'pointer',oldpointer)      
+      toggleBusy(gui.Window);
    end
 %-------------------------------------------------------------------------%
    function onSyncAllButton(~,~)
-      oldpointer = get(gui.Window,'pointer');
-      set(gui.Window,'pointer','watch') 
-      drawnow;
+      toggleBusy(gui.Window);
+      %ind = get(gui.ArraySlider,'Value');
       eventName = gui.AlignEventsPopup.String{get(gui.AlignEventsPopup,'Value')};
-      data.segment.reset();
-      data.segment.sync('name',eventName,'window',[-4 5]);
+      %if ~isempty(data.segment(ind).validSync)
+         data.segment.reset();
+      %end
+      win = [get(gui.SyncWindowStart,'Value') get(gui.SyncWindowEnd,'Value')];
+      
+      eventStart = true;
+      if strcmp(gui.SyncEdgePopup.String{get(gui.SyncEdgePopup,'Value')},'end')
+         eventStart = false;
+      end
+      data.segment.sync('name',eventName,'window',win,'eventStart',eventStart);
       updateViews();
-      set(gui.Window,'pointer',oldpointer)      
+      toggleBusy(gui.Window);
+%       toggleBusy(gui.Window);
+%       eventName = gui.AlignEventsPopup.String{get(gui.AlignEventsPopup,'Value')};
+%       data.segment.reset();
+%       data.segment.sync('name',eventName,'window',[-4 5]);
+%       updateViews();
+%       toggleBusy(gui.Window);
    end
 %-------------------------------------------------------------------------%
    function onResetButton(~,~)
-      oldpointer = get(gui.Window, 'pointer');
-      set(gui.Window, 'pointer', 'watch') 
-      drawnow;
+      toggleBusy(gui.Window);
       data.segment.reset();
       updateAlignTab();
       updateViews();
-      set(gui.Window, 'pointer', oldpointer)      
+      toggleBusy(gui.Window);
+   end
+%-------------------------------------------------------------------------%
+   function toggleBusy(h)
+      persistent oldpointer;
+      
+      if isempty(oldpointer)
+         oldpointer = get(h,'pointer');
+         set(gui.Window, 'pointer', 'watch');
+         drawnow;
+      else
+         set(gui.Window, 'pointer', oldpointer);
+         oldpointer = [];
+      end
    end
 %-------------------------------------------------------------------------%
    function onExit( ~, ~ )
