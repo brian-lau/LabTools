@@ -7,6 +7,8 @@
 
 function [h,yOffset] = raster(self,varargin)
 
+import spk.*
+
 p = inputParser;
 p.KeepUnmatched= true;
 p.FunctionName = 'PointProcess raster method';

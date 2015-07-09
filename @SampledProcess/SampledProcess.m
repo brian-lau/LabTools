@@ -7,10 +7,10 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
       tStart % Start time of process
       tEnd   % End time of process
    end
-   properties(SetAccess = private)
+   properties(SetAccess = protected)
       Fs % Sampling frequency
    end
-   properties(SetAccess = private, Dependent = true, Transient = true)
+   properties(SetAccess = protected, Dependent = true, Transient = true)
       dim
       dt
    end   
@@ -30,7 +30,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
             values = varargin{1};
             assert(isnumeric(values),...
                'SampledProcess:Constructor:InputFormat',...
-               'Single inputs must be passed in as array of values');
+               'Single inputs must be passed in as array of numeric values');
             if isnumeric(values)
                varargin{1} = 'values';
                varargin{2} = values;
@@ -103,7 +103,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
          if ~isempty(self.tEnd)
             if tStart > self.tEnd
                error('SampledProcess:tStart:InputValue',...
-                  'tStart must be less than tStart.');
+                  'tStart must be less than tEnd.');
             elseif tStart == self.tEnd
                self.tEnd = self.tEnd + eps(self.tEnd);
             end
@@ -180,7 +180,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
       dat = convert2Fieldtrip(self)
       
       % Visualization
-      plot(self,varargin)
+      [h,yOffset] = plot(self,varargin)
    end
    
    methods(Access = protected)
