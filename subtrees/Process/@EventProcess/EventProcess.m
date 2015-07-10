@@ -97,11 +97,10 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
       % remove event
       
       %% Display
-      [h,yOffset] = plot(self,varargin)
+      h = plot(self,varargin)
 
    end
    methods(Access = protected)
-      applyWindow(self)
       applyOffset(self,undo)
    end
 end
