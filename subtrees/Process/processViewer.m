@@ -1,16 +1,12 @@
 function gui = processViewer(seg)
 % Data is shared between all child functions by declaring the variables
 % here (all functions are nested). We keep things tidy by putting
-% all GUI stuff in one structure and all data stuff in another. As the app
-% grows, we might consider making these objects rather than structures.
-
+% all GUI stuff in one structure and all data stuff in another.
 data = createData(seg);
 if data.plotS
    data.sd = getCurrentSD(1);
 end
 gui = createInterface();
-
-% Now update the GUI with the current data
 updateViews();
 updateAlignTab();
 
@@ -37,7 +33,6 @@ updateAlignTab();
    end
 %-------------------------------------------------------------------------%
    function gui = createInterface()
-      import gui.*;
       gui = struct();
       
       sz = get(0,'ScreenSize');
@@ -50,7 +45,7 @@ updateAlignTab();
          'OuterPosition',[sz(1:2)+50 sz(3:4)-100],...
          'Visible','off',...
          'HandleVisibility','on');
-      
+            
       % + File menu
       gui.FileMenu = uimenu(gui.Window,'Label','File');
       uimenu(gui.FileMenu,'Label','Load','Callback',@onExit);
@@ -63,8 +58,7 @@ updateAlignTab();
          'Show Plot Tools and Dock Figure'};
       for i = 1:numel(rmTools)
          b = findall(a,'ToolTipString',rmTools{i});
-         %set(b,'Visible','Off');
-         delete(b);
+         delete(b);%set(b,'Visible','Off');
       end
       %       hToolLegend = findall(gcf,'tag','Annotation.InsertLegend');
       %       set(hToolLegend, 'ClickedCallback',@cbLegend);
@@ -164,7 +158,8 @@ updateAlignTab();
       gui.ResetButton = uicontrol('parent',gui.lowerTab1,'style','pushbutton',...
          'position',[35,top-275,125,35],'Fontsize',14,...
          'String','Reset','Callback',@onResetButton);
-      set(gui.Window,'Visible','on');
+      
+      gui.Window.Visible = 'on';
       % view must be visible for statusbar
       %gui.sb = statusbar(gui.Window,'Ready');
    end % createInterface
@@ -224,7 +219,7 @@ updateAlignTab();
          heights = [heights 0];
       end
       
-      set(ViewGrid,'Heights',heights);
+      ViewGrid.Heights = heights;
       
       if exist('axS','var') && exist('axP','var')
          linkaxes([axS,axP],'x');
@@ -232,18 +227,18 @@ updateAlignTab();
    end
 %-------------------------------------------------------------------------%
    function updateAlignTab()
-      ind = get(gui.ArraySlider,'Value');
+      ind = gui.ArraySlider.Value;
       
       str = {'none' data.segment(ind).eventProcess.values{1}.name};
-      set(gui.AlignEventsPopup,'String',str);
+      gui.AlignEventsPopup.String = str;
       if isempty(data.segment(ind).validSync)
-         set(gui.AlignEventsPopup,'Value',1);
+         gui.AlignEventsPopup.Value = 1;
       elseif isa(data.segment(ind).validSync,'metadata.Event')
          if strcmp(data.segment(ind).validSync.name,'NULL')
-            set(gui.AlignEventsPopup,'Value',1);
+            gui.AlignEventsPopup.Value = 1;
          else
             ind = strcmp(data.segment(ind).validSync.name,str);
-            set(gui.AlignEventsPopup,'value',find(ind));
+            gui.AlignEventsPopup.Value = find(ind);
          end
       end
    end
@@ -273,19 +268,19 @@ updateAlignTab();
    end
 %-------------------------------------------------------------------------%
    function plotS()
-      ind = get(gui.ArraySlider,'Value');
+      ind = gui.ArraySlider.Value;
       ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
       axes(ax);
       
       cla(ax); hold on;
       plot(data.segment(ind).sampledProcess,'handle',ax,...
-         'stack',get(gui.StackButton,'Value'),...
-         'sep',get(gui.ScaleSlider,'Value')*data.sd);
+         'stack',gui.StackButton.Value,...
+         'sep',gui.ScaleSlider.Value*data.sd);
       axis tight;
    end
 %-------------------------------------------------------------------------%
    function plotP()
-      ind = get(gui.ArraySlider,'Value');
+      ind = gui.ArraySlider.Value;
       ax = findobj(gui.ViewPanelP,'Tag','Point Process Axis 1');
       axes(ax);
       
@@ -295,20 +290,20 @@ updateAlignTab();
    end
 %-------------------------------------------------------------------------%
    function plotE()
-      ind = get(gui.ArraySlider,'Value');
-      
+      ind = gui.ArraySlider.Value;
+
       ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
       plot(data.segment(ind).eventProcess,'handle',ax);
    end
 %-------------------------------------------------------------------------%
    function onRedrawButton(~,~)
       fig.interactivemouse('OFF');
-      set(gui.MousePanButton,'Value',0);
+      gui.MousePanButton.Value = 0;
       updateViews();
    end % redrawDemo
 %-------------------------------------------------------------------------%
    function onEventsButton(~,~)
-      if get(gui.EventsButton,'Value')
+      if gui.EventsButton.Value
          plotE();
       else
          delete(findobj(gui.ViewPanelS,'Tag','Event'));
@@ -323,34 +318,34 @@ updateAlignTab();
 
 %-------------------------------------------------------------------------%
    function onArraySlider( ~, ~ )
-      if get(gui.ArraySlider,'Value') >= get(gui.ArraySlider,'Max')
-         set(gui.ArraySlider,'Value',1);
+      if gui.ArraySlider.Value >= gui.ArraySlider.Max
+         gui.ArraySlider.Value = 1;
          %       elseif get(gui.ArraySlider,'Value') == get(gui.ArraySlider,'Min')
          %          set(gui.ArraySlider,'Value',get(gui.ArraySlider,'Max'));
       else
-         set(gui.ArraySlider,'Value',ceil(get(gui.ArraySlider,'Value')));
+         gui.ArraySlider.Value = ceil(gui.ArraySlider.Value');
       end
-      set(gui.ArraySliderTxt,'String',...
+      gui.ArraySliderTxt.String = ...
          ['Array ' num2str(get(gui.ArraySlider,'Value')) '/'...
-         num2str(numel(data.segment))])
+         num2str(numel(data.segment))];
       updateViews();
       updateAlignTab();
    end % onHelp
 %-------------------------------------------------------------------------%
    function onStackButton( ~, ~ )
       if data.plotS
-         set(gui.MousePanButton,'Value',0);
+         gui.MousePanButton.Value = 0;
          fig.interactivemouse('OFF');
          
-         ind = get(gui.ArraySlider,'Value');
+         ind = gui.ArraySlider.Value;
          data.sd = getCurrentSD(ind);
          
-         if get(gui.StackButton,'Value')
-            set(gui.ScaleSlider,'Value',3);
-            set(gui.ScaleSliderTxt,'String','Stack separation 3 SD');
+         if gui.StackButton.Value
+            gui.ScaleSlider.Value = 3;
+            gui.ScaleSliderTxt.String = 'Stack separation 3 SD';
          else
-            set(gui.ScaleSlider,'Value',0);
-            set(gui.ScaleSliderTxt,'String','Stack separation 0 SD');
+            gui.ScaleSlider.Value = 0;
+            gui.ScaleSliderTxt.String = 'Stack separation 0 SD';
          end
          
          updateViewPanelS();
@@ -364,30 +359,30 @@ updateAlignTab();
    end
 %-------------------------------------------------------------------------%
    function onScaleSlider( ~, ~ )
-      if get(gui.StackButton,'Value')
-         set(gui.ScaleSliderTxt,'String',...
-            ['Stack separation ' sprintf('%1.1f',(get(gui.ScaleSlider,'Value'))) ' SD']);
+      if gui.StackButton.Value
+         gui.ScaleSliderTxt.String = ...
+            ['Stack separation ' sprintf('%1.1f',(get(gui.ScaleSlider,'Value'))) ' SD'];
          updateViewPanelS();
          updateEvents();
       else
-         set(gui.ScaleSlider,'Value',0);
-         set(gui.ScaleSliderTxt,'String','Stack separation 0 SD');
+         gui.ScaleSlider.Value = 0;
+         gui.ScaleSliderTxt.String = 'Stack separation 0 SD';
       end
    end % onExit
 %-------------------------------------------------------------------------%
    function onSyncWindowStart(~,~)
-      val = str2num(get(gui.SyncWindowStart,'String'));
+      val = str2num(gui.SyncWindowStart.String);
       if isnumeric(val) && isscalar(val)
-         set(gui.SyncWindowStart,'Value',val);
+         gui.SyncWindowStart.Value = val;
       else
          error('bad value');
       end
    end
 %-------------------------------------------------------------------------%
    function onSyncWindowEnd(~,~)
-      val = str2num(get(gui.SyncWindowEnd,'String'));
+      val = str2num(gui.SyncWindowEnd.String);
       if isnumeric(val) && isscalar(val)
-         set(gui.SyncWindowEnd,'Value',val);
+         gui.SyncWindowEnd.Value = val;
       else
          error('bad value');
       end
@@ -395,15 +390,15 @@ updateAlignTab();
 %-------------------------------------------------------------------------%
    function onSyncButton(~,~)
       toggleBusy(gui.Window);
-      ind = get(gui.ArraySlider,'Value');
-      eventName = gui.AlignEventsPopup.String{get(gui.AlignEventsPopup,'Value')};
-      if ~isempty(data.segment(ind).validSync)
-         data.segment(ind).reset();
-      end
-      win = [get(gui.SyncWindowStart,'Value') get(gui.SyncWindowEnd,'Value')];
+      ind = gui.ArraySlider.Value;
+      eventName = gui.AlignEventsPopup.String{gui.AlignEventsPopup.Value};
+%       if ~isempty(data.segment(ind).validSync)
+%          data.segment(ind).reset();
+%       end
+      win = [gui.SyncWindowStart.Value gui.SyncWindowEnd.Value];
       
       eventStart = true;
-      if strcmp(gui.SyncEdgePopup.String{get(gui.SyncEdgePopup,'Value')},'end')
+      if strcmp(gui.SyncEdgePopup.String{gui.SyncEdgePopup.Value},'end')
          eventStart = false;
       end
       data.segment(ind).sync('name',eventName,'window',win,'eventStart',eventStart);
@@ -413,26 +408,19 @@ updateAlignTab();
 %-------------------------------------------------------------------------%
    function onSyncAllButton(~,~)
       toggleBusy(gui.Window);
-      %ind = get(gui.ArraySlider,'Value');
-      eventName = gui.AlignEventsPopup.String{get(gui.AlignEventsPopup,'Value')};
-      %if ~isempty(data.segment(ind).validSync)
-         data.segment.reset();
-      %end
-      win = [get(gui.SyncWindowStart,'Value') get(gui.SyncWindowEnd,'Value')];
+      eventName = gui.AlignEventsPopup.String{gui.AlignEventsPopup.Value};
+%       %if ~isempty(data.segment(ind).validSync)
+%          data.segment.reset();
+%       %end
+      win = [gui.SyncWindowStart.Value gui.SyncWindowEnd.Value];
       
       eventStart = true;
-      if strcmp(gui.SyncEdgePopup.String{get(gui.SyncEdgePopup,'Value')},'end')
+      if strcmp(gui.SyncEdgePopup.String{gui.SyncEdgePopup.Value},'end')
          eventStart = false;
       end
       data.segment.sync('name',eventName,'window',win,'eventStart',eventStart);
       updateViews();
       toggleBusy(gui.Window);
-%       toggleBusy(gui.Window);
-%       eventName = gui.AlignEventsPopup.String{get(gui.AlignEventsPopup,'Value')};
-%       data.segment.reset();
-%       data.segment.sync('name',eventName,'window',[-4 5]);
-%       updateViews();
-%       toggleBusy(gui.Window);
    end
 %-------------------------------------------------------------------------%
    function onResetButton(~,~)
@@ -447,18 +435,18 @@ updateAlignTab();
       persistent oldpointer;
       
       if isempty(oldpointer)
-         oldpointer = get(h,'pointer');
-         set(gui.Window, 'pointer', 'watch');
+         oldpointer = h.Pointer;
+         gui.Window.Pointer = 'watch';
          drawnow;
       else
-         set(gui.Window, 'pointer', oldpointer);
+         gui.Window.Pointer = oldpointer;
          oldpointer = [];
       end
    end
 %-------------------------------------------------------------------------%
-   function onExit( ~, ~ )
+   function onExit(~,~)
       % User wants to quit out of the application
-      delete( gui.Window );
+      delete(gui.Window);
    end % onExit
 
 end % EOF
