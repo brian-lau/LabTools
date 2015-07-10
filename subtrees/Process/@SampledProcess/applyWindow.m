@@ -43,20 +43,15 @@ end
 
 windowedTimes = cell(nWindow,1);
 windowedValues = cell(nWindow,1);
-windowIndex = cell(nWindow,1);
-isValidWindow = false(nWindow,1);
+isValidWindow = true(nWindow,1);
 for i = 1:nWindow
    ind = (times>=window(i,1)) & (times<=window(i,2));
    windowedTimes{i,1} = times(ind);
    windowedValues{i,1} = values(ind,:); % FIXME, only works for 2D
-   windowIndex{i,1} = find(ind);
-   if (window(i,1)>=self.tStart) && (window(i,2)<=self.tEnd)
-      isValidWindow(i) = true;
-   else
+   if (window(i,1)<self.tStart) || (window(i,2)>self.tEnd)
       isValidWindow(i) = false;
    end
 end
 self.times = windowedTimes;
 self.values = windowedValues;
-self.index = windowIndex;
 self.isValidWindow = isValidWindow;

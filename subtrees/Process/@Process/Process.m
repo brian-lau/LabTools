@@ -4,7 +4,7 @@
 % R2011a - matlab.mixin.Copyable for copying handle objects
 %
 % TODO
-% move checkWindows/checkOffset into package?
+% move checkWindows/checkOffset into package? private (faster)?
 % set only in constructor
 %   - clock, timeUnit
 % FIXME offset is a misleading name? could imply offset in values...
@@ -41,7 +41,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Process < hgsetget & ma
       isValidWindow % Boolean if window(s) lies within tStart and tEnd
    end
    properties(SetAccess = protected, Hidden = true)
-      index    % Indices into times/values in window
       times_   % Original event/sample times
       values_  % Original attribute/values
       window_  % Original window
@@ -79,7 +78,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Process < hgsetget & ma
       % tail
       
       obj = loadobj(S)
-      %toFieldTrip
    end
    
    methods(Abstract, Access = protected)
