@@ -19,23 +19,26 @@ nWindow = size(self.window,1);
 window = self.window;
 minWin = min(window(:,1));
 maxWin = max(window(:,2));
-if (minWin<self.tStart) && (maxWin>self.tEnd)
-   pre = self.extendPre(self.tStart,minWin,1/self.Fs_); % TODO Fs_ or Fs???
+tStart = min(self.times{1});
+tEnd = max(self.times{1});
+
+if (minWin<tStart) && (maxWin>tEnd)
+   pre = self.extendPre(tStart,minWin,1/self.Fs);
    preV = nan(size(pre,1),size(self.values_,2));
-   post = self.extendPost(self.tEnd,maxWin,1/self.Fs_);
+   post = self.extendPost(tEnd,maxWin,1/self.Fs);
    postV = nan(size(post,1),size(self.values_,2));
-   times = [pre ; self.times_ ; post];
-   values = [preV ; self.values_ ; postV];
-elseif (minWin<self.tStart) && (maxWin<=self.tEnd)
-   pre = self.extendPre(self.tStart,minWin,1/self.Fs_); % TODO Fs_ or Fs???
+   times = [pre ; self.times{1} ; post];
+   values = [preV ; self.values{1} ; postV];
+elseif (minWin<tStart) && (maxWin<=tEnd)
+   pre = self.extendPre(tStart,minWin,1/self.Fs);
    preV = nan(size(pre,1),size(self.values_,2));
-   times = [pre ; self.times_];
-   values = [preV ; self.values_];
-elseif (minWin>=self.tStart) && (maxWin>self.tEnd)
-   post = self.extendPost(self.tEnd,maxWin,1/self.Fs_);
+   times = [pre ; self.times{1}];
+   values = [preV ; self.values{1}];
+elseif (minWin>=tStart) && (maxWin>tEnd)
+   post = self.extendPost(tEnd,maxWin,1/self.Fs);
    postV = nan(size(post,1),size(self.values_,2));
-   times = [self.times_ ; post];
-   values = [self.values_ ; postV];
+   times = [self.times{1} ; post];
+   values = [self.values{1} ; postV];
 else
    times = self.times_;
    values = self.values_;
@@ -43,15 +46,10 @@ end
 
 windowedTimes = cell(nWindow,1);
 windowedValues = cell(nWindow,1);
-isValidWindow = true(nWindow,1);
 for i = 1:nWindow
    ind = (times>=window(i,1)) & (times<=window(i,2));
    windowedTimes{i,1} = times(ind);
    windowedValues{i,1} = values(ind,:); % FIXME, only works for 2D
-   if (window(i,1)<self.tStart) || (window(i,2)>self.tEnd)
-      isValidWindow(i) = false;
-   end
 end
 self.times = windowedTimes;
 self.values = windowedValues;
-self.isValidWindow = isValidWindow;

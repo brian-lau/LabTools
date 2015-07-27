@@ -21,15 +21,14 @@ if n == 1
 else
    if isscalar(offset) && isnumeric(offset)
       % single offset or offsets, same for each process
-      offset = self.checkOffset(offset);
-      [self.offset] = deal(offset);
+      set(self,'offset',offset);
    elseif isvector(offset)
       % Different offset for each process
       offset = self.checkOffset(num2cell(offset),n);
       [self.offset] = deal(offset{:});
    elseif iscell(offset)
       % Different offset for each process
-      offset = self.checkWindow(offset,n);
+      offset = self.checkOffset(offset,n);
       [self.offset] = deal(offset{:});
    else
       error('Process:setOffset:InputFormat','Bad offset');

@@ -2,7 +2,7 @@
 % If multiple processes, currently cannot be multidimensional,
 % time = rows
 
-classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Process   
+classdef(CaseInsensitiveProperties) SampledProcess < Process   
    properties(AbortSet)%(AbortSet, Access=?Segment)
       tStart % Start time of process
       tEnd   % End time of process
@@ -75,6 +75,10 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
             self.tEnd = p.Results.tEnd;
          end
          
+         %%%% 
+         self.times = {self.times_};
+         self.values = {self.values_};
+
          % Set the window
          if isempty(p.Results.window)
             self.setInclusiveWindow();
@@ -83,6 +87,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
          end
          
          % Set the offset
+         self.cumulOffset = 0;
          if isempty(p.Results.offset)
             self.offset = 0;
          else
@@ -119,9 +124,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
                'tStart must be a numeric scalar.');
          end
          self.discardBeforeStart();
-         if ~isempty(self.tEnd)
-            self.setInclusiveWindow();
-         end
+%          if ~isempty(self.tEnd)
+%             self.setInclusiveWindow();
+%          end
       end
       
       function set.tEnd(self,tEnd)
@@ -144,9 +149,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
                'tEnd must be a numeric scalar.');
          end
          self.discardAfterEnd();
-         if ~isempty(self.tStart)
-            self.setInclusiveWindow();
-         end
+%          if ~isempty(self.tStart)
+%             self.setInclusiveWindow();
+%          end
       end
       
       function dt = get.dt(self)
@@ -158,7 +163,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
       end
       
       % 
-      self = setInclusiveWindow(self)
+      %self = setInclusiveWindow(self)
       self = reset(self)
       obj = chop(self,shiftToWindow)
       s = sync(self,event,varargin)
@@ -185,7 +190,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SampledProcess < Proces
    
    methods(Access = protected)
       applyWindow(self)
-      applyOffset(self,undo)
+      applyOffset(self,offset)
       discardBeforeStart(self)
       discardAfterEnd(self)
    end

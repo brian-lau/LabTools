@@ -4,34 +4,31 @@
 %     index
 %     isValidWindow
 % TODO
-% Windows are inclusive on both sides, does this make sense???
+% o Windows are inclusive on both sides, does this make sense???
+% o How to handle different # of windows (ie, when current # of windows
+%   does not match requested number of windows
 
 function applyWindow(self)
 
 nWindow = size(self.window,1);
 
-times = self.times_;
-if isempty(times)
+times = self.times;
+if isempty(times) % FIXME, is this only for constructor?
    return;
 end
 
 nTimes = size(times,2);
-
-values = self.values_;
 window = self.window;
+values = self.values;
+
 windowedTimes = cell(nWindow,nTimes);
 windowedValues = cell(nWindow,nTimes);
-isValidWindow = true(nWindow,1);
 for i = 1:nWindow
    for j = 1:nTimes
       ind = (times{j}(:,1)>=window(i,1)) & (times{j}(:,1)<=window(i,2));
       windowedTimes{i,j} = times{j}(ind,:);
       windowedValues{i,j} = values{j}(ind);
    end
-   if (window(i,1)<self.tStart) || (window(i,2)>self.tEnd)
-      isValidWindow(i) = false;
-   end
 end
 self.times = windowedTimes;
 self.values = windowedValues;
-self.isValidWindow = isValidWindow;

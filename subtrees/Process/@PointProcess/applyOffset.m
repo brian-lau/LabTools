@@ -1,16 +1,5 @@
 % Offset times,
-
-function applyOffset(self,undo)
-
-if nargin == 1
-   undo = false;
-end
-
-if undo
-   offset = -self.offset;
-else
-   offset = self.offset;
-end
+function applyOffset(self,offset)
 
 nTimes = size(self.times,2);
 for i = 1:numel(offset)

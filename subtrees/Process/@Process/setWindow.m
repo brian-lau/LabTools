@@ -25,8 +25,7 @@ if n == 1
 else
    if isnumeric(window)
       % Single window or windows, same for each process
-      window = self.checkWindow(window);
-      [self.window] = deal(window);
+      set(self,'window',window);
    elseif iscell(window)
       % Different windows for each process
       window = self.checkWindow(window,n);

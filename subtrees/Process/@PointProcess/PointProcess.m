@@ -4,7 +4,7 @@
 %
 % uniformValues = true should allow concatonation of values as arrays
 
-classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process         
+classdef(CaseInsensitiveProperties) PointProcess < Process         
    properties(AbortSet)
       tStart % Start time of process
       tEnd   % End time of process
@@ -82,7 +82,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
                [eventTimes,tInd] = cellfun(@(x) sortrows(x),times,'uni',0);
             end
 
-
             if isempty(par.values)
                values = cellfun(@(x) ones(size(x,1),1),eventTimes,'uni',0);
             else
@@ -129,7 +128,11 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          else
             self.tEnd = par.tEnd;
          end
-
+         
+         %%%% 
+         self.times = self.times_;
+         self.values = self.values_;
+         
          % Set the window
          if isempty(par.window)
             self.setInclusiveWindow();
@@ -138,6 +141,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          end
          
          % Set the offset
+         self.cumulOffset = 0;
          if isempty(par.offset)
             self.offset = 0;
          else
@@ -149,7 +153,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
 
          % Store original window and offset for resetting
          self.window_ = self.window;
-         self.offset_ = self.offset;
+         self.offset_ = self.offset;         
       end % constructor
       
       function set.tStart(self,tStart)
@@ -168,9 +172,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
                'tStart must be a numeric scalar.');
          end
          self.discardBeforeStart();
-         if ~isempty(self.tEnd)
-            self.setInclusiveWindow();
-         end
+%          if ~isempty(self.tEnd)
+%             self.setInclusiveWindow();
+%          end
       end
       
       function set.tEnd(self,tEnd)
@@ -189,9 +193,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
                'tEnd must be a numeric scalar.');
          end
          self.discardAfterEnd();
-         if ~isempty(self.tStart)
-            self.setInclusiveWindow();
-         end
+%          if ~isempty(self.tStart)
+%             self.setInclusiveWindow();
+%          end
       end
       
       function count = get.count(self)
@@ -203,7 +207,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          end
       end
       
-      self = setInclusiveWindow(self)
       self = reset(self)
       obj = chop(self,shiftToWindow)
       self = sync(self,event,varargin)
@@ -229,7 +232,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
      
    methods(Access = protected)
       applyWindow(self)
-      applyOffset(self,undo)
+      applyOffset(self,offset)
       discardBeforeStart(self)
       discardAfterEnd(self)
    end

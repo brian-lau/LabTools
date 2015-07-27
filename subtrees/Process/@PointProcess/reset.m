@@ -7,9 +7,17 @@
 function self = reset(self)
 
 for i = 1:numel(self)
+   self(i).times = self(i).times_;
+   self(i).values = self(i).values_;
+
+   self(i).reset_ = true;
    self(i).window = self(i).window_;
-   % Directly apply window in case window_ = window
-   self(i).offset = 'windowIsReset';
-   applyWindow(self(i));
+   self(i).reset_ = false;
+
+   self(i).cumulOffset = 0;
    self(i).offset = self(i).offset_;
+   
+   % Directly apply window in case window_ = window 
+   % FIXME should actually check if window is different before applying
+   applyWindow(self(i));
 end

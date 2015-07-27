@@ -1,7 +1,7 @@
 % TODO
 %  o manage coordination of times in values?
 
-classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointProcess         
+classdef(CaseInsensitiveProperties) EventProcess < PointProcess         
    properties(SetAccess = private, Dependent = true, Transient = true)
       duration  % # of events in window
       isValidEvent
@@ -101,7 +101,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) EventProcess < PointPro
 
    end
    methods(Access = protected)
-      applyOffset(self,undo)
+      applyOffset(self,offset)
    end
 end
 
