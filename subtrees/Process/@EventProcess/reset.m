@@ -13,9 +13,6 @@ for i = 1:numel(self)
    self(i).reset_ = true;
    self(i).window = self(i).window_;
    self(i).reset_ = false;
-
-   self(i).cumulOffset = 0;
-   self(i).offset = self(i).offset_;
    
    % Directly apply window in case window_ = window 
    % FIXME should actually check if window is different before applying
@@ -25,4 +22,7 @@ for i = 1:numel(self)
    for j = 1:length(self(i).values)
       reset(self(i).values{j});
    end
+   
+   self(i).cumulOffset = 0;
+   self(i).offset = self(i).offset_;
 end

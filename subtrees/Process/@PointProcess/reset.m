@@ -14,10 +14,10 @@ for i = 1:numel(self)
    self(i).window = self(i).window_;
    self(i).reset_ = false;
 
-   self(i).cumulOffset = 0;
-   self(i).offset = self(i).offset_;
-   
    % Directly apply window in case window_ = window 
    % FIXME should actually check if window is different before applying
    applyWindow(self(i));
+
+   self(i).cumulOffset = 0;
+   self(i).offset = self(i).offset_;
 end
