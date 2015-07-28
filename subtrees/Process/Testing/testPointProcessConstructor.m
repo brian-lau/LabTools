@@ -1,7 +1,6 @@
 function test_suite = testPointProcessConstructor
 initTestSuite;
 
-
 function testNoArgs
 % Not enough parameters to do any alignment
 p =  PointProcess();
@@ -14,11 +13,10 @@ assertEqual(p.values_,{ones(10,1)});
 assertEqual(p.tStart,0);
 assertEqual(p.tEnd,10);
 assertEqual(p.times,{(1:10)'});
-assertEqual(p.index,{(1:10)'});
 assertTrue(p.isValidWindow);
 assertEqual(p.values,{ones(10,1)});
 assertEqual(p.count,10);
-assertEqual(p.window_,[1 10]);
+assertEqual(p.window_,[0 10]);
 assertEqual(p.offset_,0);
 
 f = @() PointProcess('shouldnotwork');
@@ -31,9 +29,9 @@ function testNoTimes
 p = PointProcess('info',containers.Map({'cat'},{'dog'}));
 assertEqual(p.count,0);
 assertEqual(p.times_,{});
-assertEqual(p.times,[]);
+assertEqual(p.times,{});
 assertEqual(p.values_,{});
-assertEqual(p.values,[]);
+assertEqual(p.values,{});
 
 %%
 function testTimes
@@ -45,7 +43,6 @@ assertEqual(p.tStart,0);
 assertEqual(p.tEnd,10);
 assertEqual(p.times,{(1:10)'});
 assertEqual(p.values,{ones(10,1)});
-assertEqual(p.index,{(1:10)'});
 assertTrue(p.isValidWindow);
 assertEqual(p.count,10);
 
@@ -55,7 +52,6 @@ p = PointProcess('times',1:10,'window',[5 10]);
 assertEqual(p.window,[5 10]);
 assertEqual(p.count,6);
 assertEqual(p.times,{(5:10)'});
-assertEqual(p.index,{(5:10)'});
 assertEqual(p.isValidWindow,true);
 
 function testTimesWindow2
@@ -64,7 +60,6 @@ p = PointProcess('times',1:10,'window',[-5 5]);
 assertEqual(p.window,[-5 5]);
 assertEqual(p.count,5);
 assertEqual(p.times,{(1:5)'});
-assertEqual(p.index,{(1:5)'});
 assertFalse(p.isValidWindow);
 
 function testTimesWindow3
@@ -74,7 +69,6 @@ assertEqual(p.window,[1 5 ; 6 11]);
 assertEqual(p.count,[5 5]');
 assertEqual(p.times,{(1:5)' ; (6:10)'});
 assertEqual(p.values,{ones(5,1) ; ones(5,1)});
-assertEqual(p.index,{(1:5)' ; (6:10)'});
 assertEqual(p.isValidWindow,[true false]');
 
 function testTimestStart
@@ -93,20 +87,20 @@ p = PointProcess('times',1:10,'tEnd',5);
 assertEqual(p.times_,{(1:5)'});
 assertEqual(p.times,{(1:5)'});
 assertEqual(p.values,{ones(5,1)});
-assertEqual(p.window,[1 5]);
+assertEqual(p.window,[0 5]);
 assertEqual(p.tStart,0);
 assertEqual(p.tEnd,5);
-assertEqual(p.window_,[1 5]);
+assertEqual(p.window_,[0 5]);
 assertEqual(p.offset_,0);
 
 function testTimesOffset
 p = PointProcess('times',1:10,'offset',5);
 assertEqual(p.times_,{(1:10)'});
 assertEqual(p.times,{(1:10)'+5});
-assertEqual(p.window,[1 10]);
+assertEqual(p.window,[0 10]);
 assertEqual(p.tStart,0);
 assertEqual(p.tEnd,10);
-assertEqual(p.window_,[1 10]);
+assertEqual(p.window_,[0 10]);
 assertEqual(p.offset_,5);
 
 function testTimesValues
