@@ -21,6 +21,15 @@ else
 end
 hold on;
 
+if numel(self) > 1
+   for i = 1:numel(self)
+      subplot(numel(self),1,i); hold on
+      plot(self(i).times{1},self(i).values{1});
+   end
+   return
+end
+
+% FIXME multiple windows?
 values = self.values{1};
 t = self.times{1};
 if p.Results.stack
