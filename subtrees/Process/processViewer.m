@@ -293,6 +293,9 @@ updateAlignTab();
       ind = gui.ArraySlider.Value;
 
       ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
+      if isempty(ax)
+         ax = findobj(gui.ViewPanelP,'Tag','Point Process Axis 1');
+      end
       plot(data.segment(ind).eventProcess,'handle',ax);
    end
 %-------------------------------------------------------------------------%
@@ -392,9 +395,6 @@ updateAlignTab();
       toggleBusy(gui.Window);
       ind = gui.ArraySlider.Value;
       eventName = gui.AlignEventsPopup.String{gui.AlignEventsPopup.Value};
-%       if ~isempty(data.segment(ind).validSync)
-%          data.segment(ind).reset();
-%       end
       win = [gui.SyncWindowStart.Value gui.SyncWindowEnd.Value];
       
       eventStart = true;
@@ -409,18 +409,18 @@ updateAlignTab();
    function onSyncAllButton(~,~)
       toggleBusy(gui.Window);
       eventName = gui.AlignEventsPopup.String{gui.AlignEventsPopup.Value};
-%       %if ~isempty(data.segment(ind).validSync)
-%          data.segment.reset();
-%       %end
       win = [gui.SyncWindowStart.Value gui.SyncWindowEnd.Value];
       
+      tic;
       eventStart = true;
       if strcmp(gui.SyncEdgePopup.String{gui.SyncEdgePopup.Value},'end')
          eventStart = false;
       end
       data.segment.sync('name',eventName,'window',win,'eventStart',eventStart);
+      toc
       updateViews();
       toggleBusy(gui.Window);
+      
    end
 %-------------------------------------------------------------------------%
    function onResetButton(~,~)
