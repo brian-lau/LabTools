@@ -67,50 +67,50 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
          end
       end
       
-%       function self = set.tStart(self,tStart)
-%          if isscalar(tStart)
+      function set.tStart(self,tStart)
+         if isscalar(tStart)
+            self.tStart = tStart;
+         else
+            %error('tstart');
+            self.tStart = NaN;
+         end
+%          if isnan(tStart)
 %             self.tStart = tStart;
-%          else
-%             %error('tstart');
-%             self.tStart = NaN;
+%          elseif ~isempty(tStart)
+%             assert(isscalar(tStart) && isnumeric(tStart),'Event:tStart:InputFormat',...
+%                'tStart must be a numeric scalar.');
+%             if ~isempty(self.tEnd)
+%                assert(tStart <= self.tEnd,'Event:tStart:InputValue',...
+%                   'tStart must be <= tEnd.');
+%             end
+%             self.tStart = tStart;
 %          end
-% %          if isnan(tStart)
-% %             self.tStart = tStart;
-% %          elseif ~isempty(tStart)
-% %             assert(isscalar(tStart) && isnumeric(tStart),'Event:tStart:InputFormat',...
-% %                'tStart must be a numeric scalar.');
-% %             if ~isempty(self.tEnd)
-% %                assert(tStart <= self.tEnd,'Event:tStart:InputValue',...
-% %                   'tStart must be <= tEnd.');
-% %             end
-% %             self.tStart = tStart;
-% %          end
-%       end
-%       
-%       function self = set.tEnd(self,tEnd)
-%          if isscalar(tEnd)
+      end
+      
+      function set.tEnd(self,tEnd)
+         if isscalar(tEnd)
+            self.tEnd = tEnd;
+         else
+            self.tEnd = NaN;
+            %error('tend');
+         end
+%          if isempty(tEnd)
+%             if ~isempty(self.tStart)
+%                self.tEnd = self.tStart;
+%             end
+%          elseif isnan(tEnd)
 %             self.tEnd = tEnd;
 %          else
-%             self.tEnd = NaN;
-%             %error('tend');
+%             assert(isscalar(tEnd) && isnumeric(tEnd),'Event:tEnd:InputFormat',...
+%                'tEnd must be a numeric scalar.');
+%             if ~isempty(self.tStart)
+%                assert(self.tStart <= tEnd,'Event:tEnd:InputValue',...
+%                   'tStart must be <= tEnd.');
+%             end
+%             self.tEnd = tEnd;
 %          end
-% %          if isempty(tEnd)
-% %             if ~isempty(self.tStart)
-% %                self.tEnd = self.tStart;
-% %             end
-% %          elseif isnan(tEnd)
-% %             self.tEnd = tEnd;
-% %          else
-% %             assert(isscalar(tEnd) && isnumeric(tEnd),'Event:tEnd:InputFormat',...
-% %                'tEnd must be a numeric scalar.');
-% %             if ~isempty(self.tStart)
-% %                assert(self.tStart <= tEnd,'Event:tEnd:InputValue',...
-% %                   'tStart must be <= tEnd.');
-% %             end
-% %             self.tEnd = tEnd;
-% %          end
-%       end
-    end
+      end
+   end
    
    methods(Sealed = true)
       function self = reset(self)
