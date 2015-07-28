@@ -66,18 +66,19 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.Fs = self.Fs_;
          dt = 1/self.Fs_;
          self.times_ = self.tvec(p.Results.tStart,dt,(size(self.values_,1)));
-         
+
+         %%%% 
+         self.times = {self.times_};
+         self.values = {self.values_};
+
          % Define the start and end times of the process
          self.tStart = p.Results.tStart;
+         
          if isempty(p.Results.tEnd)
             self.tEnd = self.times_(end);
          else
             self.tEnd = p.Results.tEnd;
          end
-         
-         %%%% 
-         self.times = {self.times_};
-         self.values = {self.values_};
 
          % Set the window
          if isempty(p.Results.window)
@@ -124,9 +125,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
                'tStart must be a numeric scalar.');
          end
          self.discardBeforeStart();
-%          if ~isempty(self.tEnd)
-%             self.setInclusiveWindow();
-%          end
+         if ~isempty(self.tEnd)
+            self.setInclusiveWindow();
+         end
       end
       
       function set.tEnd(self,tEnd)
@@ -149,9 +150,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
                'tEnd must be a numeric scalar.');
          end
          self.discardAfterEnd();
-%          if ~isempty(self.tStart)
-%             self.setInclusiveWindow();
-%          end
+         if ~isempty(self.tStart)
+            self.setInclusiveWindow();
+         end
       end
       
       function dt = get.dt(self)
