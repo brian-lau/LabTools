@@ -170,7 +170,7 @@ updateAlignTab();
          'Units','pixels');
       controlBoxUpper = uix.BoxPanel('Parent',controlBox,'Units','pixels');
       controlBoxLower = uix.BoxPanel('Parent',controlBox,'Units','pixels');
-      set(controlBox,'Heights',[300 -2]);
+      set(controlBox,'Heights',[300 450]);
       
       h1 = uitabgroup('Parent',controlBoxUpper,'Units','pixels');
       upperTab1 = uitab(h1,'title','View','Units','pixels');
