@@ -222,12 +222,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       
       %% Display
       [h,yOffset] = plot(self,varargin)
-      [h,yOffset] = raster(self,varargin)
-      
-      %% Operators
-      plus(x,y)
-      minus(x,y)
-      bool = eq(x,y)
+      [h,yOffset] = raster(self,varargin)     
    end
      
    methods(Access = protected)

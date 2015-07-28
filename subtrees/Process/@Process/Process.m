@@ -31,8 +31,8 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
    properties(SetAccess = protected, Transient = true)
       % Note that window is applied without offset, so times can be outside 
       % of the window property
-      times    % Event/sample times
-      values   % Attribute/value associated with each time
+      times = {}   % Event/sample times
+      values = {}  % Attribute/value associated with each time
    end
    properties(SetAccess = protected, Dependent = true, Transient = true)
       isValidWindow % Boolean if window(s) lies within tStart and tEnd
@@ -63,11 +63,10 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
       
       % append
       % prepend
-      
-      % stack? same tStart and tEnd and Fs (for sampled)
-      
+            
       % fix = keep current data as original
 
+      % disp (overload?)
       % head
       % tail
       
@@ -178,6 +177,11 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
       bool = infoHasKey(self,key)
       bool = infoHasValue(self,value,varargin)
       info = copyInfo(self)
+      
+      %% Operators
+      plus(x,y)
+      minus(x,y)
+      bool = eq(x,y)
    end
    
    methods(Static, Access = protected)
