@@ -12,18 +12,16 @@ if isa(x,'PointProcess') && isa(y,'PointProcess')
    % since x,y will be handles, we need to destroy one, and
    % reassignin to the leading variable?
 elseif isa(x,'PointProcess') && isnumeric(y)
-   if numel(x) > 1
-      y = num2cell(y);
-      [x.offset] = y{:};
-   else
+   if isscalar(y)
       [x.offset] = deal(y);
+   else
+      [x.offset] = list(y);
    end
 elseif isa(y,'PointProcess') && isnumeric(x)
-   if numel(y) > 1
-      x = num2cell(x);
-      [y.offset] = x{:};
-   else
+   if isscalar(y)
       [y.offset] = deal(x);
+   else
+      [y.offset] = list(x);
    end
 else
    error('Plus not defined for inputs');
