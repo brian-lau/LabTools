@@ -148,28 +148,35 @@ for i = 1:ntrials
    t1(i) = rand;
    t2(i) = rand;
    
+   % Time-sensitive events
    e(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1,'name','fix');
    e(2) = metadata.event.Stimulus('tStart',2+t1(i),'tEnd',3+t1(i),'name','cue');
    if rem(i,2)
       e(3) = metadata.event.Response('tStart',5+t1(i)+t2(i),'tEnd',6+t1(i)+t2(i),'name','button');
    end
 
+   % Simulate SampledProcess
    y = normpdf(t,2+t1(i),.25);
    if rem(i,2)
       y = y - normpdf(t,5+t1(i)+t2(i),.5);
    end
    
+   % Simulate PointProcess
    sp = 2+t1(i) + (0:.1:1);
    if rem(i,2)
       sp = [sp , 5+t1(i)+t2(i) + (0:.1:1)];
    end
+   
+   % Test Trial data
+   trial = metadata.trial.Msup;
+   trial.isCorrect = rand<0.8;
 
    data(i) = Segment('process',...
       {SampledProcess('values',[y,0.85*y,0.65*y,0.55*y,0.35*y,0.15*y],'Fs',1/dt) ...
       PointProcess({sp sp+.01 sp+.02 sp+.03 sp+.04 sp+.05}) ...
       EventProcess('events',e)},...
       'labels',{'lfp' 'spikes' 'events'});
-   
+   data(i).info('trialInfo') = trial;
    clear e;
 end
 
