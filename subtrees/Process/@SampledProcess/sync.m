@@ -62,7 +62,7 @@ if p.Results.commonTime
       if numel(offset) == 1
          offset = nearest(offset,t+offset);
       else
-         offset = nearest(offset,bsxfun(@plus,t,vec(offset)));
+         offset = nearest(offset,bsxfun(@plus,t,vec(offset)'));
       end
       self.setOffset(-offset);
    else
