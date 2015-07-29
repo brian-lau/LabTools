@@ -63,9 +63,6 @@ for i = 1:numel(self)
          else
             cellfun(@(x) x.sync(event,syncPars),self(i).processes,'uni',0);
          end
-         %self(i).validSync = true;
-      else
-         %self(i).validSync = false;%metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN)
       end
       self(i).validSync = event;
    elseif numel(event) > 1
@@ -74,6 +71,5 @@ for i = 1:numel(self)
       error('multiple events, policy selector not done');
    else
       error('incorrect number of events');
-      %self(i).validSync = false;
    end
 end
