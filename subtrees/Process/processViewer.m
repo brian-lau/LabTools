@@ -8,7 +8,8 @@ if data.plotS
 end
 gui = createInterface();
 updateViews();
-updateAlignTab();
+updateSyncTab();
+updateSelectTab();
 
 %-------------------------------------------------------------------------%
    function data = createData(seg)
@@ -118,7 +119,7 @@ updateAlignTab();
       set(gui.WindowSlider,'SliderStep', [1 5] / max(1,n - 1),'Value', 1);
       
       % + Sync tab
-      top = 325;
+      top = 350;
       uicontrol('Parent',gui.lowerTab1,'Style','text',...
          'String','Use event prop','Fontsize',14,'HorizontalAlignment','left',...
          'Position', [10 top 150 25]);
@@ -128,7 +129,7 @@ updateAlignTab();
       uicontrol('Parent',gui.lowerTab1,'Style','text',...
          'String','synchronize to','Fontsize',14,'HorizontalAlignment','left',...
          'Position', [10 top-25 150 25]);
-      gui.AlignEventsPopup = uicontrol('Parent',gui.lowerTab1,'Style','popup',...
+      gui.SyncEventsPopup = uicontrol('Parent',gui.lowerTab1,'Style','popup',...
          'String', {'none'},'Fontsize',14,...
          'Position', [110 top-25 90 25]);
       uicontrol('Parent',gui.lowerTab1,'Style','text',...
@@ -155,13 +156,38 @@ updateAlignTab();
       gui.SyncAllButton = uicontrol('parent',gui.lowerTab1,'style','pushbutton',...
          'position',[35,top-225,125,35],'Fontsize',14,...
          'String','Sync all','Callback',@onSyncAllButton);
-      gui.ResetButton = uicontrol('parent',gui.lowerTab1,'style','pushbutton',...
+      gui.SyncResetButton = uicontrol('parent',gui.lowerTab1,'style','pushbutton',...
          'position',[35,top-275,125,35],'Fontsize',14,...
-         'String','Reset','Callback',@onResetButton);
+         'String','Reset','Callback',@onSyncResetButton);
+      
+      % + Select tab
+      top = 350;
+      uicontrol('Parent',gui.lowerTab2,'Style','text',...
+         'String','Use info key','Fontsize',14,'HorizontalAlignment','left',...
+         'Position', [10 top 150 25]);
+      gui.SelectInfoPopup = uicontrol('Parent',gui.lowerTab2,'Style','popup',...
+         'String', {'none'},'Fontsize',14,...
+         'Position', [110 top 90 25], 'Callback', @onSelectInfoPopup);
+      uicontrol('Parent',gui.lowerTab2,'Style','text',...
+         'String','and property','Fontsize',14,'HorizontalAlignment','left',...
+         'Position', [10 top-25 150 25]);
+      gui.SelectPropPopup = uicontrol('Parent',gui.lowerTab2,'Style','popup',...
+         'String', {'none'},'Fontsize',14,...
+         'Position', [110 top-25 90 25],'Callback',@onSelectPropPopup);
+      uicontrol('Parent',gui.lowerTab2,'Style','text',...
+         'String','select value','Fontsize',14,'HorizontalAlignment','left',...
+         'Position', [10 top-50 150 25]);
+      gui.SelectValuePopup = uicontrol('Parent',gui.lowerTab2,'Style','popup',...
+         'String', {'none'},'Fontsize',14,...
+         'Position', [110 top-50 90 25],'Callback',@onSelectValuePopup);
+      gui.SelectButton = uicontrol('parent',gui.lowerTab2,'style','pushbutton',...
+         'position',[35,top-225,125,35],'Fontsize',14,...
+         'String','Select','Callback',@onSelectButton);
+      gui.SelectResetButton = uicontrol('parent',gui.lowerTab2,'style','pushbutton',...
+         'position',[35,top-275,125,35],'Fontsize',14,...
+         'String','Reset','Callback',@onSelectResetButton);
       
       gui.Window.Visible = 'on';
-      % view must be visible for statusbar
-      %gui.sb = statusbar(gui.Window,'Ready');
    end % createInterface
 %-------------------------------------------------------------------------%
    function [controlBox,controlBoxUpper,controlBoxLower,upperTab1,upperTab2,...
@@ -226,21 +252,28 @@ updateAlignTab();
       end
    end
 %-------------------------------------------------------------------------%
-   function updateAlignTab()
+   function updateSyncTab()
       ind = gui.ArraySlider.Value;
       
       str = {'none' data.segment(ind).eventProcess.values{1}.name};
-      gui.AlignEventsPopup.String = str;
+      gui.SyncEventsPopup.String = str;
       if isempty(data.segment(ind).validSync)
-         gui.AlignEventsPopup.Value = 1;
+         gui.SyncEventsPopup.Value = 1;
       elseif isa(data.segment(ind).validSync,'metadata.Event')
          if strcmp(data.segment(ind).validSync.name,'NULL')
-            gui.AlignEventsPopup.Value = 1;
+            gui.SyncEventsPopup.Value = 1;
          else
             ind = strcmp(data.segment(ind).validSync.name,str);
-            gui.AlignEventsPopup.Value = find(ind);
+            gui.SyncEventsPopup.Value = find(ind);
          end
       end
+   end
+%-------------------------------------------------------------------------%
+   function updateSelectTab()
+      ind = gui.ArraySlider.Value;
+      
+      str = cat(2,'none',data.segment(ind).info.keys);
+      gui.SelectInfoPopup.String = str;
    end
 %-------------------------------------------------------------------------%
    function updateViews()
@@ -332,7 +365,7 @@ updateAlignTab();
          ['Array ' num2str(get(gui.ArraySlider,'Value')) '/'...
          num2str(numel(data.segment))];
       updateViews();
-      updateAlignTab();
+      updateSyncTab();
    end % onHelp
 %-------------------------------------------------------------------------%
    function onStackButton( ~, ~ )
@@ -394,7 +427,7 @@ updateAlignTab();
    function onSyncButton(~,~)
       toggleBusy(gui.Window);
       ind = gui.ArraySlider.Value;
-      eventName = gui.AlignEventsPopup.String{gui.AlignEventsPopup.Value};
+      eventName = gui.SyncEventsPopup.String{gui.SyncEventsPopup.Value};
       win = [gui.SyncWindowStart.Value gui.SyncWindowEnd.Value];
       
       eventStart = true;
@@ -408,7 +441,7 @@ updateAlignTab();
 %-------------------------------------------------------------------------%
    function onSyncAllButton(~,~)
       toggleBusy(gui.Window);
-      eventName = gui.AlignEventsPopup.String{gui.AlignEventsPopup.Value};
+      eventName = gui.SyncEventsPopup.String{gui.SyncEventsPopup.Value};
       win = [gui.SyncWindowStart.Value gui.SyncWindowEnd.Value];
       
       tic;
@@ -423,12 +456,53 @@ updateAlignTab();
       
    end
 %-------------------------------------------------------------------------%
-   function onResetButton(~,~)
+   function onSyncResetButton(~,~)
       toggleBusy(gui.Window);
       data.segment.reset();
-      updateAlignTab();
+      updateSyncTab();
       updateViews();
       toggleBusy(gui.Window);
+   end
+%-------------------------------------------------------------------------%
+   function onSelectInfoPopup(~,~)
+      ind = gui.ArraySlider.Value;
+      str = gui.SelectInfoPopup.String;
+      indStr = gui.SelectInfoPopup.Value;
+      if indStr > 1
+         prop = data.segment(ind).info(str{indStr});
+         if isa(prop,'metadata.Section')
+            % TODO Filter out some invalid properties
+            str = properties(prop);
+         elseif isstruct(prop)
+            str = fieldnames(prop);
+         else
+            str = 'none';
+         end
+      else
+         str = 'none';
+      end
+      gui.SelectPropPopup.String = str;
+   end
+%-------------------------------------------------------------------------%
+   function onSelectPropPopup(~,~)
+      
+      key = gui.SelectInfoPopup.String{gui.SelectInfoPopup.Value};
+      prop = gui.SelectPropPopup.String{gui.SelectPropPopup.Value};
+      
+      q = linq(data.segment);
+      str = q.where(@(x) isKey(x.info,key))...
+         .where(@(x) isprop(x.info(key),prop) || isfield(x.info(key),prop))...
+         .where(@(x) ~isempty(x.info(key).(prop)))...
+         .select(@(x) x.info(key).(prop));
+      
+      if str.count > 0
+         str = str.distinct().toArray();
+         if islogical(str)
+            str = double(str);
+         end
+         gui.SelectValuePopup.String = str;
+      else
+      end
    end
 %-------------------------------------------------------------------------%
    function toggleBusy(h)
