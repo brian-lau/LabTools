@@ -1,4 +1,3 @@
-% FIXME offset is a misleading name? could imply offset in values...
 % TODO 
 %   x should we allow initial process be multiply windowed???
 %   o labels can be numeric? 
@@ -94,7 +93,7 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
          %
          % SEE ALSO
          % setWindow, applyWindow         
-         self.window = self.checkWindow(window,size(window,1));
+         self.window = checkWindow(window,size(window,1));
          if ~self.reset_
             nWindow = size(self.window,1);
             if isempty(self.window) || ((nWindow==1) && (size(self.times,1)==1))
@@ -122,7 +121,7 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
          %
          % SEE ALSO
          % setOffset, applyOffset
-         newOffset = self.checkOffset(offset,size(self.window,1));
+         newOffset = checkOffset(offset,size(self.window,1));
          self.offset = newOffset;
          applyOffset(self,newOffset);
          self.cumulOffset = self.cumulOffset + newOffset;
@@ -184,8 +183,8 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
       bool = eq(x,y)
    end
    
-   methods(Static, Access = protected)
-      validWindow = checkWindow(window,n)
-      validOffset = checkOffset(offset,n)
-   end
+%    methods(Static, Access = protected)
+%       validWindow = checkWindow(window,n)
+%       validOffset = checkOffset(offset,n)
+%    end
 end

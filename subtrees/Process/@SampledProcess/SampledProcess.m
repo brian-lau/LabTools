@@ -84,7 +84,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          if isempty(p.Results.window)
             self.setInclusiveWindow();
          else
-            self.window = self.checkWindow(p.Results.window,size(p.Results.window,1));
+            self.window = checkWindow(p.Results.window,size(p.Results.window,1));
          end
          
          % Set the offset
@@ -92,7 +92,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          if isempty(p.Results.offset)
             self.offset = 0;
          else
-            self.offset = self.checkOffset(p.Results.offset,size(p.Results.offset,1));
+            self.offset = checkOffset(p.Results.offset,size(p.Results.offset,1));
          end         
 
          % Create labels

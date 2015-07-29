@@ -33,7 +33,7 @@ if iscell(window)
    % Different windows for each element
    if numel(window) == n
       for i = 1:n
-         validWindow{1,i} = Process.checkWindow(window{i},size(window{i},1));
+         validWindow{1,i} = checkWindow(window{i},size(window{i},1));
       end
    else
       error('Process:checkWindow:InputFormat',...

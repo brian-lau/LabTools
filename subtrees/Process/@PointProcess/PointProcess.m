@@ -137,7 +137,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          if isempty(par.window)
             self.setInclusiveWindow();
          else
-            self.window = self.checkWindow(par.window,size(par.window,1));
+            self.window = checkWindow(par.window,size(par.window,1));
          end
          
          % Set the offset
@@ -145,7 +145,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          if isempty(par.offset)
             self.offset = 0;
          else
-            self.offset = self.checkOffset(par.offset,size(par.offset,1));
+            self.offset = checkOffset(par.offset,size(par.offset,1));
          end         
 
          self.labels = par.labels;

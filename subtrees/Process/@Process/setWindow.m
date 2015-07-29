@@ -28,7 +28,7 @@ else
       set(self,'window',window);
    elseif iscell(window)
       % Different windows for each process
-      window = self.checkWindow(window,n);
+      window = checkWindow(window,n);
       [self.window] = deal(window{:});
    else
       error('Process:setWindow:InputFormat',...

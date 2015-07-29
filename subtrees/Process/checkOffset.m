@@ -32,7 +32,7 @@ if iscell(offset)
    % Different offsets for each element
    if numel(offset) == n
       for i = 1:n
-         validOffset{1,i} = Process.checkOffset(offset{i},length(offset{i}));
+         validOffset{1,i} = checkOffset(offset{i},length(offset{i}));
       end
    else
       error('Process:checkOffset:InputFormat',...

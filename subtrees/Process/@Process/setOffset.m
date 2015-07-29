@@ -24,11 +24,11 @@ else
       set(self,'offset',offset);
    elseif isvector(offset)
       % Different offset for each process
-      offset = self.checkOffset(num2cell(offset),n);
+      offset = checkOffset(num2cell(offset),n);
       [self.offset] = deal(offset{:});
    elseif iscell(offset)
       % Different offset for each process
-      offset = self.checkOffset(offset,n);
+      offset = checkOffset(offset,n);
       [self.offset] = deal(offset{:});
    else
       error('Process:setOffset:InputFormat','Bad offset');
