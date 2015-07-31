@@ -24,24 +24,24 @@ tEnd = max(self.times{1});
 
 if (minWin<tStart) && (maxWin>tEnd)
    pre = self.extendPre(tStart,minWin,1/self.Fs);
-   preV = nan(size(pre,1),size(self.values_,2));
+   preV = nan(size(pre,1),size(self.values_{1},2));
    post = self.extendPost(tEnd,maxWin,1/self.Fs);
-   postV = nan(size(post,1),size(self.values_,2));
+   postV = nan(size(post,1),size(self.values_{1},2));
    times = [pre ; self.times{1} ; post];
    values = [preV ; self.values{1} ; postV];
 elseif (minWin<tStart) && (maxWin<=tEnd)
    pre = self.extendPre(tStart,minWin,1/self.Fs);
-   preV = nan(size(pre,1),size(self.values_,2));
+   preV = nan(size(pre,1),size(self.values_{1},2));
    times = [pre ; self.times{1}];
    values = [preV ; self.values{1}];
 elseif (minWin>=tStart) && (maxWin>tEnd)
    post = self.extendPost(tEnd,maxWin,1/self.Fs);
-   postV = nan(size(post,1),size(self.values_,2));
+   postV = nan(size(post,1),size(self.values_{1},2));
    times = [self.times{1} ; post];
    values = [self.values{1} ; postV];
 else
-   times = self.times_;
-   values = self.values_;
+   times = self.times_{1};
+   values = self.values_{1};
 end
 
 windowedTimes = cell(nWindow,1);

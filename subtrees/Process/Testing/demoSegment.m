@@ -155,7 +155,7 @@ for i = 1:ntrials
       e(3) = metadata.event.Response('tStart',5+t1(i)+t2(i),'tEnd',6+t1(i)+t2(i),'name','button');
    end
 
-   % Simulate SampledProcess
+   % Test Trial data
    trial = metadata.trial.Msup;
    if rem(i,2)
       trial.isCorrect = true;
@@ -168,25 +168,27 @@ for i = 1:ntrials
       trial.isRepeat = false;
    end
    
+   % Simulate SampledProcess
    y = normpdf(t,2+t1(i),.25);
    if rem(i,2)
       y = y - normpdf(t,5+t1(i)+t2(i),.5);
    end
+   y = [y,0.85*y,0.65*y,0.55*y,0.35*y,0.15*y];
    
    % Simulate PointProcess
    sp = 2+t1(i) + (0:.1:1);
    if rem(i,2)
       sp = [sp , 5+t1(i)+t2(i) + (0:.1:1)];
    end
+   sp = {sp sp+.01 sp+.02 sp+.03 sp+.04 sp+.05};
    
-   % Test Trial data
-   trial = metadata.trial.Msup;
-   trial.isCorrect = rand<0.8;
-
+   % Pack everything into Segment container
    data(i) = Segment('process',...
-      {SampledProcess('values',[y,0.85*y,0.65*y,0.55*y,0.35*y,0.15*y],'Fs',1/dt) ...
-      PointProcess({sp sp+.01 sp+.02 sp+.03 sp+.04 sp+.05}) ...
-      EventProcess('events',e)},...
+      {...
+      SampledProcess('values',y,'Fs',1/dt,'tStart',0,'tEnd',10) ...
+      PointProcess('times',sp,'tStart',0,'tEnd',10) ...
+      EventProcess('events',e,'tStart',0,'tEnd',10) ...
+      },...
       'labels',{'lfp' 'spikes' 'events'});
    data(i).info('trial') = trial;
    clear e;

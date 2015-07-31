@@ -274,6 +274,11 @@ updateSelectTab();
       
       str = cat(2,'none',data.segment(ind).info.keys);
       gui.SelectInfoPopup.String = str;
+      gui.SelectInfoPopup.Value = 1;
+      gui.SelectPropPopup.String = {'none'};
+      gui.SelectPropPopup.Value = 1;
+      gui.SelectValuePopup.String = {'none'};
+      gui.SelectValuePopup.Value = 1;
    end
 %-------------------------------------------------------------------------%
    function updateViews()
@@ -527,7 +532,7 @@ updateSelectTab();
       else
          
       end
-      %keyboard
+
       data = createData(temp);
       if data.plotS
          data.sd = getCurrentSD(1);
@@ -561,7 +566,6 @@ updateSelectTab();
    end
 %-------------------------------------------------------------------------%
    function onExit(~,~)
-      % User wants to quit out of the application
       delete(gui.Window);
    end % onExit
 

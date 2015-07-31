@@ -48,7 +48,6 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
    end
    
    methods(Abstract)
-      reset(self)
       chop(self,shiftToWindow)
       s = sync(self,event,varargin)
       [s,labels] = extract(self,reqLabels)
@@ -75,8 +74,11 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
    methods(Abstract, Access = protected)
       applyWindow(self);
       applyOffset(self,offset);
-      discardBeforeStart(self);
-      discardAfterEnd(self);
+   end
+   
+   methods(Access = protected)
+      discardBeforeStart(self)
+      discardAfterEnd(self)
    end
 
    methods
@@ -132,6 +134,8 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
       self = setOffset(self,offset)
       self = setInclusiveWindow(self)
       
+      self = reset(self)
+      
       function set.labels(self,labels)
          n = size(self.values_,2);
          if isempty(labels)
@@ -183,8 +187,4 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
       bool = eq(x,y)
    end
    
-%    methods(Static, Access = protected)
-%       validWindow = checkWindow(window,n)
-%       validOffset = checkOffset(offset,n)
-%    end
 end

@@ -97,7 +97,6 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       
       %% Display
       h = plot(self,varargin)
-
    end
    methods(Access = protected)
       applyOffset(self,offset)

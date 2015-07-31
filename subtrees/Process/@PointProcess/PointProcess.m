@@ -209,7 +209,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          end
       end
       
-      self = reset(self)
       obj = chop(self,shiftToWindow)
       self = sync(self,event,varargin)
       [s,labels] = extract(self,reqLabels)
@@ -230,8 +229,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
    methods(Access = protected)
       applyWindow(self)
       applyOffset(self,offset)
-      discardBeforeStart(self)
-      discardAfterEnd(self)
    end
 
    methods(Static)

@@ -98,7 +98,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
                   error('Segment:Constructor:InputFormat',...
                      'Windows for all processes must be equal');
                end
- %              self.window = [self.tStart self.tEnd];
             else
                self.window = par.window;
             end
@@ -163,7 +162,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          for i = 1:numel(self.processes)
             self.processes{i}.offset = offset;
          end
-         self.offset = offset;
       end
 
       function window = get.window(self)
@@ -175,7 +173,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          for i = 1:numel(self.processes)
             self.processes{i}.window = window;
          end
-         self.window = window;
       end
       
       function set.labels(self,labels)

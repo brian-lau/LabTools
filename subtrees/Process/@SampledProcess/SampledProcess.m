@@ -56,27 +56,24 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          
          % Create values array
          if isvector(p.Results.values)
-            self.values_ = p.Results.values(:);
+            self.values_ = {p.Results.values(:)};
          else
-            % Assume leading dimension is time
-            % FIXME, should probably force to 2D? Actually, maybe not,
-            % allow user to preserve dimensions after leading
-            self.values_ = p.Results.values;
+            self.values_ = {p.Results.values};
          end
          self.Fs_ = p.Results.Fs;
          self.Fs = self.Fs_;
          dt = 1/self.Fs_;
-         self.times_ = self.tvec(p.Results.tStart,dt,(size(self.values_,1)));
+         self.times_ = {self.tvec(p.Results.tStart,dt,(size(self.values_{1},1)))};
 
          %%%% 
-         self.times = {self.times_};
-         self.values = {self.values_};
+         self.times = self.times_;
+         self.values = self.values_;
 
          % Define the start and end times of the process
          self.tStart = p.Results.tStart;
          
          if isempty(p.Results.tEnd)
-            self.tEnd = self.times_(end);
+            self.tEnd = self.times_{1}(end);
          else
             self.tEnd = p.Results.tEnd;
          end
@@ -117,9 +114,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          end
          if isscalar(tStart) && isnumeric(tStart)
             pre = self.extendPre(self.tStart,tStart,1/self.Fs_);
-            preV = nan(size(pre,1),size(self.values_,2));
-            self.times_ = [pre ; self.times_];
-            self.values_ = [preV ; self.values_];
+            preV = nan(size(pre,1),size(self.values_{1},2));
+            self.times_ = {[pre ; self.times_{1}]};
+            self.values_ = {[preV ; self.values_{1}]};
             self.tStart = tStart;
          else
             error('SampledProcess:tStart:InputFormat',...
@@ -142,9 +139,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          end
          if isscalar(tEnd) && isnumeric(tEnd)
             post = self.extendPost(self.tEnd,tEnd,1/self.Fs_);
-            postV = nan(size(post,1),size(self.values_,2));
-            self.times_ = [self.times_ ; post];
-            self.values_ = [self.values_ ; postV];
+            postV = nan(size(post,1),size(self.values_{1},2));
+            self.times_ = {[self.times_{1} ; post]};
+            self.values_ = {[self.values_{1} ; postV]};
             self.tEnd = tEnd;
          else
             error('SampledProcess:tEnd:InputFormat',...
@@ -165,8 +162,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       end
       
       % 
-      %self = setInclusiveWindow(self)
-      self = reset(self)
       obj = chop(self,shiftToWindow)
       s = sync(self,event,varargin)
 
@@ -193,8 +188,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    methods(Access = protected)
       applyWindow(self)
       applyOffset(self,offset)
-      discardBeforeStart(self)
-      discardAfterEnd(self)
    end
    
    methods(Static)
