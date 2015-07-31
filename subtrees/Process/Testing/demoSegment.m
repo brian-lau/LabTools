@@ -153,7 +153,14 @@ for i = 1:ntrials
    if rem(i,2)
       e(3) = metadata.event.Response('tStart',5+t1(i)+t2(i),'tEnd',6+t1(i)+t2(i),'name','button');
    end
-
+   
+   trial = metadata.trial.Msup;
+   if rem(i,2)
+      trial.isCorrect = true;
+   else
+      trial.isCorrect = false;
+   end
+   
    y = normpdf(t,2+t1(i),.25);
    if rem(i,2)
       y = y - normpdf(t,5+t1(i)+t2(i),.5);
@@ -169,6 +176,7 @@ for i = 1:ntrials
       PointProcess({sp sp+.01 sp+.02 sp+.03 sp+.04 sp+.05}) ...
       EventProcess('events',e)},...
       'labels',{'lfp' 'spikes' 'events'});
+   data(i).info('trial') = trial;
    
    clear e;
 end
