@@ -484,8 +484,7 @@ updateSelectTab();
       gui.SelectPropPopup.String = str;
    end
 %-------------------------------------------------------------------------%
-   function onSelectPropPopup(~,~)
-      
+   function onSelectPropPopup(~,~)      
       key = gui.SelectInfoPopup.String{gui.SelectInfoPopup.Value};
       prop = gui.SelectPropPopup.String{gui.SelectPropPopup.Value};
       
@@ -502,7 +501,50 @@ updateSelectTab();
          end
          gui.SelectValuePopup.String = str;
       else
+         gui.SelectValuePopup.String = 'none';
       end
+   end
+%-------------------------------------------------------------------------%
+   function onSelectValuePopup(~,~)
+   end
+%-------------------------------------------------------------------------%
+   function onSelectButton(~,~)
+      key = gui.SelectInfoPopup.String{gui.SelectInfoPopup.Value};
+      prop = gui.SelectPropPopup.String{gui.SelectPropPopup.Value};
+      try
+         value = gui.SelectValuePopup.String{gui.SelectValuePopup.Value};
+         isNumeric = false;
+      catch
+         value = str2num(gui.SelectValuePopup.String(gui.SelectValuePopup.Value));
+         isNumeric = true;
+      end
+      
+      q = linq(data.segment);
+      if isNumeric
+         temp = q.where(@(x) isKey(x.info,key))...
+            .where(@(x) isprop(x.info(key),prop) || isfield(x.info(key),prop))...
+            .where(@(x) x.info(key).(prop) == value).toArray();
+      else
+         
+      end
+      %keyboard
+      data = createData(temp);
+      if data.plotS
+         data.sd = getCurrentSD(1);
+      end
+      updateViews();
+      updateSyncTab();
+      updateSelectTab();
+   end
+%-------------------------------------------------------------------------%
+   function onSelectResetButton(~,~)
+      data = createData(seg);
+      if data.plotS
+         data.sd = getCurrentSD(1);
+      end
+      updateViews();
+      updateSyncTab();
+      updateSelectTab();
    end
 %-------------------------------------------------------------------------%
    function toggleBusy(h)

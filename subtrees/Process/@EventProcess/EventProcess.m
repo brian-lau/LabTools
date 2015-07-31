@@ -1,5 +1,4 @@
-% TODO
-%  o manage coordination of times in values?
+% Event processes
 
 classdef(CaseInsensitiveProperties) EventProcess < PointProcess         
    properties(SetAccess = private, Dependent = true, Transient = true)
