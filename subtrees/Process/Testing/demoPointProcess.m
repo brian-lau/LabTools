@@ -3,7 +3,7 @@ doc PointProcess
 % Each object method has some documention
 help PointProcess.raster
 
-clear all;
+clear all; 
 %% Basic pointProcess object
 p = PointProcess('times',3*rand(20,1))
 %
