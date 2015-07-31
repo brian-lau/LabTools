@@ -1,3 +1,5 @@
+% Point processes
+
 % removed requirement of unique eventTimes (overlapping spikes, etc),
 % should default to unique values, possibly check for unique values when
 % passed in

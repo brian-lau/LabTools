@@ -1,4 +1,5 @@
 % Regularly sampled processes
+
 % If multiple processes, currently cannot be multidimensional,
 % time = rows
 

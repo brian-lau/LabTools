@@ -160,6 +160,11 @@ for i = 1:ntrials
    else
       trial.isCorrect = false;
    end
+   if rand<.5
+      trial.isRepeat = true;
+   else
+      trial.isRepeat = false;
+   end
    
    y = normpdf(t,2+t1(i),.25);
    if rem(i,2)
