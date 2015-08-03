@@ -1,43 +1,63 @@
 % TODO
 %  o IIR filters?
 
-function [self,b,a] = lowpass(self,corner,varargin)
+function [self,h,d] = lowpass(self,varargin)
+
+if nargin < 2
+   error('SampledProcess:lowpass:InputValue',...
+      'Must at least specify ''Fc'' and ''order''.');
+end
 
 p = inputParser;
 p.KeepUnmatched = true;
-addRequired(p,'corner',@(x) isnumeric(x) && isscalar(x) && (x>0));
-addParamValue(p,'order',[],@isnumeric);
-addParamValue(p,'method','firws',@ischar);
-addParamValue(p,'tbw',2,@isnumeric);
-addParamValue(p,'window','blackman',@ischar);
-addParamValue(p,'fix',false,@islogical);
-addParamValue(p,'plot',false,@islogical);
-parse(p,corner,varargin{:});
+addParameter(p,'Fpass',[],@isnumeric);
+addParameter(p,'Fstop',[],@isnumeric);
+addParameter(p,'Fc',[],@isnumeric);
+addParameter(p,'order',[],@isnumeric);
+addParameter(p,'attenuation',60,@isnumeric); % Stopband attenuation in dB
+addParameter(p,'ripple',0.1,@isnumeric); % Passband ripple in dB
+addParameter(p,'method','',@ischar);
+addParameter(p,'fix',false,@islogical);
+addParameter(p,'plot',false,@islogical);
+addParameter(p,'verbose',false,@islogical);
+parse(p,varargin{:});
+par = p.Results;
 
 Fs = unique([self.Fs]);
 assert(numel(Fs)==1,'Must have same Fs');
-nyquist = self.Fs/2;
 
-assert(((corner+p.Results.tbw)/nyquist)<1,'Corner too high for transition bandwidth');
+if isempty(par.order) % minimum-order filter
+   assert(~isempty(par.Fpass)&&~isempty(par.Fstop),...
+      'Minimum order filter requires Fpass and Fstop to be specified.');
+   d = fdesign.lowpass('Fp,Fst,Ap,Ast',...
+      par.Fpass,par.Fstop,par.ripple,par.attenuation,Fs);
+else % specified-order filter
+   if ~isempty(par.Fpass) && isempty(par.Fstop)
+      d = fdesign.lowpass('N,Fp,Ap,Ast',...
+         par.order,par.Fpass,par.ripple,par.attenuation,Fs);
+   elseif ~isempty(par.Fpass) && ~isempty(par.Fstop)
+      d = fdesign.lowpass('N,Fp,Fst,Ap',...
+         par.order,par.Fpass,par.Fstop,par.ripple,Fs);
+   elseif ~isempty(par.Fc) % 6dB cutoff
+      d = fdesign.lowpass('N,Fc,Ap,Ast',...
+         par.order,par.Fc,par.ripple,par.attenuation,Fs);
+   else
+      error('SampledProcess:lowpass:InputValue',...
+         'Incomplete filter design specification');
+   end
+end
 
-if isempty(p.Results.order)
-   order = pop_firwsord(p.Results.window,Fs,p.Results.tbw);
+if isempty(par.method)
+   h = design(d,'FilterStructure','dffir');
 else
-   order = p.Results.order;
+   h = design(d,par.method,'FilterStructure','dffir');
 end
 
-switch lower(p.Results.method)
-   case 'firls'
-      b = firls(order,[0 corner/nyquist (corner+p.Results.tbw)/nyquist 1],[1 1 0 0]);
-      a = 1;
-   case 'firws'
-      [b,a] = firws(order,corner/nyquist,'low');
-   otherwise
-      error('Unknown FIR filter design method');
-end
-self.filter(b,'a',a,'fix',p.Results.fix);
+self.filter(h.Numerator,'a',1,'fix',p.Results.fix);
 
-if p.Results.plot
-   %freqz(b,a,[],'whole',Fs);
-   plotfresp(b,a,order,Fs);
+if par.plot
+   fvtool(h);
+end
+if par.verbose
+   info(h,'long');
 end

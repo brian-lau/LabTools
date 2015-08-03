@@ -1,43 +1,59 @@
-function [self,b] = bandpass(self,corner,varargin)
+% s.bandpass('Fstop1',100,'Fpass1',120,'Fpass2',300,'Fstop2',310,'verbose',true,'plot',true);
+function [self,h,d] = bandpass(self,varargin)
+
+if nargin < 2
+   error('SampledProcess:bandpass:InputValue',...
+      'Must at least specify ''Fc1/2'' and ''order''.');
+end
 
 p = inputParser;
 p.KeepUnmatched = true;
-addRequired(p,'corner',@(x) isnumeric(x) && (numel(x)==2) && all(x>0));
-addParamValue(p,'order',[],@isnumeric);
-addParamValue(p,'method','firws',@ischar);
-addParamValue(p,'window','blackman',@ischar);
-addParamValue(p,'tbw',2,@isnumeric);
-addParamValue(p,'fix',false,@islogical);
-addParamValue(p,'plot',false,@islogical);
-parse(p,corner,varargin{:});
+addParameter(p,'Fpass1',[],@isnumeric);
+addParameter(p,'Fpass2',[],@isnumeric);
+addParameter(p,'Fstop1',[],@isnumeric);
+addParameter(p,'Fstop2',[],@isnumeric);
+addParameter(p,'Fc1',[],@isnumeric);
+addParameter(p,'Fc2',[],@isnumeric);
+addParameter(p,'order',[],@isnumeric);
+addParameter(p,'attenuation1',60,@isnumeric); % Stopband attenuation in dB
+addParameter(p,'attenuation2',60,@isnumeric); % Stopband attenuation in dB
+addParameter(p,'ripple',0.1,@isnumeric); % Passband ripple in dB
+addParameter(p,'method','',@ischar);
+addParameter(p,'fix',false,@islogical);
+addParameter(p,'plot',false,@islogical);
+addParameter(p,'verbose',false,@islogical);
+parse(p,varargin{:});
+par = p.Results;
 
 Fs = unique([self.Fs]);
 assert(numel(Fs)==1,'Must have same Fs');
-nyquist = self.Fs/2;
 
-assert(corner(2)>corner(1),'Second bandedge must be higher than first');
-assert(corner(2)>p.Results.tbw,'Corner too low for transition bandwidth');
-assert(((corner(1)+p.Results.tbw)/nyquist)<1,'Corner too high for transition bandwidth');
+if isempty(par.order) % minimum-order filter
+   assert(~isempty(par.Fpass1)&&~isempty(par.Fpass2)&&~isempty(par.Fstop1)&&~isempty(par.Fstop2),...
+      'Minimum order filter requires Fpass1/2 and Fstop1/2 to be specified.');
+   d = fdesign.bandpass('Fst1,Fp1,Fp2,Fst2,Ast1,Ap,Ast2',...
+      par.Fstop1,par.Fpass1,par.Fpass2,par.Fstop2,par.attenuation1,par.ripple,par.attenuation2,Fs);
+else % specified-order filter
+   if ~isempty(par.Fc1) && ~isempty(par.Fc2) % 6dB cutoff
+      d = fdesign.bandpass('N,Fc1,Fc2,Ast1,Ap,Ast2',...
+         par.order,par.Fc1,par.Fc2,par.attenuation1,par.ripple,par.attenuation2,Fs);
+   else
+      error('SampledProcess:bandpass:InputValue',...
+         'Incomplete filter design specification');
+   end
+end
 
-if isempty(p.Results.order)
-   order = pop_firwsord(p.Results.window,Fs,p.Results.tbw);
+if isempty(par.method)
+   h = design(d,'FilterStructure','dffir');
 else
-   order = p.Results.order;
+   h = design(d,par.method,'FilterStructure','dffir');
 end
 
-switch lower(p.Results.method)
-   case 'firls'
-      b = firls(order,[0 (corner(1)-p.Results.tbw)/nyquist corner(1)/nyquist...
-         corner(2)/nyquist (corner(2)+p.Results.tbw)/nyquist 1],[0 0 1 1 0 0]);
-      a = 1;
-   case 'firws'
-      [b,a] = firws(order,corner/nyquist,'band');
-   otherwise
-      error('Unknown FIR filter design method');
-end
-self.filter(b,'a',a,'fix',p.Results.fix);
+self.filter(h.Numerator,'a',1,'fix',p.Results.fix);
 
-if p.Results.plot
-   %freqz(b,a,[],'whole',Fs);
-   plotfresp(b,a,order,Fs);
+if par.plot
+   fvtool(h);
+end
+if par.verbose
+   info(h,'long');
 end
