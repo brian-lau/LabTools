@@ -62,7 +62,6 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
       % append
       % prepend
             
-      % fix = keep current data as original
 
       % disp (overload?)
       % head
@@ -180,7 +179,10 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
       bool = infoHasKey(self,key)
       bool = infoHasValue(self,value,varargin)
       info = copyInfo(self)
-      
+
+      % Keep current data as original
+      self = fix(self)
+
       %% Operators
       plus(x,y)
       minus(x,y)
