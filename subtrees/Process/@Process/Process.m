@@ -180,7 +180,7 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
       bool = infoHasValue(self,value,varargin)
       info = copyInfo(self)
 
-      % Keep current data as original
+      % Keep current data/transformations as original
       self = fix(self)
 
       %% Operators
