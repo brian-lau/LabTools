@@ -55,7 +55,7 @@ if isempty(text)
    end
 end
 
-if nargin == 3
+if nargin == 4
    temp = dipole;
    dipole = temp(1:2);
    side = temp(3);
