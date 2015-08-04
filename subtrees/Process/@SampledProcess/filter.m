@@ -1,7 +1,10 @@
 % TODO
-%   o edge padding
-%   o handle nan padding (filter state?, replace nans?)
-%   o different filtering methods (causal, etc.)
+%   o edge padding, handle nan padding (filter state?, replace nans?)
+%   x different filtering methods (causal, etc.)
+%   o batched (looped) filtering (eg. for memmapped data)
+%   o compensateDelay should be 'filtfilt' 'grpdelay' 'none',
+%     then add parameter in filtering functions to compensate if using
+%     filtfilt (halve order, and sqrt attenuation/ripple)?
 
 function self = filter(self,b,varargin)
 
@@ -22,7 +25,7 @@ end
 
 for i = 1:numel(self)
    for j = 1:size(self(i).window,1)
-      if p.Results.compesateDelay
+      if p.Results.compensateDelay
          self(i).values{j} = filtfilt(b,a,self(i).values{j});
       else
          self(i).values{j} = filter(b,a,self(i).values{j});
