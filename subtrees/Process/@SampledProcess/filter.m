@@ -5,6 +5,7 @@
 %   o compensateDelay should be 'filtfilt' 'grpdelay' 'none',
 %     then add parameter in filtering functions to compensate if using
 %     filtfilt (halve order, and sqrt attenuation/ripple)?
+%   o should filtering functions only design filters? or have 'filter' bool
 
 function self = filter(self,b,varargin)
 

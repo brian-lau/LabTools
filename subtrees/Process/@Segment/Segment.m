@@ -1,14 +1,6 @@
 % Class for collecting Sampled, Point and EventProcesses with common start
 % and end time.
-% x Probably should place tStart/tEnd
-% x must check for common start and end times!
-%   tStart and tEnd are fixed across processes, which could end up with
-%   problems of NaN-padding...
 
-% o methods for 
-%   o adding processes
-%   o chopping
-% 
 classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & matlab.mixin.Copyable
    properties
       info@containers.Map % Information about segment
