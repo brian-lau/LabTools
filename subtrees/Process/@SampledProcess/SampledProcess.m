@@ -101,23 +101,18 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
 
       function set.tStart(self,tStart)
          if ~isempty(self.tEnd)
-            if tStart > self.tEnd
-               error('SampledProcess:tStart:InputValue',...
+            assert(self.tStart < tEnd,'SampledProcess:tEnd:InputValue',...
                   'tStart must be less than tEnd.');
-            elseif tStart == self.tEnd
-               self.tEnd = self.tEnd + eps(self.tEnd);
-            end
          end
-         if isscalar(tStart) && isnumeric(tStart)
-            pre = self.extendPre(self.tStart,tStart,1/self.Fs_);
-            preV = nan(size(pre,1),size(self.values_{1},2));
-            self.times_ = {[pre ; self.times_{1}]};
-            self.values_ = {[preV ; self.values_{1}]};
-            self.tStart = tStart;
-         else
-            error('SampledProcess:tStart:InputFormat',...
-               'tStart must be a numeric scalar.');
-         end
+         assert(isscalar(tStart) && isnumeric(tStart),...
+            'SampledProcess:tStart:InputFormat',...
+            'tStart must be a numeric scalar.');
+         dim = size(self.values_{1});
+         [pre,preV] = self.extendPre(self.tStart,tStart,1/self.Fs_,dim(2:end));
+         self.times_ = {[pre ; self.times_{1}]};
+         self.values_ = {[preV ; self.values_{1}]};
+         self.tStart = tStart;
+
          self.discardBeforeStart();
          if ~isempty(self.tEnd)
             self.setInclusiveWindow();
@@ -126,23 +121,18 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       
       function set.tEnd(self,tEnd)
          if ~isempty(self.tStart)
-            if self.tStart > tEnd
-               error('SampledProcess:tEnd:InputValue',...
+            assert(self.tStart < tEnd,'SampledProcess:tEnd:InputValue',...
                   'tEnd must be greater than tStart.');
-            elseif self.tStart == tEnd
-               tEnd = tEnd + eps(tEnd);
-            end
          end
-         if isscalar(tEnd) && isnumeric(tEnd)
-            post = self.extendPost(self.tEnd,tEnd,1/self.Fs_);
-            postV = nan(size(post,1),size(self.values_{1},2));
-            self.times_ = {[self.times_{1} ; post]};
-            self.values_ = {[self.values_{1} ; postV]};
-            self.tEnd = tEnd;
-         else
-            error('SampledProcess:tEnd:InputFormat',...
-               'tEnd must be a numeric scalar.');
-         end
+         assert(isscalar(tEnd) && isnumeric(tEnd),...
+            'SampledProcess:tEnd:InputFormat',...
+            'tEnd must be a numeric scalar.');
+         dim = size(self.values_{1});
+         [post,postV] = self.extendPost(self.tEnd,tEnd,1/self.Fs_,dim(2:end));
+         self.times_ = {[self.times_{1} ; post]};
+         self.values_ = {[self.values_{1} ; postV]};
+         self.tEnd = tEnd;
+         
          self.discardAfterEnd();
          if ~isempty(self.tStart)
             self.setInclusiveWindow();
@@ -189,7 +179,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    methods(Static)
       obj = loadobj(S)
       t = tvec(t0,dt,n)
-      pre = extendPre(tStartOld,tStartNew,dt)
-      post = extendPost(tEndOld,tEndNew,dt)
+      [pre,preV] = extendPre(tStartOld,tStartNew,dt,dim)
+      [post,postV] = extendPost(tEndOld,tEndNew,dt,dim)
    end
 end

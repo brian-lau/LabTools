@@ -31,6 +31,7 @@ end
 
 % FIXME multiple windows?
 values = self.values{1};
+values = reshape(values,self.dim{1}(1),prod(self.dim{1}(2:end)));
 t = self.times{1};
 if p.Results.stack
    n = size(values,2);
