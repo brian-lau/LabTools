@@ -24,22 +24,12 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
             return;
          end
 
-         if (nargin==1) && ~isstruct(varargin{1})
-            times = varargin{1};
-            assert(isnumeric(times) || iscell(times),...
+         if mod(nargin,2)==1 && ~isstruct(varargin{1})
+            assert(isnumeric(varargin{1}) || iscell(varargin{1}),...
                'PointProcess:Constructor:InputFormat',...
                   ['Single inputs must be passed in as array of event times'...
                ', or cell array of arrays of event times.']);
-            if isnumeric(times)
-               varargin{1} = 'times';
-               varargin{2} = times;
-            else
-               assert(all(cellfun(@isnumeric,times)),...
-                  'PointProcess:Constructor:InputFormat',...
-                  'Each element of cell array must be a numeric array.');
-               varargin{1} = 'times';
-               varargin{2} = times;
-            end
+            varargin = {'times' varargin{:}};
          end
          
          p = inputParser;

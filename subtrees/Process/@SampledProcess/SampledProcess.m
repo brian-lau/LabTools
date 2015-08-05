@@ -27,15 +27,11 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
            return;
          end
          
-         if nargin == 1
-            values = varargin{1};
-            assert(isnumeric(values),...
+         if mod(nargin,2)==1 && ~isstruct(varargin{1})
+            assert(isnumeric(varargin{1}),...
                'SampledProcess:Constructor:InputFormat',...
                'Single inputs must be passed in as array of numeric values');
-            if isnumeric(values)
-               varargin{1} = 'values';
-               varargin{2} = values;
-            end
+            varargin = {'values' varargin{:}};
          end
 
          p = inputParser;
@@ -43,7 +39,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.FunctionName = 'SampledProcess constructor';
          p.addParamValue('info',containers.Map('KeyType','char','ValueType','any'));
          p.addParamValue('Fs',1);
-         p.addParamValue('values',[],@ismatrix );
+         p.addParamValue('values',[],@isnumeric );
          p.addParamValue('labels',{},@(x) iscell(x) || ischar(x));
          p.addParamValue('quality',[],@isnumeric);
          p.addParamValue('window',[],@isnumeric);
