@@ -5,43 +5,45 @@
 % move checkWindows/checkOffset into package? private (faster)?
 % set only in constructor
 %   - clock, timeUnit
-classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
+classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties
       info@containers.Map % Information about process
    end
    properties(SetAccess = protected)
-      timeUnit % Time representation (placeholder)
-      clock    % Clock info (drift-correction)
+      timeUnit            % Time representation (TODO)
+      clock               % Clock info (drift-correction, TODO)
    end
    properties(AbortSet)
-      % tStart/tEnd are currently in subclasses since setters are different for each
-      window   % [min max] time window of interest
+      % tStart/tEnd are defined in subclasses since setters are different for each
+      %tStart             % Start time of process
+      %tEnd               % End time of process
+      window              % [min max] time window of interest
    end
    properties
-      offset   % Offset of event/sample times relative to window
+      offset              % Time offset relative to window
+                          % Note that window is applied without offset, 
+                          % so times can be outside of the window property
+      cumulOffset         % Cumulative offset
    end
    properties
-      labels
-      quality
-      cumulOffset
+      labels              % Label for each element
+      quality             % Scalar information for each element
    end
-   % Window-dependent, but only calculated on window change
-   % http://blogs.mathworks.com/loren/2012/03/26/considering-performance-in-object-oriented-matlab-code/
    properties(SetAccess = protected, Transient = true)
-      % Note that window is applied without offset, so times can be outside 
-      % of the window property
-      times = {}   % Event/sample times
-      values = {}  % Attribute/value associated with each time
+      % Window-dependent, but only calculated on window change
+      % http://blogs.mathworks.com/loren/2012/03/26/considering-performance-in-object-oriented-matlab-code/
+      times = {}          % Event/sample times
+      values = {}         % Attribute/value associated with each time
    end
    properties(SetAccess = protected, Dependent = true, Transient = true)
-      isValidWindow % Boolean if window(s) lies within tStart and tEnd
+      isValidWindow       % Boolean if window(s) within tStart and tEnd
    end
    properties(SetAccess = protected, Hidden = true)
-      times_   % Original event/sample times
-      values_  % Original attribute/values
-      window_  % Original window
-      offset_  % Original offset
-      reset_ = false % reset bit
+      times_              % Original event/sample times
+      values_             % Original attribute/values
+      window_             % Original window
+      offset_             % Original offset
+      reset_ = false      % reset bit
    end
    properties(SetAccess = protected)
       version = '0.1.0'
@@ -128,13 +130,10 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
          self.cumulOffset = self.cumulOffset + newOffset;
       end
       
-      % these handle object array assignment
+      % Assignment for object arrays
       self = setWindow(self,window)
       self = setOffset(self,offset)
-      self = setInclusiveWindow(self)
-      
-      self = reset(self)
-      
+            
       function set.labels(self,labels)
          n = size(self.values_,2);
          if isempty(labels)
@@ -175,13 +174,17 @@ classdef(CaseInsensitiveProperties) Process < hgsetget & matlab.mixin.Copyable
          isValidWindow = (self.window(:,1)>=self.tStart) & (self.window(:,2)<=self.tEnd);
       end
       
+      self = setInclusiveWindow(self)
+      self = reset(self)
+      self = map(self,func,varargin)
+      % Keep current data/transformations as original
+      self = fix(self)
+
       keys = infoKeys(self,flatBool)
       bool = infoHasKey(self,key)
       bool = infoHasValue(self,value,varargin)
       info = copyInfo(self)
 
-      % Keep current data/transformations as original
-      self = fix(self)
 
       %% Operators
       plus(x,y)

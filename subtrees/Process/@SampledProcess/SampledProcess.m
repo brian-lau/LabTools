@@ -99,6 +99,10 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.offset_ = self.offset;
       end % constructor
 
+%       function times_ = get.times_(self)
+%          times_ = {self.tvec(self.tStart,dt,(size(self.values_{1},1)))};
+%       end
+      
       function set.tStart(self,tStart)
          if ~isempty(self.tEnd)
             assert(self.tStart < tEnd,'SampledProcess:tEnd:InputValue',...
@@ -157,9 +161,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       [self,b] = lowpass(self,corner,varargin)
       [self,b] = bandpass(self,corner,varargin)
       self = resample(self,newFs,varargin)
-      %self = smooth(self)
       self = detrend(self)
-      self = map(self,func,varargin)
 
       % Output
       [s,labels] = extract(self,reqLabels)
