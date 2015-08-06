@@ -4,6 +4,10 @@
 % side - 'D' or 'G'
 
 % x,y,z are localizations depending on coordinate system
+% in stn/acpc
+%  x = ml
+%  y = ap
+%  z = dv
 
 function [x,y,z] = getDBSloc(fname,patient,coord,dipole,side)
 
