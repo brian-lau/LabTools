@@ -1,22 +1,16 @@
-% TODO 
-%   x should we allow initial process be multiply windowed???
-%   o labels can be numeric? 
-%   o dimLabels?
-% move checkWindows/checkOffset into package? private (faster)?
-% set only in constructor
-%   - clock, timeUnit
 classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties
       info@containers.Map % Information about process
    end
-   properties(SetAccess = protected)
+   properties(SetAccess = immutable)
       timeUnit            % Time representation (TODO)
       clock               % Clock info (drift-correction, TODO)
    end
+   properties(Abstract)
+      tStart              % Start time of process
+      tEnd                % End time of process
+   end
    properties(AbortSet)
-      % tStart/tEnd are defined in subclasses since setters are different for each
-      %tStart             % Start time of process
-      %tEnd               % End time of process
       window              % [min max] time window of interest
    end
    properties
@@ -24,8 +18,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
                           % Note that window is applied without offset, 
                           % so times can be outside of the window property
       cumulOffset         % Cumulative offset
-   end
-   properties
       labels              % Label for each element
       quality             % Scalar information for each element
    end
@@ -38,9 +30,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties(SetAccess = protected, Dependent = true, Transient = true)
       isValidWindow       % Boolean if window(s) within tStart and tEnd
    end
-   properties(SetAccess = protected, Hidden = true)
+   properties(Abstract, SetAccess = protected, Hidden = true)
       times_              % Original event/sample times
       values_             % Original attribute/values
+   end
+   properties(SetAccess = protected, Hidden = true)
       window_             % Original window
       offset_             % Original offset
       reset_ = false      % reset bit
@@ -49,6 +43,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       version = '0.1.0'
    end
    
+   %%
    methods(Abstract)
       chop(self,shiftToWindow)
       s = sync(self,event,varargin)
@@ -201,5 +196,4 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       minus(x,y)
       bool = eq(x,y)
    end
-   
 end

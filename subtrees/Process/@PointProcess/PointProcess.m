@@ -8,13 +8,18 @@
 
 classdef(CaseInsensitiveProperties) PointProcess < Process         
    properties(AbortSet)
-      tStart % Start time of process
-      tEnd   % End time of process
+      tStart             % Start time of process
+      tEnd               % End time of process
    end
    properties(SetAccess = protected, Dependent = true, Transient = true)
-      count  % # of events in window
+      count              % # of events in each window
+   end
+   properties(SetAccess = protected, Hidden = true)
+      times_              % Original event/sample times
+      values_             % Original attribute/values
    end
    
+   %%
    methods
       %% Constructor
       function self = PointProcess(varargin)

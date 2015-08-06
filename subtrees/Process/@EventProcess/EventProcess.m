@@ -2,12 +2,14 @@
 
 classdef(CaseInsensitiveProperties) EventProcess < PointProcess         
    properties(SetAccess = private, Dependent = true, Transient = true)
-      duration  % # of events in window
-      isValidEvent
+      duration           % duration of events in windows
+      isValidEvent       % start/end time of events in windows?
    end
    properties
       nullEvent = metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN)
    end
+   
+   %%
    methods
       %% Constructor
       function self = EventProcess(varargin)
@@ -65,6 +67,7 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       %% Display
       h = plot(self,varargin)
    end
+   
    methods(Access = protected)
       applyOffset(self,offset)
    end

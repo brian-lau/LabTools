@@ -5,20 +5,25 @@
 
 classdef(CaseInsensitiveProperties) SampledProcess < Process   
    properties(AbortSet)
-      tStart % Start time of process
-      tEnd   % End time of process
+      tStart             % Start time of process
+      tEnd               % End time of process
    end
    properties(SetAccess = protected)
-      Fs % Sampling frequency
+      Fs                 % Sampling frequency
    end
    properties(SetAccess = protected, Dependent = true, Transient = true)
-      dim
-      dt
+      dt                 % 1/Fs
+      dim                % Dimensionality of each window
    end   
    properties(SetAccess = protected, Hidden = true)
-      Fs_ % Original sampling frequency
+      Fs_                % Original sampling frequency
+   end
+   properties(SetAccess = protected, Hidden = true)
+      times_              % Original event/sample times
+      values_             % Original attribute/values
    end
    
+   %%
    methods
       %% Constructor
       function self = SampledProcess(varargin)
@@ -37,15 +42,15 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p = inputParser;
          p.KeepUnmatched= false;
          p.FunctionName = 'SampledProcess constructor';
-         p.addParamValue('info',containers.Map('KeyType','char','ValueType','any'));
-         p.addParamValue('Fs',1);
-         p.addParamValue('values',[],@isnumeric );
-         p.addParamValue('labels',{},@(x) iscell(x) || ischar(x));
-         p.addParamValue('quality',[],@isnumeric);
-         p.addParamValue('window',[],@isnumeric);
-         p.addParamValue('offset',[],@isnumeric);
-         p.addParamValue('tStart',0,@isnumeric);
-         p.addParamValue('tEnd',[],@isnumeric);
+         p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
+         p.addParameter('Fs',1);
+         p.addParameter('values',[],@isnumeric );
+         p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
+         p.addParameter('quality',[],@isnumeric);
+         p.addParameter('window',[],@isnumeric);
+         p.addParameter('offset',[],@isnumeric);
+         p.addParameter('tStart',0,@isnumeric);
+         p.addParameter('tEnd',[],@isnumeric);
          p.parse(varargin{:});
          
          self.info = p.Results.info;
@@ -105,7 +110,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       
       function set.tStart(self,tStart)
          if ~isempty(self.tEnd)
-            assert(self.tStart < tEnd,'SampledProcess:tEnd:InputValue',...
+            assert(tStart < self.tEnd,'SampledProcess:tEnd:InputValue',...
                   'tStart must be less than tEnd.');
          end
          assert(isscalar(tStart) && isnumeric(tStart),...
