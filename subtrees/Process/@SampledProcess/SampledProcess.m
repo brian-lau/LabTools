@@ -4,7 +4,7 @@
 % time = rows
 
 classdef(CaseInsensitiveProperties) SampledProcess < Process   
-   properties(AbortSet)%(AbortSet, Access=?Segment)
+   properties(AbortSet)
       tStart % Start time of process
       tEnd   % End time of process
    end

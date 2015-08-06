@@ -58,13 +58,12 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       apply(self,fun) % apply applyFunc func?
       %copy?
       %plot
-            
+      
       % remove % delete by label
       
       % append
       % prepend
-            
-
+      
       % disp (overload?)
       % head
       % tail

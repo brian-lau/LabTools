@@ -11,7 +11,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       tStart % Start time of process
       tEnd   % End time of process
    end
-   % These dependent properties all apply the window property
    properties(SetAccess = protected, Dependent = true, Transient = true)
       count  % # of events in window
    end
