@@ -13,37 +13,45 @@ if isempty(self.times_)
    return;
 end
 
-nWindow = size(self.window,1);
-assert(nWindow==numel(self.values),'monkey!');
+nWindowReq = size(self.window,1);
+nWindowOrig = numel(self.values);
+if nWindowOrig > 1
+   assert(nWindowReq==nWindowOrig,'monkey!');
+end
 
 window = self.window;
-windowedTimes = cell(nWindow,1);
-windowedValues = cell(nWindow,1);
-for i = 1:nWindow
-   % NaN-pad when window extends beyond process. This extension is
-   % done to the nearest sample that fits in the window.
+windowedTimes = cell(nWindowReq,1);
+windowedValues = cell(nWindowReq,1);
+for i = 1:nWindowReq
    minWin = min(window(i,1));
    maxWin = max(window(i,2));
-   tStart = min(self.times{i});
-   tEnd = max(self.times{i});
-   dim = size(self.values{i});
+   if nWindowOrig == 1
+      idx = 1;
+   else
+      idx = i;
+   end
+   % NaN-pad when window extends beyond process. This extension is
+   % done to the nearest sample that fits in the window.
+   tStart = min(self.times{idx});
+   tEnd = max(self.times{idx});
+   dim = size(self.values{idx});
    dim = dim(2:end); % leading dim is always time
    if (minWin<tStart) && (maxWin>tEnd)
       [pre,preV] = self.extendPre(tStart,minWin,1/self.Fs,dim);
       [post,postV] = self.extendPost(tEnd,maxWin,1/self.Fs,dim);
-      times = [pre ; self.times{i} ; post];
-      values = [preV ; self.values{i} ; postV];
+      times = [pre ; self.times{idx} ; post];
+      values = [preV ; self.values{idx} ; postV];
    elseif (minWin<tStart) && (maxWin<=tEnd)
       [pre,preV] = self.extendPre(tStart,minWin,1/self.Fs,dim);
-      times = [pre ; self.times{i}];
-      values = [preV ; self.values{i}];
+      times = [pre ; self.times{idx}];
+      values = [preV ; self.values{idx}];
    elseif (minWin>=tStart) && (maxWin>tEnd)
       [post,postV] = self.extendPost(tEnd,maxWin,1/self.Fs,dim);
-      times = [self.times{i} ; post];
-      values = [self.values{i} ; postV];
+      times = [self.times{idx} ; post];
+      values = [self.values{idx} ; postV];
    else
-      times = self.times{i};
-      values = self.values{i};
+      times = self.times{idx};
+      values = self.values{idx};
    end
    
    ind = (times>=window(i,1)) & (times<=window(i,2));
