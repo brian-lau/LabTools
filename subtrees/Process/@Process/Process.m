@@ -134,9 +134,15 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       self = setOffset(self,offset)
             
       function set.labels(self,labels)
-         n = size(self.values_,2);
+         dim = size(self.values_{1});
+         if numel(dim) > 2
+            dim = dim(2:end);
+         else
+            dim(1) = 1;
+         end
+         n = prod(dim);
          if isempty(labels)
-            self.labels = arrayfun(@(x) ['id' num2str(x)],1:n,'uni',0);
+            self.labels = arrayfun(@(x) ['id' num2str(x)],reshape(1:n,dim),'uni',0);
          elseif iscell(labels)
             assert(all(cellfun(@ischar,labels)),'Process:labels:InputType',...
                'Labels must be strings');
@@ -153,17 +159,22 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       end
       
       function set.quality(self,quality)
-         n = size(self.values_,2);
+         dim = size(self.values_{1});
+         if numel(dim) > 2
+            dim = dim(2:end);
+         else
+            dim(1) = 1;
+         end
          assert(isnumeric(quality),'Process:quality:InputFormat',...
             'Must be numeric');
          
          if isempty(quality)
-            quality = ones(1,n);
+            quality = ones(dim);
             self.quality = quality;
-         elseif numel(quality)==n
+         elseif all(size(quality)==dim)
             self.quality = quality(:)';
          elseif numel(quality)==1
-            self.quality = repmat(quality,1,n);
+            self.quality = repmat(quality,dim);
          else
             error('bad quality');
          end
