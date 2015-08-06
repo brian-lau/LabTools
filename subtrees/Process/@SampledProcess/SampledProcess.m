@@ -33,7 +33,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          end
          
          if mod(nargin,2)==1 && ~isstruct(varargin{1})
-            assert(isnumeric(varargin{1}),...
+            assert(isnumeric(varargin{1}) || isa(varargin{1},'StreamTest'),...
                'SampledProcess:Constructor:InputFormat',...
                'Single inputs must be passed in as array of numeric values');
             varargin = {'values' varargin{:}};
@@ -44,7 +44,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.FunctionName = 'SampledProcess constructor';
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
          p.addParameter('Fs',1);
-         p.addParameter('values',[],@isnumeric );
+         p.addParameter('values',[],@(x) isnumeric(x) || isa(x,'StreamTest'));
          p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
          p.addParameter('quality',[],@isnumeric);
          p.addParameter('window',[],@isnumeric);
@@ -54,7 +54,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.parse(varargin{:});
          
          self.info = p.Results.info;
-         
          % Create values array
          if isvector(p.Results.values)
             self.values_ = {p.Results.values(:)};
@@ -64,9 +63,11 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.Fs_ = p.Results.Fs;
          self.Fs = self.Fs_;
          dt = 1/self.Fs_;
-         self.times_ = {self.tvec(p.Results.tStart,dt,(size(self.values_{1},1)))};
+         dim = size(self.values_{1});
+         self.times_ = {self.tvec(p.Results.tStart,dt,dim(1))};
 
-         %%%% 
+          keyboard
+        %%%% 
          self.times = self.times_;
          self.values = self.values_;
 
