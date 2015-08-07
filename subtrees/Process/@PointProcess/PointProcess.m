@@ -11,10 +11,10 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       tStart             % Start time of process
       tEnd               % End time of process
    end
-   properties(SetAccess = protected, Dependent = true, Transient = true)
+   properties(SetAccess = protected, Dependent, Transient)
       count              % # of events in each window
    end
-   properties(SetAccess = protected, Hidden = true)
+   properties(SetAccess = protected, Hidden)
       times_              % Original event/sample times
       values_             % Original attribute/values
    end

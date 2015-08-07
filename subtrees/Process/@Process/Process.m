@@ -21,25 +21,27 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       labels              % Label for each element
       quality             % Scalar information for each element
    end
-   properties(SetAccess = protected, Transient = true)
+   properties(SetAccess = protected, Transient, GetObservable)
       % Window-dependent, but only calculated on window change
       % http://blogs.mathworks.com/loren/2012/03/26/considering-performance-in-object-oriented-matlab-code/
       times = {}          % Event/sample times
       values = {}         % Attribute/value associated with each time
    end
-   properties(SetAccess = protected, Dependent = true, Transient = true)
+   properties(SetAccess = protected, Dependent, Transient)
       isValidWindow       % Boolean if window(s) within tStart and tEnd
    end
-   properties(Abstract, SetAccess = protected, Hidden = true)
+   properties(Abstract, SetAccess = protected, Hidden)
       times_              % Original event/sample times
       values_             % Original attribute/values
    end
-   properties(SetAccess = protected, Hidden = true)
+   properties(SetAccess = protected, Hidden)
       window_             % Original window
       offset_             % Original offset
       reset_ = false      % reset bit
    end
    properties(SetAccess = protected)
+      lazy
+      isLoaded
       version = '0.1.0'
    end
    
@@ -64,6 +66,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       % tail
       
       obj = loadobj(S)
+      % saveobj
    end
    
    methods(Abstract, Access = protected)
@@ -89,8 +92,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % Does not work for arrays of objects. Use setWindow for that.
          %
          % SEE ALSO
-         % setWindow, applyWindow         
+         % setWindow, applyWindow
          self.window = checkWindow(window,size(window,1));
+         if self.lazy && ~self.isLoaded
+            return;
+         end
          if ~self.reset_
             nWindow = size(self.window,1);
             if isempty(self.window) || ((nWindow==1) && (size(self.times,1)==1))
@@ -101,7 +107,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
                applyWindow(self);
                applyOffset(self,self.cumulOffset);
             else
-               % Reset the process, 
+               % Reset the process,
                self.times = self.times_;
                self.values = self.values_;
                
@@ -120,6 +126,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % setOffset, applyOffset
          newOffset = checkOffset(offset,size(self.window,1));
          self.offset = newOffset;
+         if self.lazy && ~self.isLoaded
+            return;
+         end
          applyOffset(self,newOffset);
          self.cumulOffset = self.cumulOffset + newOffset;
       end

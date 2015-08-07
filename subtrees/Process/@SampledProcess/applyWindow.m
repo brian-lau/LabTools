@@ -1,4 +1,4 @@
-% Window original event times, setting
+% Window event times, setting
 %     times
 %     values
 %     index
@@ -13,8 +13,10 @@ if isempty(self.times_)
    return;
 end
 
+%keyboard
+
 nWindowReq = size(self.window,1);
-nWindowOrig = numel(self.values);
+nWindowOrig = numel(self.times);
 if nWindowOrig > 1
    assert(nWindowReq==nWindowOrig,'monkey!');
 end

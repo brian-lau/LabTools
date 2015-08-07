@@ -1,7 +1,7 @@
 % Event processes
 
 classdef(CaseInsensitiveProperties) EventProcess < PointProcess         
-   properties(SetAccess = private, Dependent = true, Transient = true)
+   properties(SetAccess = private, Dependent, Transient)
       duration           % duration of events in windows
       isValidEvent       % start/end time of events in windows?
    end

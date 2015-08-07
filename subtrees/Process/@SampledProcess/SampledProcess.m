@@ -10,17 +10,19 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    end
    properties(SetAccess = protected)
       Fs                 % Sampling frequency
+%      lazy
    end
-   properties(SetAccess = protected, Dependent = true, Transient = true)
+   properties(SetAccess = protected, Dependent, Transient)
       dt                 % 1/Fs
       dim                % Dimensionality of each window
    end   
-   properties(SetAccess = protected, Hidden = true)
+   properties(SetAccess = protected, Hidden)
       Fs_                % Original sampling frequency
    end
-   properties(SetAccess = protected, Hidden = true)
+   properties(SetAccess = protected, Hidden)
       times_              % Original event/sample times
       values_             % Original attribute/values
+%      isLoaded = true;
    end
    
    %%
@@ -43,7 +45,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.KeepUnmatched= false;
          p.FunctionName = 'SampledProcess constructor';
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
-         p.addParameter('Fs',1);
+         p.addParameter('Fs',[],@(x) isnumeric(x) && isscalar(x));
          p.addParameter('values',[],@(x) isnumeric(x) || isa(x,'StreamTest'));
          p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
          p.addParameter('quality',[],@isnumeric);
@@ -51,63 +53,101 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.addParameter('offset',[],@isnumeric);
          p.addParameter('tStart',0,@isnumeric);
          p.addParameter('tEnd',[],@isnumeric);
+         p.addParameter('lazy',false,@islogical);
          p.parse(varargin{:});
          
-         self.info = p.Results.info;
-         % Create values array
-         if isvector(p.Results.values)
-            self.values_ = {p.Results.values(:)};
+         par = p.Results;
+         
+         self.info = par.info;
+         
+         self.lazy = par.lazy;
+         
+         if isa(par.values,'StreamTest')
+            assert(isempty(par.Fs),'Cannot specify Fs when using DataStreams');
+            self.Fs_ = par.values.Fs;
+            self.Fs = self.Fs_;
+            if self.lazy
+               addlistener(self,'values','PreGet',@self.test);
+               self.values_ = {par.values};
+               self.isLoaded = false;
+            else
+               % Import all data from stream
+               ind = repmat({':'},1,numel(par.values.dim));
+               self.values_ = {par.values(ind{:})};
+               self.values = self.values_;
+            end
+            dim = par.values.dim;
+            self.times_ = {self.tvec(par.tStart,self.dt,dim(1))};
          else
-            self.values_ = {p.Results.values};
+            if self.lazy
+               warning('Lazy loading is only possible with a DataStream');
+               self.lazy = false;
+            end
+            if isempty(par.Fs)
+               self.Fs_ = 1;
+            else
+               self.Fs_ = par.Fs;
+            end
+            self.Fs = self.Fs_;
+            self.values_ = {par.values};
+            self.values = self.values_;
+            dim = size(self.values_{1});
+            self.times_ = {self.tvec(par.tStart,self.dt,dim(1))};
          end
-         self.Fs_ = p.Results.Fs;
-         self.Fs = self.Fs_;
-         dt = 1/self.Fs_;
-         dim = size(self.values_{1});
-         self.times_ = {self.tvec(p.Results.tStart,dt,dim(1))};
-
-          keyboard
-        %%%% 
          self.times = self.times_;
-         self.values = self.values_;
 
          % Define the start and end times of the process
-         self.tStart = p.Results.tStart;
-         
-         if isempty(p.Results.tEnd)
+         if isa(par.values,'StreamTest')
+            self.tStart = par.values.tStart;
+         else
+            self.tStart = par.tStart;
+         end
+      
+         if isempty(par.tEnd)
             self.tEnd = self.times_{1}(end);
          else
-            self.tEnd = p.Results.tEnd;
+            self.tEnd = par.tEnd;
          end
-
+                  
          % Set the window
-         if isempty(p.Results.window)
+         if isempty(par.window)
             self.setInclusiveWindow();
          else
-            self.window = checkWindow(p.Results.window,size(p.Results.window,1));
+            self.window = par.window;
          end
          
          % Set the offset
          self.cumulOffset = 0;
-         if isempty(p.Results.offset)
+         if isempty(par.offset)
             self.offset = 0;
          else
-            self.offset = checkOffset(p.Results.offset,size(p.Results.offset,1));
-         end         
+            self.offset = par.offset;
+         end
 
          % Create labels
-         self.labels = p.Results.labels;
+         self.labels = par.labels;
          
-         self.quality = p.Results.quality;
+         self.quality = par.quality;
 
          % Store original window and offset for resetting
          self.window_ = self.window;
          self.offset_ = self.offset;
       end % constructor
 
-%       function times_ = get.times_(self)
-%          times_ = {self.tvec(self.tStart,dt,(size(self.values_{1},1)))};
-%       end
+      function test(self,varargin)
+         if ~self.isLoaded
+         disp('hello');
+         window = self.window;
+         for i = 1:size(window,1)
+            ind = (self.times_{1}>=window(i,1)) & (self.times_{1}<=window(i,2));
+            values{i,1} = self.values_{1}(ind,:);
+         end
+         self.values = values;
+         self.isLoaded = true;
+         applyWindow(self);
+         applyOffset(self,self.offset);
+         end
+      end
       
       function set.tStart(self,tStart)
          if ~isempty(self.tEnd)
@@ -117,16 +157,20 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          assert(isscalar(tStart) && isnumeric(tStart),...
             'SampledProcess:tStart:InputFormat',...
             'tStart must be a numeric scalar.');
-         dim = size(self.values_{1});
-         [pre,preV] = self.extendPre(self.tStart,tStart,1/self.Fs_,dim(2:end));
-         self.times_ = {[pre ; self.times_{1}]};
-         self.values_ = {[preV ; self.values_{1}]};
-         self.tStart = tStart;
-
-         self.discardBeforeStart();
-         if ~isempty(self.tEnd)
-            self.setInclusiveWindow();
+         
+         if isa(self.values_{1},'StreamTest')
+            self.tStart = tStart;
+         else
+            dim = size(self.values_{1});
+            [pre,preV] = self.extendPre(self.tStart,tStart,1/self.Fs_,dim(2:end));
+            self.times_ = {[pre ; self.times_{1}]};
+            self.values_ = {[preV ; self.values_{1}]};
+            self.tStart = tStart;
+            self.discardBeforeStart();
          end
+%          if ~isempty(self.tEnd)
+%             self.setInclusiveWindow();
+%          end
       end
       
       function set.tEnd(self,tEnd)
@@ -137,16 +181,21 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          assert(isscalar(tEnd) && isnumeric(tEnd),...
             'SampledProcess:tEnd:InputFormat',...
             'tEnd must be a numeric scalar.');
-         dim = size(self.values_{1});
-         [post,postV] = self.extendPost(self.tEnd,tEnd,1/self.Fs_,dim(2:end));
-         self.times_ = {[self.times_{1} ; post]};
-         self.values_ = {[self.values_{1} ; postV]};
-         self.tEnd = tEnd;
          
-         self.discardAfterEnd();
-         if ~isempty(self.tStart)
-            self.setInclusiveWindow();
+         if isa(self.values_{1},'StreamTest')
+            self.tEnd = tEnd;
+         else
+            dim = size(self.values_{1});
+            [post,postV] = self.extendPost(self.tEnd,tEnd,1/self.Fs_,dim(2:end));
+            self.times_ = {[self.times_{1} ; post]};
+            self.values_ = {[self.values_{1} ; postV]};
+            self.tEnd = tEnd;
+            self.discardAfterEnd();
          end
+         
+%          if ~isempty(self.tStart)
+%             self.setInclusiveWindow();
+%          end
       end
       
       function dt = get.dt(self)

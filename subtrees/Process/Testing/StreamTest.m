@@ -1,15 +1,20 @@
 classdef StreamTest < handle
-   properties
-      n
+   properties(SetAccess = protected)
+      tStart
+      Fs
+      dim
       data
    end
    
    methods
       function self = StreamTest(data,varargin)
-         %keyboard
-         self.n = size(data,1);
+         self.tStart = 0;
+         self.Fs = 1000;
+         self.dim = size(data);
          self.data = data;
       end
+      
+      
       function dim = size(self)
          dim = size(self.data);
       end
