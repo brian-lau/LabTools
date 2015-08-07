@@ -40,8 +40,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       reset_ = false      % reset bit
    end
    properties(SetAccess = protected)
-      lazy
-      isLoaded
+      lazy = false
+      isLoaded = true
       version = '0.1.0'
    end
    

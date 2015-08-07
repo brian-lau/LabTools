@@ -10,7 +10,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    end
    properties(SetAccess = protected)
       Fs                 % Sampling frequency
-%      lazy
    end
    properties(SetAccess = protected, Dependent, Transient)
       dt                 % 1/Fs
@@ -22,7 +21,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    properties(SetAccess = protected, Hidden)
       times_              % Original event/sample times
       values_             % Original attribute/values
-%      isLoaded = true;
    end
    
    %%
@@ -77,23 +75,24 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
                self.values = self.values_;
             end
             dim = par.values.dim;
-            self.times_ = {self.tvec(par.tStart,self.dt,dim(1))};
          else
-            if self.lazy
-               warning('Lazy loading is only possible with a DataStream');
-               self.lazy = false;
-            end
             if isempty(par.Fs)
                self.Fs_ = 1;
             else
                self.Fs_ = par.Fs;
             end
             self.Fs = self.Fs_;
-            self.values_ = {par.values};
-            self.values = self.values_;
+            if self.lazy
+               addlistener(self,'values','PreGet',@self.test);
+               self.values_ = {par.values};
+               self.isLoaded = false;
+            else
+               self.values_ = {par.values};
+               self.values = self.values_;
+            end
             dim = size(self.values_{1});
-            self.times_ = {self.tvec(par.tStart,self.dt,dim(1))};
          end
+         self.times_ = {self.tvec(par.tStart,self.dt,dim(1))};
          self.times = self.times_;
 
          % Define the start and end times of the process
