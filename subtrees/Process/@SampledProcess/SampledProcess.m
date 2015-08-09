@@ -135,16 +135,27 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
 
       function test(self,varargin)
          if ~self.isLoaded
-         disp('hello');
-         window = self.window;
-         for i = 1:size(window,1)
-            ind = (self.times_{1}>=window(i,1)) & (self.times_{1}<=window(i,2));
-            values{i,1} = self.values_{1}(ind,:);
+            disp('hello');
+            window = self.window;
+            for i = 1:size(window,1)
+               ind = (self.times_{1}>=window(i,1)) & (self.times_{1}<=window(i,2));
+               values{i,1} = self.values_{1}(ind,:);
+            end
+            self.values = values;
+            self.isLoaded = true;
+            applyWindow(self);
+            applyOffset(self,self.offset);
          end
-         self.values = values;
-         self.isLoaded = true;
-         applyWindow(self);
-         applyOffset(self,self.offset);
+         %keyboard
+         if any(cellfun(@(x) ~x{3},self.chain))
+            self.running = true;
+            for i = 1:numel(self.chain)
+               if ~self.chain{i}{3}
+                  feval(self.chain{i}{1},self,self.chain{i}{2}{:});
+                  self.chain{i}{3} = true;
+               end
+            end
+            self.running = false;
          end
       end
       

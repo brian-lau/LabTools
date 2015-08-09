@@ -41,6 +41,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties(SetAccess = protected)
       lazy = false
+      running = false;
+      chain = {}
       isLoaded = true
       version = '0.1.0'
    end
