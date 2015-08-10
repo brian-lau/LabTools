@@ -38,13 +38,14 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       window_             % Original window
       offset_             % Original offset
       reset_ = false      % reset bit
+      evalImmediately = true % 
+      %defer
    end
    properties(SetAccess = protected)
       lazy = false
-      running = false;
       chain = {}
       isLoaded = true
-      version = '0.1.0'
+      version = '0.3.0'
    end
    
    %%
@@ -52,8 +53,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       chop(self,shiftToWindow)
       s = sync(self,event,varargin)
       [s,labels] = extract(self,reqLabels)
-      %windowfun(self,fun)
-      %windowFun(self,fun,nOpt,varargin) % apply applyFunc func?
       apply(self,fun) % apply applyFunc func?
       %copy?
       %plot

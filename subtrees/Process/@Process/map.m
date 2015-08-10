@@ -1,6 +1,5 @@
-% The new method 'map' allows you to apply an function (passed in as a handle)
-% to SampledProcess values, with the restriction that your function must return
-% an output of the same dimensionality as its input.
+% Apply an function (passed in as a handle) values, with the restriction 
+% that your function must return an output of the same input dimensionality.
 %
 % An example:
 %
@@ -11,15 +10,13 @@
 % s.map(@(x) abs(x));
 % plot(s);
 %
+% % Teager-Kaiser energy operator
+% tkeo = @(x) x.^2 - circshift(x,1).*circshift(x,-1);
+% s.map(@(x) tkeo(x))
+%
 % % Using a function that does not maintain dimensionality will error
 % s.map(@(x) sum(x));
 %
-% % reset
-% s.reset();
-%
-% % Teager-Kaiser energy operator (assumes column arrangement)
-% tkeo = @(x) x.^2 - circshift(x,1).*circshift(x,-1);
-% s.map(@(x) tkeo(x))
 
 function self = map(self,func,varargin)
 
@@ -29,13 +26,14 @@ addRequired(p,'func',@(x) isa(x,'function_handle'));
 parse(p,func,varargin{:});
 
 for i = 1:numel(self)
-   
-   if ~self(i).running
+   %-- chain
+   if ~self(i).evalImmediately
       addLink(self(i),func);
       if self(i).lazy
          continue;
       end
    end
+   %-- chain
    
    values = cellfun(func,self(i).values,'uni',false);
    % Check dimensions

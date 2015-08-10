@@ -9,15 +9,14 @@ for i = 1:numel(self)
       continue;
    end
    
-   % use lcm?
-   % http://www.mathworks.com/matlabcentral/fileexchange/45329-sample-rate-conversion/content/SRC/srconv.m
-   [n,d] = rat(newFs/self(i).Fs);
+   % FIXME, tolerance as input/default?
+   [p,q] = rat(newFs/self(i).Fs);
    
    % Resample first window and cache the filter
-   [values{1},b] = resample(self(i).values{1},n,d);
+   [values{1},b] = resample(self(i).values{1},p,q);
    nWindow = size(self(i).window,1);
    if nWindow > 1
-      values(2:nWindow,1) = cellfun(@(x) resample(x,n,d,b),...
+      values(2:nWindow,1) = cellfun(@(x) resample(x,p,q,b),...
          self(i).values(2:nWindow,1),'uni',0);
    end
    

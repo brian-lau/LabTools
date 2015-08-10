@@ -205,8 +205,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       % Output
       [s,labels] = extract(self,reqLabels)
       output = apply(self,fun,nOpt,varargin)
-
-      dat = convert2Fieldtrip(self)
       
       % Visualization
       [h,yOffset] = plot(self,varargin)
