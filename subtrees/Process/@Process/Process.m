@@ -78,7 +78,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    
    methods(Access = protected)
       discardBeforeStart(self)
-      discardAfterEnd(self)
+      discardAfterEnd(self)      
+      loadOnDemand(self,varargin)
    end
 
    methods
@@ -190,6 +191,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          isValidWindow = (self.window(:,1)>=self.tStart) & (self.window(:,2)<=self.tEnd);
       end
       
+      eval(self)
       self = setInclusiveWindow(self)
       self = reset(self)
       self = map(self,func,varargin)
