@@ -12,6 +12,12 @@
 function [x,y,z] = getDBSloc(fname,patient,coord,dipole,side)
 
 persistent text patients sides coords dipoles X Y Z;
+persistent filename;
+
+if ~strcmp(filename,fname)
+   text = [];
+end
+filename = fname;
 
 if isempty(text)
    
@@ -45,7 +51,11 @@ if isempty(text)
          sides{i,1} = 'D';
       end
       
-      dipoles{i,1} = [temp2{end}(1) temp2{end}(3)];
+      try
+         dipoles{i,1} = [temp2{end}(1) temp2{end}(3)];
+      catch
+         dipoles{i,1} = [temp2{end}(1)];
+      end
       
       if strcmp(temp{4}(1),'A')
          coords{i,1} = 'ACPC';
@@ -61,8 +71,8 @@ end
 
 if nargin == 4
    temp = dipole;
-   dipole = temp(1:2);
-   side = temp(3);
+   dipole = temp(1:end-1);
+   side = temp(end);
 end
 
 ind = strncmpi(patient,patients,numel(patient)) & strcmpi(coords,coord) & strcmpi(dipoles,dipole) & strcmpi(sides,side);
@@ -75,5 +85,4 @@ else
    x = NaN;
    y = NaN;
    z = NaN;
-   %error('missing or not unique');
 end
