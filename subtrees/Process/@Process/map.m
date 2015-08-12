@@ -27,14 +27,14 @@ parse(p,func,varargin{:});
 
 for i = 1:numel(self)
    %-- chain
-   if ~self(i).evalImmediately
+   if ~self(i).running_
       addLink(self(i),func);
-      if self(i).lazy
+      if self(i).lazyEval
          continue;
       end
    end
    %-- chain
-   
+
    values = cellfun(func,self(i).values,'uni',false);
    % Check dimensions
    match = cellfun(@(x,y) size(x) == size(y),self(i).values,values,'uni',false);

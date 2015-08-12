@@ -1,7 +1,7 @@
 function loadOnDemand(self,varargin)
 
 if ~self.isLoaded
-   disp('hello');
+   disp('loading');
    window = self.window;
    for i = 1:size(window,1)
       ind = (self.times_{1}>=window(i,1)) & (self.times_{1}<=window(i,2));
@@ -13,4 +13,4 @@ if ~self.isLoaded
    applyOffset(self,self.offset);
 end
 
-eval(self);
+isRunnable(self);

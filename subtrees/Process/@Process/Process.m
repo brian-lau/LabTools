@@ -38,14 +38,18 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       window_             % Original window
       offset_             % Original offset
       reset_ = false      % reset bit
-      evalImmediately = true % 
-      %defer
+      running_ = false
    end
    properties(SetAccess = protected)
-      lazy = false
+      lazyLoad = false
+      lazyEval = true
       chain = {}
       isLoaded = true
       version = '0.3.0'
+   end
+   events
+      runnable
+      loadable
    end
    
    %%
@@ -79,6 +83,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       discardBeforeStart(self)
       discardAfterEnd(self)      
       loadOnDemand(self,varargin)
+      addLink(self,varargin)
    end
 
    methods
@@ -96,7 +101,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % SEE ALSO
          % setWindow, applyWindow
          self.window = checkWindow(window,size(window,1));
-         if self.lazy && ~self.isLoaded
+         if self.lazyLoad && ~self.isLoaded
             return;
          end
          if ~self.reset_
@@ -128,7 +133,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % setOffset, applyOffset
          newOffset = checkOffset(offset,size(self.window,1));
          self.offset = newOffset;
-         if self.lazy && ~self.isLoaded
+         if self.lazyLoad && ~self.isLoaded
             return;
          end
          applyOffset(self,newOffset);
@@ -190,7 +195,23 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          isValidWindow = (self.window(:,1)>=self.tStart) & (self.window(:,2)<=self.tEnd);
       end
       
-      eval(self)
+      function isRunnable(self,~,~)
+         isLoadable(self);
+         disp('checking runnability');
+         if isempty(self.chain)
+         elseif any(~[self.chain{:,3}]);
+            notify(self,'runnable');
+         end
+      end
+      
+      function isLoadable(self,~,~)
+         disp('checking loadability');
+         if ~self.isLoaded
+            notify(self,'loadable');
+         end
+      end
+      
+      eval(self,varargin)
       self = setInclusiveWindow(self)
       self = reset(self)
       self = map(self,func,varargin)

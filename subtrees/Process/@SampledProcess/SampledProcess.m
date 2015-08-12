@@ -51,21 +51,30 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.addParameter('offset',[],@isnumeric);
          p.addParameter('tStart',0,@isnumeric);
          p.addParameter('tEnd',[],@isnumeric);
-         p.addParameter('lazy',false,@islogical);
+         p.addParameter('lazyLoad',false,@islogical);
+         p.addParameter('lazyEval',false,@islogical);
          p.parse(varargin{:});
          
          par = p.Results;
          
          self.info = par.info;
          
-         self.lazy = par.lazy;
+         self.lazyEval = par.lazyEval;
+         if self.lazyEval
+            self.running_ = false;
+            addlistener(self,'values','PreGet',@self.isRunnable);
+            addlistener(self,'runnable',@self.eval);
+            %addlistener(self,'runnable',@(x,y) disp('notified'));
+            %addlistener(self,'values','PreGet',@(x,y) disp('request'));
+         end
          
          if isa(par.values,'StreamTest')
             assert(isempty(par.Fs),'Cannot specify Fs when using DataStreams');
             self.Fs_ = par.values.Fs;
             self.Fs = self.Fs_;
-            if self.lazy
-               addlistener(self,'values','PreGet',@self.test);
+            if self.lazyLoad
+%                addlistener(self,'values','PreGet',@self.isLoadable);
+               addlistener(self,'loadable',@self.loadOnDemand);
                self.values_ = {par.values};
                self.isLoaded = false;
             else
@@ -82,8 +91,8 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
                self.Fs_ = par.Fs;
             end
             self.Fs = self.Fs_;
-            if self.lazy
-               addlistener(self,'values','PreGet',@self.loadOnDemand);
+            if self.lazyLoad
+%                addlistener(self,'values','PreGet',@self.loadOnDemand);
                self.values_ = {par.values};
                self.isLoaded = false;
             else

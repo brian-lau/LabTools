@@ -7,7 +7,7 @@
 function self = reset(self)
 
 for i = 1:numel(self)
-   if self.lazy
+   if self.lazyLoad
       self(i).times = self(i).times_;
       self(i).values = {};
       self(i).isLoaded = false;
