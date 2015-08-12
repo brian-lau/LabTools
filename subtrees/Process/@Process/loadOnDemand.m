@@ -12,5 +12,3 @@ if ~self.isLoaded
    applyWindow(self);
    applyOffset(self,self.offset);
 end
-
-isRunnable(self);

@@ -13,8 +13,6 @@ if isempty(self.times_)
    return;
 end
 
-%keyboard
-
 nWindowReq = size(self.window,1);
 nWindowOrig = numel(self.times);
 if nWindowOrig > 1

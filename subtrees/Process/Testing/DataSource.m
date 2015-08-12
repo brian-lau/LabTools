@@ -1,4 +1,4 @@
-classdef StreamTest < handle
+classdef(Abstract) DataSource < handle
    properties(SetAccess = protected)
       tStart
       Fs
@@ -7,19 +7,13 @@ classdef StreamTest < handle
    end
    
    methods
-      function self = StreamTest(data,varargin)
-         self.tStart = 0;
-         self.Fs = 1000;
-         self.dim = size(data);
-         self.data = data;
-      end
-      
       
       function dim = size(self)
          dim = size(self.data);
       end
+      
       function B = subsref(self,S)
-         % Handle the first indexing on object itself, shorcut place()
+         % Shortcut direct access to data
          switch S(1).type
             case '()'
                B = self.data(S(1).subs{:});

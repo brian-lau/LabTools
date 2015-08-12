@@ -23,7 +23,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties(SetAccess = protected, Transient, GetObservable)
       % Window-dependent, but only calculated on window change
-      % http://blogs.mathworks.com/loren/2012/03/26/considering-performance-in-object-oriented-matlab-code/
       times = {}          % Event/sample times
       values = {}         % Attribute/value associated with each time
    end
@@ -83,6 +82,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       discardBeforeStart(self)
       discardAfterEnd(self)      
       loadOnDemand(self,varargin)
+      evalOnDemand(self,varargin)
       addLink(self,varargin)
    end
 
@@ -101,7 +101,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % SEE ALSO
          % setWindow, applyWindow
          self.window = checkWindow(window,size(window,1));
-         if self.lazyLoad && ~self.isLoaded
+         if ~self.isLoaded%self.lazyLoad && ~self.isLoaded
             return;
          end
          if ~self.reset_
@@ -133,7 +133,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % setOffset, applyOffset
          newOffset = checkOffset(offset,size(self.window,1));
          self.offset = newOffset;
-         if self.lazyLoad && ~self.isLoaded
+         if ~self.isLoaded%self.lazyLoad && ~self.isLoaded
             return;
          end
          applyOffset(self,newOffset);
@@ -200,6 +200,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          disp('checking runnability');
          if isempty(self.chain)
          elseif any(~[self.chain{:,3}]);
+            disp('I am runnable');
             notify(self,'runnable');
          end
       end
@@ -207,11 +208,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function isLoadable(self,~,~)
          disp('checking loadability');
          if ~self.isLoaded
+            disp('I am loadable');
             notify(self,'loadable');
          end
       end
       
-      eval(self,varargin)
       self = setInclusiveWindow(self)
       self = reset(self)
       self = map(self,func,varargin)

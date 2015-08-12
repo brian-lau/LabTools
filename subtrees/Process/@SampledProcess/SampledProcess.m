@@ -33,7 +33,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          end
          
          if mod(nargin,2)==1 && ~isstruct(varargin{1})
-            assert(isnumeric(varargin{1}) || isa(varargin{1},'StreamTest'),...
+            assert(isnumeric(varargin{1}) || isa(varargin{1},'DataSource'),...
                'SampledProcess:Constructor:InputFormat',...
                'Single inputs must be passed in as array of numeric values');
             varargin = {'values' varargin{:}};
@@ -44,7 +44,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.FunctionName = 'SampledProcess constructor';
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
          p.addParameter('Fs',[],@(x) isnumeric(x) && isscalar(x));
-         p.addParameter('values',[],@(x) isnumeric(x) || isa(x,'StreamTest'));
+         p.addParameter('values',[],@(x) isnumeric(x) || isa(x,'DataSource'));
          p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
          p.addParameter('quality',[],@isnumeric);
          p.addParameter('window',[],@isnumeric);
@@ -59,24 +59,31 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          
          self.info = par.info;
          
-         self.lazyEval = par.lazyEval;
-         if self.lazyEval
+         self.lazyEval = par.lazyEval;         
+         self.lazyLoad = par.lazyLoad;
+         if self.lazyLoad && ~self.lazyEval
+            addlistener(self,'values','PreGet',@self.isLoadable);
+            addlistener(self,'loadable',@self.loadOnDemand);
+            self.isLoaded = false;
+         elseif self.lazyEval
             self.running_ = false;
             addlistener(self,'values','PreGet',@self.isRunnable);
-            addlistener(self,'runnable',@self.eval);
-            %addlistener(self,'runnable',@(x,y) disp('notified'));
-            %addlistener(self,'values','PreGet',@(x,y) disp('request'));
+            addlistener(self,'runnable',@self.evalOnDemand);
+            if self.lazyLoad
+               % No listener for loadable since callback for runnable checks
+               addlistener(self,'loadable',@self.loadOnDemand);
+               self.isLoaded = false;
+            else
+               self.isLoaded = true;
+            end
          end
          
-         if isa(par.values,'StreamTest')
-            assert(isempty(par.Fs),'Cannot specify Fs when using DataStreams');
+         if isa(par.values,'DataSource')
+            assert(isempty(par.Fs),'Cannot specify Fs when using DataSources');
             self.Fs_ = par.values.Fs;
             self.Fs = self.Fs_;
             if self.lazyLoad
-%                addlistener(self,'values','PreGet',@self.isLoadable);
-               addlistener(self,'loadable',@self.loadOnDemand);
                self.values_ = {par.values};
-               self.isLoaded = false;
             else
                % Import all data from stream
                ind = repmat({':'},1,numel(par.values.dim));
@@ -92,9 +99,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             end
             self.Fs = self.Fs_;
             if self.lazyLoad
-%                addlistener(self,'values','PreGet',@self.loadOnDemand);
                self.values_ = {par.values};
-               self.isLoaded = false;
             else
                self.values_ = {par.values};
                self.values = self.values_;
@@ -151,7 +156,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             'SampledProcess:tStart:InputFormat',...
             'tStart must be a numeric scalar.');
          
-         if isa(self.values_{1},'StreamTest')
+         if isa(self.values_{1},'DataSource')
             self.tStart = tStart;
          else
             dim = size(self.values_{1});
@@ -175,7 +180,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             'SampledProcess:tEnd:InputFormat',...
             'tEnd must be a numeric scalar.');
          
-         if isa(self.values_{1},'StreamTest')
+         if isa(self.values_{1},'DataSource')
             self.tEnd = tEnd;
          else
             dim = size(self.values_{1});
