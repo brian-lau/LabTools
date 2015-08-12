@@ -40,4 +40,5 @@ for i = 1:numel(self)
    end
    
    self(i).chain = {};
+   self(i).Fs = self(i).Fs_;
 end

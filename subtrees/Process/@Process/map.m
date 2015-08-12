@@ -26,14 +26,14 @@ addRequired(p,'func',@(x) isa(x,'function_handle'));
 parse(p,func,varargin{:});
 
 for i = 1:numel(self)
-   %-- chain
+   %-- Add link to function chain ----------
    if ~self(i).running_
       addLink(self(i),func);
       if self(i).lazyEval
          continue;
       end
    end
-   %-- chain
+   %----------------------------------------
 
    values = cellfun(func,self(i).values,'uni',false);
    % Check dimensions

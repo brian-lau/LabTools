@@ -210,9 +210,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
 
       % Transform
       self = filter(self,b,varargin)
-      [self,b] = highpass(self,corner,varargin)
-      [self,b] = lowpass(self,corner,varargin)
-      [self,b] = bandpass(self,corner,varargin)
+      [self,h,d] = lowpass(self,varargin)
+      [self,h,d] = highpass(self,varargin)
+      [self,h,d] = bandpass(self,varargin)
       self = resample(self,newFs,varargin)
       self = detrend(self)
 
