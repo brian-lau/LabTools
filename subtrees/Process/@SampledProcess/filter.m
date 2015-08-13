@@ -15,18 +15,28 @@ addRequired(p,'b',@(x) isnumeric(x) || isa(x,'dfilt.dffir'));
 addParameter(p,'a',1,@isnumeric);
 addParameter(p,'compensateDelay',true,@islogical);
 parse(p,b,varargin{:});
+par = p.Results;
 
 if isa(b,'dfilt.dffir')
    h = b;
    b = h.Numerator;
    a = 1;
 else
-   a = p.Results.a;
+   a = par.a;
 end
 
 for i = 1:numel(self)
+   %------- Add to function queue ----------
+   if ~self(i).running_
+      addToQueue(self(i),b,par);
+      if self(i).lazyEval
+         continue;
+      end
+   end
+   %----------------------------------------
+
    for j = 1:size(self(i).window,1)
-      if p.Results.compensateDelay
+      if par.compensateDelay
          self(i).values{j} = filtfilt(b,a,self(i).values{j});
       else
          self(i).values{j} = filter(b,a,self(i).values{j});

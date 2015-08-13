@@ -22,38 +22,50 @@ addParameter(p,'method','',@ischar);
 addParameter(p,'fix',false,@islogical);
 addParameter(p,'plot',false,@islogical);
 addParameter(p,'verbose',false,@islogical);
+addParameter(p,'designOnly',false,@islogical);
 parse(p,varargin{:});
 par = p.Results;
 
-Fs = unique([self.Fs]);
-assert(numel(Fs)==1,'Must have same Fs');
-
-if isempty(par.order) % minimum-order filter
-   assert(~isempty(par.Fpass1)&&~isempty(par.Fpass2)&&~isempty(par.Fstop1)&&~isempty(par.Fstop2),...
-      'Minimum order filter requires Fpass1/2 and Fstop1/2 to be specified.');
-   d = fdesign.bandpass('Fst1,Fp1,Fp2,Fst2,Ast1,Ap,Ast2',...
-      par.Fstop1,par.Fpass1,par.Fpass2,par.Fstop2,par.attenuation1,par.ripple,par.attenuation2,Fs);
-else % specified-order filter
-   if ~isempty(par.Fc1) && ~isempty(par.Fc2) % 6dB cutoff
-      d = fdesign.bandpass('N,Fc1,Fc2,Ast1,Ap,Ast2',...
-         par.order,par.Fc1,par.Fc2,par.attenuation1,par.ripple,par.attenuation2,Fs);
-   else
-      error('SampledProcess:bandpass:InputValue',...
-         'Incomplete filter design specification');
+for i = 1:numel(self)
+   %------- Add to function queue ----------
+   if ~self(i).running_
+      addToQueue(self(i),par);
+      if self(i).lazyEval
+         continue;
+      end
    end
-end
-
-if isempty(par.method)
-   h = design(d,'FilterStructure','dffir');
-else
-   h = design(d,par.method,'FilterStructure','dffir');
-end
-
-self.filter(h.Numerator,'a',1,'fix',p.Results.fix);
-
-if par.plot
-   fvtool(h);
-end
-if par.verbose
-   info(h,'long');
+   %----------------------------------------
+   
+   if isempty(par.order) % minimum-order filter
+      assert(~isempty(par.Fpass1)&&~isempty(par.Fpass2)&&~isempty(par.Fstop1)&&~isempty(par.Fstop2),...
+         'Minimum order filter requires Fpass1/2 and Fstop1/2 to be specified.');
+      d = fdesign.bandpass('Fst1,Fp1,Fp2,Fst2,Ast1,Ap,Ast2',...
+         par.Fstop1,par.Fpass1,par.Fpass2,par.Fstop2,par.attenuation1,par.ripple,par.attenuation2,Fs);
+   else % specified-order filter
+      if ~isempty(par.Fc1) && ~isempty(par.Fc2) % 6dB cutoff
+         d = fdesign.bandpass('N,Fc1,Fc2,Ast1,Ap,Ast2',...
+            par.order,par.Fc1,par.Fc2,par.attenuation1,par.ripple,par.attenuation2,Fs);
+      else
+         error('SampledProcess:bandpass:InputValue',...
+            'Incomplete filter design specification');
+      end
+   end
+   
+   if isempty(par.method)
+      h = design(d,'FilterStructure','dffir');
+   else
+      h = design(d,par.method,'FilterStructure','dffir');
+   end
+   
+   if par.plot
+      fvtool(h);
+   end
+   
+   if par.verbose
+      info(h,'long');
+   end
+   
+   if ~par.designOnly
+      self(i).filter(h.Numerator,'a',1,'fix',p.Results.fix);
+   end
 end

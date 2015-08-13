@@ -1,4 +1,4 @@
-% Add link to function evaluation queue
+% Add to function evaluation queue
 % 
 
 % {function_name args status}

@@ -60,7 +60,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       [s,labels] = extract(self,reqLabels)
       apply(self,fun) % apply applyFunc func?
       %copy?
-      %plot
+      plot(self)
       
       % remove % delete by label
       
@@ -105,7 +105,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % SEE ALSO
          % setWindow, applyWindow
 
-         %-- Add link to function queue ----------
+         %------- Add to function queue ----------
          if ~self.running_
             addToQueue(self,window);
             if self.lazyEval
@@ -143,7 +143,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % SEE ALSO
          % setOffset, applyOffset
          
-         %-- Add link to function queue ----------
+         %------- Add to function queue ----------
          if ~self.running_
             addToQueue(self,offset);
             if self.lazyEval
@@ -157,11 +157,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          applyOffset(self,newOffset);
          self.cumulOffset = self.cumulOffset + newOffset;
       end
-      
-      % Assignment for object arrays
-      self = setWindow(self,window)
-      self = setOffset(self,offset)
-            
+                  
       function set.labels(self,labels)
          dim = size(self.values_{1});
          if numel(dim) > 2
@@ -212,7 +208,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function isValidWindow = get.isValidWindow(self)
          isValidWindow = (self.window(:,1)>=self.tStart) & (self.window(:,2)<=self.tEnd);
       end
-            
+      
+      % Assignment for object arrays
+      self = setWindow(self,window)
+      self = setOffset(self,offset)
+
       self = setInclusiveWindow(self)
       self = reset(self)
       self = map(self,func,varargin)

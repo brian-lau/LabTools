@@ -1,4 +1,5 @@
-% resample data in window
+% Resample data in window
+
 function self = resample(self,newFs)
 
 assert(isnumeric(newFs)&&isscalar(newFs),...

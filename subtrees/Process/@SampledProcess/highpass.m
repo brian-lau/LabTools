@@ -20,61 +20,56 @@ addParameter(p,'method','',@ischar);
 addParameter(p,'fix',false,@islogical);
 addParameter(p,'plot',false,@islogical);
 addParameter(p,'verbose',false,@islogical);
+addParameter(p,'designOnly',false,@islogical);
 parse(p,varargin{:});
 par = p.Results;
-
-if numel(self) > 1
-   Fs = unique([self.Fs]);
-   assert(numel(Fs)==1,'Must have same Fs');
    
-   for i = 1:numel(self)
-      %-- Add link to function queue ----------
-      if ~self(i).running_
-         addToQueue(self(i),par);
-         if self(i).lazyEval
-            continue;
-         end
+for i = 1:numel(self)
+   %------- Add to function queue ----------
+   if ~self(i).running_
+      addToQueue(self(i),par);
+      if self(i).lazyEval
+         continue;
       end
-      %----------------------------------------
-
-      highpass(self(i),varargin);
+   end
+   %----------------------------------------
+   
+   if isempty(par.order) % minimum-order filter
+      assert(~isempty(par.Fpass)&&~isempty(par.Fstop),...
+         'Minimum order filter requires Fpass and Fstop to be specified.');
+      d = fdesign.highpass('Fst,Fp,Ast,Ap',...
+         par.Fstop,par.Fpass,par.attenuation,par.ripple,self(i).Fs);
+   else % specified-order filter
+      if ~isempty(par.Fpass) && isempty(par.Fstop)
+         d = fdesign.highpass('N,Fp,Ast,Ap',...
+            par.order,par.Fpass,par.attenuation,par.ripple,self(i).Fs);
+      elseif ~isempty(par.Fpass) && ~isempty(par.Fstop)
+         d = fdesign.highpass('N,Fst,Fp,Ap',...
+            par.order,par.Fstop,par.Fpass,par.ripple,self(i).Fs);
+      elseif ~isempty(par.Fc) % 6dB cutoff
+         d = fdesign.highpass('N,Fc,Ast,Ap',...
+            par.order,par.Fc,par.attenuation,par.ripple,self(i).Fs);
+      else
+         error('SampledProcess:highpass:InputValue',...
+            'Incomplete filter design specification');
+      end
    end
    
-   return;
-end
-
-if isempty(par.order) % minimum-order filter
-   assert(~isempty(par.Fpass)&&~isempty(par.Fstop),...
-      'Minimum order filter requires Fpass and Fstop to be specified.');
-   d = fdesign.highpass('Fst,Fp,Ast,Ap',...
-      par.Fstop,par.Fpass,par.attenuation,par.ripple,Fs);
-else % specified-order filter
-   if ~isempty(par.Fpass) && isempty(par.Fstop)
-      d = fdesign.highpass('N,Fp,Ast,Ap',...
-         par.order,par.Fpass,par.attenuation,par.ripple,Fs);
-   elseif ~isempty(par.Fpass) && ~isempty(par.Fstop)
-      d = fdesign.highpass('N,Fst,Fp,Ap',...
-         par.order,par.Fstop,par.Fpass,par.ripple,Fs);
-   elseif ~isempty(par.Fc) % 6dB cutoff
-      d = fdesign.highpass('N,Fc,Ast,Ap',...
-         par.order,par.Fc,par.attenuation,par.ripple,Fs);
+   if isempty(par.method)
+      h = design(d,'FilterStructure','dffir');
    else
-      error('SampledProcess:highpass:InputValue',...
-         'Incomplete filter design specification');
+      h = design(d,par.method,'FilterStructure','dffir');
    end
-end
-
-if isempty(par.method)
-   h = design(d,'FilterStructure','dffir');
-else
-   h = design(d,par.method,'FilterStructure','dffir');
-end
-
-self.filter(h.Numerator,'a',1,'fix',p.Results.fix);
-
-if par.plot
-   fvtool(h);
-end
-if par.verbose
-   info(h,'long');
+   
+   if par.plot
+      fvtool(h);
+   end
+   
+   if par.verbose
+      info(h,'long');
+   end
+   
+   if ~par.designOnly
+      self(i).filter(h.Numerator,'a',1,'fix',p.Results.fix);
+   end
 end
