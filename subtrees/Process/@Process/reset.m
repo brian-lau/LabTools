@@ -7,15 +7,6 @@
 function self = reset(self)
 
 for i = 1:numel(self)
-   %-- Add link to function chain ----------
-   if ~self(i).running_
-      addLink(self(i));
-      if self(i).lazyEval
-         continue;
-      end
-   end
-   %----------------------------------------
-
    if self.lazyLoad
       self(i).times = self(i).times_;
       self(i).values = {};
