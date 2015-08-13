@@ -4,10 +4,20 @@
 % SEE ALSO
 % setInclusiveWindow
 
-function self = reset(self)
+function self = reset(self,n)
+
+if nargin < 2
+   n = 0;
+else
+   n = max(n,0);
+end
 
 for i = 1:numel(self)
+   queue = self(i).queue;
    self(i).queue = {};
+
+   % Evaluate eagerly without history
+   self(i).running_ = true;
 
    if self(i).lazyLoad
       self(i).times = self(i).times_;
@@ -33,4 +43,21 @@ for i = 1:numel(self)
    end
    
    self(i).Fs = self(i).Fs_;
+
+   % Turn deferred execution back on
+   if self(i).lazyEval
+      self(i).running_ = false;
+   end
+   
+   if n
+      queue = queue(1:n,:);
+      for j = 1:size(queue,1)
+         queue{j,3} = false;
+      end
+      self(i).queue = queue;
+      
+      if ~self(i).lazyEval
+         evalOnDemand(self);
+      end
+   end
 end
