@@ -18,8 +18,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
                           % Note that window is applied without offset, 
                           % so times can be outside of the window property
       cumulOffset         % Cumulative offset
-      labels              % Label for each element
-      quality             % Scalar information for each element
+      labels              % Label for each non-leading dimension
+      quality             % Scalar information for each non-leading dimension
    end
    properties(SetAccess = protected, Transient, GetObservable)
       % Window-dependent, but only calculated on window change
@@ -36,19 +36,21 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties(SetAccess = protected, Hidden)
       window_             % Original window
       offset_             % Original offset
-      reset_ = false      % reset bit
-      running_ = false
+      reset_ = false      % Reset bit
+      running_ = true     % Boolean indicating eager evaluation
+      runnableListener_ = {}
+      loadableListener_ = {}
    end
    properties(SetAccess = protected)
-      lazyLoad = false
-      lazyEval = true
-      chain = {}
+      lazyLoad = false    % Boolean to defer constructing values from values_
+      lazyEval = false    % Boolean to defer method evaluations (see addLink)
+      chain = {}          % History
       isLoaded = true
-      version = '0.3.0'
+      version = '0.4.0'
    end
    events
-      runnable
-      loadable
+      runnable            % Elements in chain require evaluation
+      loadable            % Values must be constructed from values_
    end
    
    %%
@@ -84,6 +86,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       loadOnDemand(self,varargin)
       evalOnDemand(self,varargin)
       addLink(self,varargin)
+      isRunnable(self,~,~)
+      isLoadable(self,~,~)
    end
 
    methods
@@ -96,14 +100,21 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function set.window(self,window)
          % Set the window property
          % Window applies to times without offset origin.
-         % Does not work for arrays of objects. Use setWindow for that.
+         % For setting window of object arrays, use setWindow.
          %
          % SEE ALSO
          % setWindow, applyWindow
-         self.window = checkWindow(window,size(window,1));
-         if ~self.isLoaded%self.lazyLoad && ~self.isLoaded
-            return;
+
+         %-- Add link to function chain ----------
+         if ~self.running_
+            addLink(self,window);
+            if self.lazyEval
+               return;
+            end
          end
+         %----------------------------------------
+         
+         self.window = checkWindow(window,size(window,1));
          if ~self.reset_
             nWindow = size(self.window,1);
             if isempty(self.window) || ((nWindow==1) && (size(self.times,1)==1))
@@ -127,15 +138,22 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
      
       function set.offset(self,offset)
          % Set the offset property
-         % Does not work for arrays of objects. Use setOffset for that.
+         % For setting offset of object arrays, use setWindow.
          %
          % SEE ALSO
          % setOffset, applyOffset
+         
+         %-- Add link to function chain ----------
+         if ~self.running_
+            addLink(self,offset);
+            if self.lazyEval
+               return;
+            end
+         end
+         %----------------------------------------
+
          newOffset = checkOffset(offset,size(self.window,1));
          self.offset = newOffset;
-         if ~self.isLoaded%self.lazyLoad && ~self.isLoaded
-            return;
-         end
          applyOffset(self,newOffset);
          self.cumulOffset = self.cumulOffset + newOffset;
       end
@@ -194,27 +212,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function isValidWindow = get.isValidWindow(self)
          isValidWindow = (self.window(:,1)>=self.tStart) & (self.window(:,2)<=self.tEnd);
       end
-      
-      function isRunnable(self,~,~)
-         if self.lazyLoad
-            isLoadable(self);
-         end
-         disp('checking runnability');
-         if isempty(self.chain)
-         elseif any(~[self.chain{:,3}]);
-            disp('I am runnable');
-            notify(self,'runnable');
-         end
-      end
-      
-      function isLoadable(self,~,~)
-         disp('checking loadability');
-         if ~self.isLoaded
-            disp('I am loadable');
-            notify(self,'loadable');
-         end
-      end
-      
+            
       self = setInclusiveWindow(self)
       self = reset(self)
       self = map(self,func,varargin)
@@ -225,11 +223,5 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       bool = infoHasKey(self,key)
       bool = infoHasValue(self,value,varargin)
       info = copyInfo(self)
-
-
-      %% Operators
-      plus(x,y)
-      minus(x,y)
-      bool = eq(x,y)
    end
 end
