@@ -11,4 +11,6 @@ for i = 1:size(self.queue,1)
    end
 end
 
-self.running_ = false;
+if self.lazyEval
+   self.running_ = false;
+end
