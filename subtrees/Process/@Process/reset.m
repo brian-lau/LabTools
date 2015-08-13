@@ -7,7 +7,7 @@
 function self = reset(self)
 
 for i = 1:numel(self)
-   self(i).chain = {};
+   self(i).queue = {};
 
    if self(i).lazyLoad
       self(i).times = self(i).times_;

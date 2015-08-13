@@ -5,9 +5,9 @@ assert(isnumeric(newFs)&&isscalar(newFs),...
    'New sampling frequency must be a numeric scalar.');
 
 for i = 1:numel(self)
-   %-- Add link to function chain ----------
+   %-- Add link to function queue ----------
    if ~self(i).running_
-      addLink(self(i),newFs);
+      addToQueue(self(i),newFs);
       if self(i).lazyEval
          continue;
       end

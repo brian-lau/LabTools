@@ -43,13 +43,13 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties(SetAccess = protected)
       lazyLoad = false    % Boolean to defer constructing values from values_
-      lazyEval = false    % Boolean to defer method evaluations (see addLink)
-      chain = {}          % History
+      lazyEval = false    % Boolean to defer method evaluations (see addToQueue)
+      queue = {}          % History
       isLoaded = true
       version = '0.4.0'
    end
    events
-      runnable            % Elements in chain require evaluation
+      runnable            % Elements in queue require evaluation
       loadable            % Values must be constructed from values_
    end
    
@@ -85,7 +85,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       discardAfterEnd(self)      
       loadOnDemand(self,varargin)
       evalOnDemand(self,varargin)
-      addLink(self,varargin)
+      addToQueue(self,varargin)
       isRunnable(self,~,~)
       isLoadable(self,~,~)
    end
@@ -105,9 +105,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % SEE ALSO
          % setWindow, applyWindow
 
-         %-- Add link to function chain ----------
+         %-- Add link to function queue ----------
          if ~self.running_
-            addLink(self,window);
+            addToQueue(self,window);
             if self.lazyEval
                return;
             end
@@ -143,9 +143,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % SEE ALSO
          % setOffset, applyOffset
          
-         %-- Add link to function chain ----------
+         %-- Add link to function queue ----------
          if ~self.running_
-            addLink(self,offset);
+            addToQueue(self,offset);
             if self.lazyEval
                return;
             end

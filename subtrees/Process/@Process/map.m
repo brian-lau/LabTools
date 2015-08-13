@@ -26,9 +26,9 @@ addRequired(p,'func',@(x) isa(x,'function_handle'));
 parse(p,func,varargin{:});
 
 for i = 1:numel(self)
-   %-- Add link to function chain ----------
+   %-- Add link to function queue ----------
    if ~self(i).running_
-      addLink(self(i),func);
+      addToQueue(self(i),func);
       if self(i).lazyEval
          continue;
       end

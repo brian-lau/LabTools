@@ -23,8 +23,25 @@ addParameter(p,'verbose',false,@islogical);
 parse(p,varargin{:});
 par = p.Results;
 
-Fs = unique([self.Fs]);
-assert(numel(Fs)==1,'Must have same Fs');
+if numel(self) > 1
+   Fs = unique([self.Fs]);
+   assert(numel(Fs)==1,'Must have same Fs');
+   
+   for i = 1:numel(self)
+      %-- Add link to function queue ----------
+      if ~self(i).running_
+         addToQueue(self(i),par);
+         if self(i).lazyEval
+            continue;
+         end
+      end
+      %----------------------------------------
+
+      highpass(self(i),varargin);
+   end
+   
+   return;
+end
 
 if isempty(par.order) % minimum-order filter
    assert(~isempty(par.Fpass)&&~isempty(par.Fstop),...
