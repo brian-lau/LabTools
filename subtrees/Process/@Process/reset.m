@@ -7,7 +7,9 @@
 function self = reset(self)
 
 for i = 1:numel(self)
-   if self.lazyLoad
+   self(i).chain = {};
+
+   if self(i).lazyLoad
       self(i).times = self(i).times_;
       self(i).values = {};
       self(i).isLoaded = false;
@@ -28,7 +30,5 @@ for i = 1:numel(self)
       
       self(i).cumulOffset = 0;
       self(i).offset = self(i).offset_;
-   end
-   
-   self(i).chain = {};
+   end   
 end
