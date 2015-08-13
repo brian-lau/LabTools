@@ -54,7 +54,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.addParameter('lazyLoad',false,@islogical);
          p.addParameter('lazyEval',false,@islogical);
          p.parse(varargin{:});
-         
          par = p.Results;
          
          self.info = par.info;
@@ -62,16 +61,15 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.lazyEval = par.lazyEval;         
          self.lazyLoad = par.lazyLoad;
          if self.lazyLoad && ~self.lazyEval
-            addlistener(self,'values','PreGet',@self.isLoadable);
-            addlistener(self,'loadable',@self.loadOnDemand);
+            self.loadableListener_{1} = addlistener(self,'values','PreGet',@self.isLoadable);
+            self.loadableListener_{2} = addlistener(self,'loadable',@self.loadOnDemand);
             self.isLoaded = false;
          elseif self.lazyEval
-            self.running_ = false;
-            addlistener(self,'values','PreGet',@self.isRunnable);
-            addlistener(self,'runnable',@self.evalOnDemand);
+            self.runnableListener_{1} = addlistener(self,'values','PreGet',@self.isRunnable);
+            self.runnableListener_{2} = addlistener(self,'runnable',@self.evalOnDemand);
             if self.lazyLoad
                % No listener for loadable since callback for runnable checks
-               addlistener(self,'loadable',@self.loadOnDemand);
+               self.loadableListener_{1} = addlistener(self,'loadable',@self.loadOnDemand);
                self.isLoaded = false;
             else
                self.isLoaded = true;
@@ -110,7 +108,8 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.times = self.times_;
 
          % Define the start and end times of the process
-         if isa(par.values,'StreamTest')
+         if isa(par.values,'DataSource')
+            % tStart is taken from DataSource
             self.tStart = par.values.tStart;
          else
             self.tStart = par.tStart;
@@ -145,6 +144,11 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          % Store original window and offset for resetting
          self.window_ = self.window;
          self.offset_ = self.offset;
+         
+         % Set running_ bool, which was true for constructor
+         if self.lazyEval
+            self.running_ = false;
+         end
       end % constructor
       
       function set.tStart(self,tStart)
