@@ -39,11 +39,11 @@ for i = 1:numel(self)
       assert(~isempty(par.Fpass1)&&~isempty(par.Fpass2)&&~isempty(par.Fstop1)&&~isempty(par.Fstop2),...
          'Minimum order filter requires Fpass1/2 and Fstop1/2 to be specified.');
       d = fdesign.bandstop('Fp1,Fst1,Fst2,Fp2,Ap1,Ast,Ap2',...
-         par.Fpass1,par.Fstop1,par.Fstop2,par.Fpass2,par.ripple1,par.attenuation,par.ripple2,Fs);
+         par.Fpass1,par.Fstop1,par.Fstop2,par.Fpass2,par.ripple1,par.attenuation,par.ripple2,self(i).Fs);
    else % specified-order filter
       if ~isempty(par.Fc1) && ~isempty(par.Fc2) % 6dB cutoff
          d = fdesign.bandstop('N,Fc1,Fc2,Ap1,Ast,Ap2',...
-            par.order,par.Fc1,par.Fc2,par.ripple1,par.attenuation,par.ripple2,Fs);
+            par.order,par.Fc1,par.Fc2,par.ripple1,par.attenuation,par.ripple2,self(i).Fs);
       else
          error('SampledProcess:bandstop:InputValue',...
             'Incomplete filter design specification');
