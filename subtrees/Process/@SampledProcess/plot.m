@@ -24,7 +24,8 @@ hold on;
 if numel(self) > 1
    for i = 1:numel(self)
       subplot(numel(self),1,i); hold on
-      plot(self(i).times{1},self(i).values{1});
+      y = self(i).values{1};
+      plot(self(i).times{1},y);
    end
    return
 end
