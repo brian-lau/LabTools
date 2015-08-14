@@ -16,7 +16,7 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
          p = inputParser;
          p.KeepUnmatched= true;
          p.FunctionName = 'EventProcess constructor';
-         p.addParamValue('events',[],@(x) isa(x,'metadata.Event') );
+         p.addParameter('events',[],@(x) isa(x,'metadata.Event') );
          p.parse(varargin{:});
 
          args = p.Unmatched;
