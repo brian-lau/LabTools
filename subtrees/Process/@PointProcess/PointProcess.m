@@ -1,10 +1,4 @@
-% Point processes
-
-% removed requirement of unique eventTimes (overlapping spikes, etc),
-% should default to unique values, possibly check for unique values when
-% passed in
-%
-% uniformValues = true should allow concatonation of values as arrays
+% Point process
 
 classdef(CaseInsensitiveProperties) PointProcess < Process         
    properties(AbortSet)
@@ -33,30 +27,33 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                'PointProcess:Constructor:InputFormat',...
                   ['Single inputs must be passed in as array of event times'...
                ', or cell array of arrays of event times.']);
-            varargin = {'times' varargin{:}};
+            varargin = [{'times'} varargin];
          end
          
          p = inputParser;
          p.KeepUnmatched= false;
          p.FunctionName = 'PointProcess constructor';
-         p.addParamValue('info',containers.Map('KeyType','char','ValueType','any'));
-         p.addParamValue('times',{},@(x) isnumeric(x) || iscell(x));
-         p.addParamValue('values',{},@(x) isvector(x) || iscell(x) );
-         p.addParamValue('labels',{},@(x) iscell(x) || ischar(x));
-         p.addParamValue('quality',[],@isnumeric);
-         p.addParamValue('window',[],@isnumeric);
-         p.addParamValue('offset',0,@isnumeric);
-         p.addParamValue('tStart',[],@isnumeric);
-         p.addParamValue('tEnd',[],@isnumeric);
+         p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
+         p.addParameter('times',{},@(x) isnumeric(x) || iscell(x));
+         p.addParameter('values',{},@(x) isvector(x) || iscell(x) );
+         p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
+         p.addParameter('quality',[],@isnumeric);
+         p.addParameter('window',[],@isnumeric);
+         p.addParameter('offset',0,@isnumeric);
+         p.addParameter('tStart',[],@isnumeric);
+         p.addParameter('tEnd',[],@isnumeric);
+         p.addParameter('lazyLoad',false,@islogical);
+         p.addParameter('lazyEval',false,@islogical);
          p.parse(varargin{:});
          par = p.Results;
          
+         % Hashmap with process information
          self.info = par.info;
          
          if isempty(par.times)
             if ~isempty(par.values)
                warning('PointProcess:Constructor:InputCount',...
-                  'Values ignored without event times');
+                  'Values without associated event times were ignored.');
             end
             eventTimes = {};
             values = {};
@@ -119,6 +116,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          else
             self.tStart = par.tStart;
          end
+         
          if isempty(par.tEnd)
             self.tEnd = max([max(cat(1,eventTimes{:}))  self.tStart]);
          else
@@ -133,7 +131,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          if isempty(par.window)
             self.setInclusiveWindow();
          else
-            self.window = checkWindow(par.window,size(par.window,1));
+            self.window = par.window;
          end
          
          % Set the offset
@@ -141,15 +139,21 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          if isempty(par.offset)
             self.offset = 0;
          else
-            self.offset = checkOffset(par.offset,size(par.offset,1));
+            self.offset = par.offset;
          end         
 
+         % Assign labels/quality
          self.labels = par.labels;
          self.quality = par.quality;
 
          % Store original window and offset for resetting
          self.window_ = self.window;
-         self.offset_ = self.offset;         
+         self.offset_ = self.offset;
+         
+         % Set running_ bool, which was true (constructor calls not queued)
+         if self.lazyEval
+            self.running_ = false;
+         end
       end % constructor
       
       function set.tStart(self,tStart)

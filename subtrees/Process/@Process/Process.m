@@ -22,9 +22,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       quality             % Scalar information for each non-leading dimension
    end
    properties(SetAccess = protected, Transient, GetObservable)
-      % Window-dependent, but only calculated on window change
-      times = {}          % Event/sample times
-      values = {}         % Attribute/value associated with each time
+      times = {}          % Current event/sample times
+      values = {}         % Current attribute/value associated with each time
    end
    properties(SetAccess = protected, Dependent, Transient)
       isValidWindow       % Boolean if window(s) within tStart and tEnd
@@ -83,11 +82,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    methods(Access = protected)
       discardBeforeStart(self)
       discardAfterEnd(self)      
-      loadOnDemand(self,varargin)
-      evalOnDemand(self,varargin)
       addToQueue(self,varargin)
-      isRunnable(self,~,~)
       isLoadable(self,~,~)
+      loadOnDemand(self,varargin)
+      isRunnable(self,~,~)
+      evalOnDemand(self,varargin)
    end
 
    methods
@@ -207,14 +206,15 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       
       function isValidWindow = get.isValidWindow(self)
          isValidWindow = (self.window(:,1)>=self.tStart) & (self.window(:,2)<=self.tEnd);
-      end
-      
+      end      
+            
       % Assignment for object arrays
       self = setWindow(self,window)
       self = setOffset(self,offset)
 
       self = setInclusiveWindow(self)
-      self = reset(self)
+      self = reset(self,n)
+      self = undo(self,n)
       self = map(self,func,varargin)
       % Keep current data/transformations as original
       self = fix(self)

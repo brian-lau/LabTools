@@ -1,7 +1,4 @@
-% Regularly sampled processes
-
-% If multiple processes, currently cannot be multidimensional,
-% time = rows
+% Regularly sampled process
 
 classdef(CaseInsensitiveProperties) SampledProcess < Process   
    properties(AbortSet)
@@ -36,7 +33,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             assert(isnumeric(varargin{1}) || isa(varargin{1},'DataSource'),...
                'SampledProcess:Constructor:InputFormat',...
                'Single inputs must be passed in as array of numeric values');
-            varargin = {'values' varargin{:}};
+            varargin = [{'values'} varargin];
          end
 
          p = inputParser;
@@ -56,8 +53,10 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.parse(varargin{:});
          par = p.Results;
          
+         % Hashmap with process information
          self.info = par.info;
          
+         % Listeners and status for lazy loading/evaluation
          self.lazyEval = par.lazyEval;         
          self.lazyLoad = par.lazyLoad;
          if self.lazyLoad && ~self.lazyEval
@@ -76,32 +75,30 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             end
          end
          
+         % Set sampling frequency and values_/values, times_/times
          if isa(par.values,'DataSource')
-            assert(isempty(par.Fs),'Cannot specify Fs when using DataSources');
+            assert(isempty(par.Fs),'SampledProcess:Fs:InputValue',...
+               'Fs must be specified by DataSource during construction');
             self.Fs_ = par.values.Fs;
             self.Fs = self.Fs_;
             if self.lazyLoad
                self.values_ = {par.values};
             else
-               % Import all data from stream
+               % Import all data from DataSource
                ind = repmat({':'},1,numel(par.values.dim));
                self.values_ = {par.values(ind{:})};
                self.values = self.values_;
             end
             dim = par.values.dim;
-         else
+         else % in-memory matrix
             if isempty(par.Fs)
                self.Fs_ = 1;
             else
                self.Fs_ = par.Fs;
             end
             self.Fs = self.Fs_;
-            if self.lazyLoad
-               self.values_ = {par.values};
-            else
-               self.values_ = {par.values};
-               self.values = self.values_;
-            end
+            self.values_ = {par.values};
+            self.values = self.values_;
             dim = size(self.values_{1});
          end
          self.times_ = {self.tvec(par.tStart,self.dt,dim(1))};
@@ -115,7 +112,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.tStart = par.tStart;
          end
       
-         if isempty(par.tEnd)
+         if isempty(par.tEnd) || isa(par.values,'DataSource')
             self.tEnd = self.times_{1}(end);
          else
             self.tEnd = par.tEnd;
@@ -136,16 +133,15 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.offset = par.offset;
          end
 
-         % Create labels
-         self.labels = par.labels;
-         
+         % Assign labels/quality
+         self.labels = par.labels;         
          self.quality = par.quality;
 
          % Store original window and offset for resetting
          self.window_ = self.window;
          self.offset_ = self.offset;
          
-         % Set running_ bool, which was true for constructor
+         % Set running_ bool, which was true (constructor calls not queued)
          if self.lazyEval
             self.running_ = false;
          end
@@ -169,10 +165,11 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.values_ = {[preV ; self.values_{1}]};
             self.tStart = tStart;
             self.discardBeforeStart();
+            
+            if ~isempty(self.tEnd)
+               self.setInclusiveWindow();
+            end
          end
-%          if ~isempty(self.tEnd)
-%             self.setInclusiveWindow();
-%          end
       end
       
       function set.tEnd(self,tEnd)
@@ -193,11 +190,11 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.values_ = {[self.values_{1} ; postV]};
             self.tEnd = tEnd;
             self.discardAfterEnd();
-         end
-         
-%          if ~isempty(self.tStart)
-%             self.setInclusiveWindow();
-%          end
+            
+            if ~isempty(self.tStart)
+               self.setInclusiveWindow();
+            end
+         end         
       end
       
       function dt = get.dt(self)
@@ -212,12 +209,14 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       obj = chop(self,shiftToWindow)
       s = sync(self,event,varargin)
 
-      % Transform
+      % In-place transformations
       self = filter(self,b,varargin)
       [self,h,d] = lowpass(self,varargin)
       [self,h,d] = highpass(self,varargin)
       [self,h,d] = bandpass(self,varargin)
       self = resample(self,newFs,varargin)
+      %decimate
+      %interp
       self = detrend(self)
 
       % Output
@@ -225,7 +224,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       output = apply(self,fun,nOpt,varargin)
       
       % Visualization
-      [h,yOffset] = plot(self,varargin)
+      plot(self,varargin)
    end
    
    methods(Access = protected)
