@@ -61,8 +61,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.lazyLoad = par.lazyLoad;
          if self.lazyLoad && ~self.lazyEval
             self.loadableListener_{1} = addlistener(self,'values','PreGet',@self.isLoadable);
-            self.loadableListener_{2} = addlistener(self,'times','PreGet',@self.isLoadable);
-            self.loadableListener_{3} = addlistener(self,'loadable',@self.loadOnDemand);
+            self.loadableListener_{2} = addlistener(self,'loadable',@self.loadOnDemand);
             self.isLoaded = false;
          elseif self.lazyEval
             self.runnableListener_{1} = addlistener(self,'values','PreGet',@self.isRunnable);
