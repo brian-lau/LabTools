@@ -162,7 +162,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function set.labels(self,labels)
          %------- Add to function queue ----------
          if ~self.running_
-            addToQueue(self,offset);
+            addToQueue(self,labels);
             if self.lazyEval
                return;
             end
@@ -177,7 +177,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function set.quality(self,quality)
          %------- Add to function queue ----------
          if ~self.running_
-            addToQueue(self,offset);
+            addToQueue(self,quality);
             if self.lazyEval
                return;
             end
