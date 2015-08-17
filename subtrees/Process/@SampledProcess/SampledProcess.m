@@ -2,22 +2,22 @@
 
 classdef(CaseInsensitiveProperties) SampledProcess < Process   
    properties(AbortSet)
-      tStart             % Start time of process
-      tEnd               % End time of process
-   end
-   properties(SetAccess = protected)
-      Fs                 % Sampling frequency
-   end
-   properties(SetAccess = protected, Dependent, Transient)
-      dt                 % 1/Fs
-      dim                % Dimensionality of each window
-   end   
-   properties(SetAccess = protected, Hidden)
-      Fs_                % Original sampling frequency
+      tStart              % Start time of process
+      tEnd                % End time of process
    end
    properties(SetAccess = protected, Hidden)
       times_              % Original event/sample times
       values_             % Original attribute/values
+   end
+   properties(SetAccess = protected)
+      Fs                  % Sampling frequency
+   end
+   properties(SetAccess = protected, Dependent, Transient)
+      dt                  % 1/Fs
+      dim                 % Dimensionality of each window
+   end   
+   properties(SetAccess = protected, Hidden)
+      Fs_                 % Original sampling frequency
    end
    
    %%
@@ -204,8 +204,8 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       function dim = get.dim(self)
          dim = cellfun(@(x) size(x),self.values,'uni',false);
       end
-      
-      % 
+            
+      %
       obj = chop(self,shiftToWindow)
       s = sync(self,event,varargin)
 
@@ -214,10 +214,10 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       [self,h,d] = lowpass(self,varargin)
       [self,h,d] = highpass(self,varargin)
       [self,h,d] = bandpass(self,varargin)
+      self = detrend(self)
       self = resample(self,newFs,varargin)
       %decimate
       %interp
-      self = detrend(self)
 
       % Output
       [s,labels] = extract(self,reqLabels)
@@ -230,6 +230,53 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    methods(Access = protected)
       applyWindow(self)
       applyOffset(self,offset)
+      
+      function l = checkLabels(self,labels)
+         dim = size(self.values_{1});
+         if numel(dim) > 2
+            dim = dim(2:end);
+         else
+            dim(1) = 1;
+         end
+         n = prod(dim);
+         if isempty(labels)
+            l = arrayfun(@(x) ['id' num2str(x)],reshape(1:n,dim),'uni',0);
+         elseif iscell(labels)
+            assert(all(cellfun(@ischar,labels)),'Process:labels:InputType',...
+               'Labels must be strings');
+            assert(numel(labels)==numel(unique(labels)),'Process:labels:InputType',...
+               'Labels must be unique');
+            assert(numel(labels)==n,'Process:labels:InputFormat',...
+               '# labels does not match # of signals');
+            l = labels;
+         elseif (n==1) && ischar(labels)
+            l = {labels};
+         else
+            error('Process:labels:InputType','Incompatible label type');
+         end
+      end
+      
+      function q = checkQuality(self,quality)
+         dim = size(self.values_{1});
+         if numel(dim) > 2
+            dim = dim(2:end);
+         else
+            dim(1) = 1;
+         end
+         assert(isnumeric(quality),'Process:quality:InputFormat',...
+            'Must be numeric');
+         
+         if isempty(quality)
+            quality = ones(dim);
+            q = quality;
+         elseif all(size(quality)==dim)
+            q = quality(:)';
+         elseif numel(quality)==1
+            q = repmat(quality,dim);
+         else
+            error('bad quality');
+         end
+      end
    end
    
    methods(Static)
