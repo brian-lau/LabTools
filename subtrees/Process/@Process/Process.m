@@ -1,3 +1,4 @@
+% Abstract class for process
 classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties
       info@containers.Map % Information about process
@@ -19,7 +20,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties
       offset              % Time offset relative to window
-                          % Note that window is applied without offset, 
+                          % Note that window is applied without offset 
                           % so times can be outside of the window property
       cumulOffset         % Cumulative offset
       labels              % Label for each non-leading dimension
@@ -43,9 +44,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties(SetAccess = protected)
       lazyLoad = false    % Boolean to defer constructing values from values_
       lazyEval = false    % Boolean to defer method evaluations (see addToQueue)
-      queue = {}          % History
-      isLoaded = true
-      version = '0.4.0'
+      queue = {}          % Method evaluation queue/history
+      isLoaded = true     % Boolean indicates whether values constructed
+      version = '0.4.0'   % Version string
    end
    events
       runnable            % Elements in queue require evaluation
@@ -77,6 +78,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    methods(Abstract, Access = protected)
       applyWindow(self);
       applyOffset(self,offset);
+      checkLabels(self)
+      checkQuality(self)
    end
    
    methods(Access = protected)
@@ -87,8 +90,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       loadOnDemand(self,varargin)
       isRunnable(self,~,~)
       evalOnDemand(self,varargin)
-      checkLabels(self)
-      checkQuality(self)
    end
 
    methods
@@ -118,15 +119,15 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          self.window = checkWindow(window,size(window,1));
          if ~self.reset_
             nWindow = size(self.window,1);
+            % For one current & requested window, allow rewindowing current values
             if isempty(self.window) || ((nWindow==1) && (size(self.times,1)==1))
-               % For one current & requested window, allow rewindowing current values
                % Reset offset
                applyOffset(self,-self.cumulOffset);
                % Expensive, only call when windows are changed (AbortSet=true)
                applyWindow(self);
                applyOffset(self,self.cumulOffset);
-            else
-               % Reset the process,
+            else % Different windows are ambiguous, start for original
+               % Reset the process
                self.times = self.times_;
                self.values = self.values_;
                
@@ -139,7 +140,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
      
       function set.offset(self,offset)
          % Set the offset property
-         % For setting offset of object arrays, use setWindow.
+         % For setting offset of object arrays, use setOffset.
          %
          % SEE ALSO
          % setOffset, applyOffset
@@ -161,7 +162,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       
       function set.labels(self,labels)
          %------- Add to function queue ----------
-         if ~self.running_
+         if ~self.running_ || ~self.lazyEval
             addToQueue(self,labels);
             if self.lazyEval
                return;
@@ -176,7 +177,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       
       function set.quality(self,quality)
          %------- Add to function queue ----------
-         if ~self.running_
+         if ~self.running_ || ~self.lazyEval
             addToQueue(self,quality);
             if self.lazyEval
                return;
@@ -190,7 +191,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       end
       
       function isValidWindow = get.isValidWindow(self)
-         isValidWindow = (self.window(:,1)>=self.tStart) & (self.window(:,2)<=self.tEnd);
+         isValidWindow = (self.window(:,1)>=self.tStart) & ...
+                         (self.window(:,2)<=self.tEnd);
       end      
             
       % Assignment for object arrays

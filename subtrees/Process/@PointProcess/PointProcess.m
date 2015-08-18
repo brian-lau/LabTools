@@ -42,8 +42,8 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          p.addParameter('offset',0,@isnumeric);
          p.addParameter('tStart',[],@isnumeric);
          p.addParameter('tEnd',[],@isnumeric);
-         p.addParameter('lazyLoad',false,@islogical);
-         p.addParameter('lazyEval',false,@islogical);
+         p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
+         p.addParameter('lazyEval',false,@(x) islogical(x) || isscalar(x));
          p.parse(varargin{:});
          par = p.Results;
          
