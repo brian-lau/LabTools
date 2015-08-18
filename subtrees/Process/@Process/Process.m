@@ -10,6 +10,10 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       tStart              % Start time of process
       tEnd                % End time of process
    end
+   properties(Abstract, SetAccess = protected, Hidden)
+      times_              % Original event/sample times
+      values_             % Original attribute/values
+   end
    properties(AbortSet)
       window              % [min max] time window of interest
    end
@@ -27,10 +31,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties(SetAccess = protected, Dependent, Transient)
       isValidWindow       % Boolean if window(s) within tStart and tEnd
-   end
-   properties(Abstract, SetAccess = protected, Hidden)
-      times_              % Original event/sample times
-      values_             % Original attribute/values
    end
    properties(SetAccess = protected, Hidden)
       window_             % Original window
@@ -87,6 +87,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       loadOnDemand(self,varargin)
       isRunnable(self,~,~)
       evalOnDemand(self,varargin)
+      checkLabels(self)
+      checkQuality(self)
    end
 
    methods
@@ -156,52 +158,35 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          applyOffset(self,newOffset);
          self.cumulOffset = self.cumulOffset + newOffset;
       end
-                  
+      
       function set.labels(self,labels)
-         dim = size(self.values_{1});
-         if numel(dim) > 2
-            dim = dim(2:end);
-         else
-            dim(1) = 1;
+         %------- Add to function queue ----------
+         if ~self.running_
+            addToQueue(self,labels);
+            if self.lazyEval
+               return;
+            end
          end
-         n = prod(dim);
-         if isempty(labels)
-            self.labels = arrayfun(@(x) ['id' num2str(x)],reshape(1:n,dim),'uni',0);
-         elseif iscell(labels)
-            assert(all(cellfun(@ischar,labels)),'Process:labels:InputType',...
-               'Labels must be strings');
-            assert(numel(labels)==numel(unique(labels)),'Process:labels:InputType',...
-               'Labels must be unique');
-            assert(numel(labels)==n,'Process:labels:InputFormat',...
-               '# labels does not match # of signals');
-            self.labels = labels;
-         elseif (n==1) && ischar(labels)
-            self.labels = {labels};
-         else
-            error('Process:labels:InputType','Incompatible label type');
-         end
+         %----------------------------------------
+         
+         % Wrap abstract method
+         labels = checkLabels(self,labels);
+         self.labels = labels;
       end
       
       function set.quality(self,quality)
-         dim = size(self.values_{1});
-         if numel(dim) > 2
-            dim = dim(2:end);
-         else
-            dim(1) = 1;
+         %------- Add to function queue ----------
+         if ~self.running_
+            addToQueue(self,quality);
+            if self.lazyEval
+               return;
+            end
          end
-         assert(isnumeric(quality),'Process:quality:InputFormat',...
-            'Must be numeric');
+         %----------------------------------------
          
-         if isempty(quality)
-            quality = ones(dim);
-            self.quality = quality;
-         elseif all(size(quality)==dim)
-            self.quality = quality(:)';
-         elseif numel(quality)==1
-            self.quality = repmat(quality,dim);
-         else
-            error('bad quality');
-         end
+         % Wrap abstract method
+         quality = checkQuality(self,quality);
+         self.quality = quality;
       end
       
       function isValidWindow = get.isValidWindow(self)
