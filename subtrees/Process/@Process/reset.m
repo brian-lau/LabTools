@@ -23,7 +23,9 @@ for i = 1:numel(self)
       self(i).times = self(i).times_;
       self(i).values = {};
       self(i).isLoaded = false;
+      self(i).reset_ = true;
       self(i).window = self(i).window_;
+      self(i).reset_ = false;
       self(i).cumulOffset = 0;
       self(i).offset = self(i).offset_;
    else
@@ -57,5 +59,7 @@ for i = 1:numel(self)
       if ~self(i).lazyEval
          evalOnDemand(self);
       end
+   else
+      self(i).queue = {};
    end
 end
