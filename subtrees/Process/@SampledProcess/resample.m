@@ -7,7 +7,7 @@ assert(isnumeric(newFs)&&isscalar(newFs),...
 
 for i = 1:numel(self)
    %-- Add link to function queue ----------
-   if ~self(i).running_
+   if ~self(i).running_ || ~self(i).lazyEval
       addToQueue(self(i),newFs);
       if self(i).lazyEval
          continue;
