@@ -194,10 +194,13 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          isValidWindow = (self.window(:,1)>=self.tStart) & ...
                          (self.window(:,2)<=self.tEnd);
       end      
-            
+      
       % Assignment for object arrays
       self = setWindow(self,window)
       self = setOffset(self,offset)
+      
+      self = flushQueue(self)
+      self = clearQueue(self)
 
       self = setInclusiveWindow(self)
       self = reset(self,n)

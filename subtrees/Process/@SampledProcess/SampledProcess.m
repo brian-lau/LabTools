@@ -147,7 +147,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          end
          
          % Don't expose constructor history
-         self.queue = {};
+         clearQueue(self);
       end % constructor
       
       function set.tStart(self,tStart)

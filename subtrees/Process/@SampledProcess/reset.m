@@ -62,6 +62,6 @@ for i = 1:numel(self)
          evalOnDemand(self);
       end
    else
-      self(i).queue = {};
+      clearQueue(self(i));
    end
 end
