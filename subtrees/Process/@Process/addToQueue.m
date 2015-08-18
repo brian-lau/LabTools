@@ -6,10 +6,6 @@
 %function addToQueue(self,nout,varargin)
 function addToQueue(self,varargin)
 
-if self.running_
-   return;
-end
-
 % assert numel(stack)>=2?
 stack = dbstack('-completenames');
 f = stack(2).name; % maybe take from end of stack?

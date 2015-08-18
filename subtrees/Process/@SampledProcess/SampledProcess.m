@@ -145,6 +145,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          if self.lazyEval
             self.running_ = false;
          end
+         
+         % Don't expose constructor history
+         self.queue = {};
       end % constructor
       
       function set.tStart(self,tStart)

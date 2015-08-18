@@ -61,5 +61,7 @@ for i = 1:numel(self)
       if ~self(i).lazyEval
          evalOnDemand(self);
       end
+   else
+      self(i).queue = {};
    end
 end

@@ -105,7 +105,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % setWindow, applyWindow
 
          %------- Add to function queue ----------
-         if ~self.running_
+         if ~self.running_ || ~self.lazyEval
             addToQueue(self,window);
             if self.lazyEval
                return;
@@ -143,7 +143,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % setOffset, applyOffset
          
          %------- Add to function queue ----------
-         if ~self.running_
+         if ~self.running_ || ~self.lazyEval
             addToQueue(self,offset);
             if self.lazyEval
                return;
