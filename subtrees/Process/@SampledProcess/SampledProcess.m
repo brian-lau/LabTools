@@ -103,6 +103,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          end
          self.times_ = {self.tvec(par.tStart,self.dt,dim(1))};
          self.times = self.times_;
+         
+         assert(numel(self.times_{1}) > 1,'SampledProcess:values:InputValue',...
+            'Need more than 1 sample to define SampledProcess');
 
          % Define the start and end times of the process
          if isa(par.values,'DataSource')

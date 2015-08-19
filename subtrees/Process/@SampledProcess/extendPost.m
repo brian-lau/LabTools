@@ -1,11 +1,13 @@
-function [post,postV] = extendPost(tEndOld,tEndNew,dt,dim)
+% Extend a time vector if new tEnd exceeds old tEnd
+
+function [postT,postV] = extendPost(tEndOld,tEndNew,dt,dim)
 
 if tEndNew > tEndOld
-   post = ((tEndOld+dt):dt:tEndNew)';
+   postT = ((tEndOld+dt):dt:tEndNew)';
 else
-   post = [];
+   postT = [];
 end
 
 if nargout == 2
-   postV = nan([size(post,1) row(dim)]);
+   postV = nan([size(postT,1) row(dim)]);
 end

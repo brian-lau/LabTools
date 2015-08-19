@@ -119,8 +119,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          self.window = checkWindow(window,size(window,1));
          if ~self.reset_
             nWindow = size(self.window,1);
-            % For one current & requested window, allow rewindowing current values
-            if isempty(self.window) || ((nWindow==1) && (size(self.times,1)==1))
+            % Rewindow if current and requested # of windows matches
+            if isempty(self.window) || (nWindow == size(self.times,1))
                % Reset offset
                applyOffset(self,-self.cumulOffset);
                % Expensive, only call when windows are changed (AbortSet=true)
