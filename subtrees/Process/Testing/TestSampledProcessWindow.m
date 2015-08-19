@@ -1,5 +1,5 @@
 % What if window is smaller than DT??? should error
-classdef UnitTestSampledProcessWindow < matlab.unittest.TestCase
+classdef TestSampledProcessWindow < matlab.unittest.TestCase
    properties
       sampledProcess
    end
@@ -211,6 +211,7 @@ classdef UnitTestSampledProcessWindow < matlab.unittest.TestCase
 
          s = SampledProcess('values',values,'Fs',Fs);
          s.window = win;
+         s.map(@(x) x + 1); % Change values to ensure reset
          win2 = [1 2 ; 0 1];
          nWin = size(win2,1);
          s.window = win2;
@@ -229,6 +230,11 @@ classdef UnitTestSampledProcessWindow < matlab.unittest.TestCase
          testCase.assertEqual(s.values,V);
          testCase.assertTrue(all(s.isValidWindow));
       end
+      
+      
+      %testSetWindowWithObjectArray
+      
+      % setInclusiveWindow
    end
    
 end
