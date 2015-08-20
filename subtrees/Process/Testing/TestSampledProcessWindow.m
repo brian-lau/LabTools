@@ -1,6 +1,7 @@
 % What if window is smaller than DT??? should error
 classdef TestSampledProcessWindow < matlab.unittest.TestCase
    properties
+      tolType = 'AbsTol'
       tol = eps;
    end
    
@@ -20,7 +21,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          times = SampledProcess.tvec(0,dt,size(values,1));
          ind = (times>=win(1)) & (times<=win(2));
          
-         testCase.assertEqual(s.times,{times(ind)},'AbsTol',testCase.tol);
+         testCase.assertEqual(s.times,{times(ind)},testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,{values(ind)});
       end
       
@@ -35,7 +36,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          times = SampledProcess.tvec(0,dt,size(values,1));
          ind = (times>=win(1)) & (times<=win(2));
          
-         testCase.assertEqual(s.times,{times(ind)},'AbsTol',testCase.tol);
+         testCase.assertEqual(s.times,{times(ind)},testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,{values(ind)});
       end
       
@@ -56,7 +57,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          times = [pre ; times(ind) ; post];
          values = [preV ; values(ind) ; postV];
          
-         testCase.assertEqual(s.times,{times},'AbsTol',testCase.tol);
+         testCase.assertEqual(s.times,{times},testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,{values});
       end
       
@@ -77,7 +78,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          times = [pre ; times(ind) ; post];
          values = [preV ; values(ind) ; postV];
          
-         testCase.assertEqual(s.times,{times},'AbsTol',testCase.tol);
+         testCase.assertEqual(s.times,{times},testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,{values});
       end
       
@@ -97,7 +98,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
             V{i,1} = values(ind);
          end
          
-         testCase.assertEqual(s.times,T,'AbsTol',testCase.tol);
+         testCase.assertEqual(s.times,T,testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,V);
       end
       
@@ -122,7 +123,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
             V{i,1} = [preV ; values(ind) ; postV];
          end
          
-         testCase.assertEqual(s.times,T,'AbsTol',testCase.tol);
+         testCase.assertEqual(s.times,T,testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,V);
       end
       
@@ -144,7 +145,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          values(ind2) = NaN;
          values = values(ind);
          
-         testCase.assertEqual(s.times,{times(ind)},'AbsTol',testCase.tol);
+         testCase.assertEqual(s.times,{times(ind)},testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,{values});
       end
       
@@ -175,7 +176,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
             V{i,1} = temp(ind);
          end
          
-         testCase.assertEqual(s.times,T,'AbsTol',testCase.tol);
+         testCase.assertEqual(s.times,T,testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,V);
       end
       
@@ -200,11 +201,25 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
             V{i,1} = values(ind);
          end
          
-         testCase.assertEqual(s.times,T,'AbsTol',testCase.tol);
+         testCase.assertEqual(s.times,T,testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,V);
       end
       
-      function setWindowWithObjectArray(testCase,Fs)
+      function setWindowWithSameArray(testCase,Fs)
+         values1 = (0:2*ceil(Fs))'; % times range from 0 to at least 2 seconds
+         values2 = 10 + (0:2*ceil(Fs))'; % times range from 0 to at least 2 seconds
+         win = [0.5 2.5];
+         dt = 1/Fs;
+         
+         s(1) = SampledProcess('values',values1,'Fs',Fs);
+         s(2) = SampledProcess('values',values2,'Fs',Fs);
+         setWindow(s,win);
+         
+         testCase.assertEqual(s(1).window,win);
+         testCase.assertEqual(s(2).window,win);
+      end
+      
+      function setWindowWithDiffArray(testCase,Fs)
          values1 = (0:2*ceil(Fs))'; % times range from 0 to at least 2 seconds
          values2 = 10 + (0:2*ceil(Fs))'; % times range from 0 to at least 2 seconds
          win1 = [0 1.5];
@@ -217,28 +232,6 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          
          testCase.assertEqual(s(1).window,win1);
          testCase.assertEqual(s(2).window,win2);
-         
-         % First SampledProcess
-         times = SampledProcess.tvec(0,dt,size(values1,1));
-         ind = (times>=win1(1)) & (times<=win1(2));
-         
-         % Expected NaN-padding
-         [pre,preV] = SampledProcess.extendPre(s(1).tStart,win1(1),dt,1);
-         [post,postV] = SampledProcess.extendPost(s(1).tEnd,win1(2),dt,1);
-         
-         testCase.assertEqual(s(1).times,{[pre ; times(ind) ; post]},'AbsTol',testCase.tol);
-         testCase.assertEqual(s(1).values,{[preV ; values1(ind) ; postV]});
-         
-         % Second SampledProcess
-         times = SampledProcess.tvec(0,dt,size(values2,1));
-         ind = (times>=win2(1)) & (times<=win2(2));
-         
-         % Expected NaN-padding
-         [pre,preV] = SampledProcess.extendPre(s(2).tStart,win2(1),dt,1);
-         [post,postV] = SampledProcess.extendPost(s(2).tEnd,win2(2),dt,1);
-         
-         testCase.assertEqual(s(2).times,{[pre ; times(ind) ; post]},'AbsTol',testCase.tol);
-         testCase.assertEqual(s(2).values,{[preV ; values2(ind) ; postV]});
       end
       
       function setInclusiveWindow(testCase,Fs)
@@ -247,22 +240,13 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          dt = 1/Fs;
          
          s = SampledProcess('values',values,'Fs',Fs);
-         s.window = win;
-         
+         s.window = win;         
          s.setInclusiveWindow();
          
-         times = SampledProcess.tvec(0,dt,size(values,1));
-         ind = (times>=s.window(1)) & (times<=s.window(2));
-         
-         % Times outside the previous window are expected to map to NaN
-         ind2 = (times<win(1)) | (times>win(2));
-         values(ind2) = NaN;
-         values = values(ind);
-         
-         testCase.assertEqual(s.times,{times(ind)},'AbsTol',testCase.tol);
-         testCase.assertEqual(s.values,{values(ind)});
+         testCase.assertEqual(s(1).window,[s.tStart s.tEnd]);
       end
       
+      % errors
    end
    
 end
