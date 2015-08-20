@@ -40,11 +40,10 @@ if iscell(window)
          'Cell array window must be {[nx2]} or [nObjs x 2]');
    end
 else
-   if numel(window) == 2
-      window = window(:)';
-      if n > 1
-         window = repmat(window,n,1);
-      end
+   assert((size(window,2)==2),'Process:checkWindow:InputFormat',...
+      'Window must have two columns');
+   if n > 1
+      window = repmat(window,n,1);
    end
    if any(window(:,1)>=window(:,2))
       error('Process:checkWindow:InputValue',...
