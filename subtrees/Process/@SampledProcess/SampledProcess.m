@@ -59,6 +59,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          % Listeners and status for lazy loading/evaluation
          self.lazyEval = par.lazyEval;         
          self.lazyLoad = par.lazyLoad;
+         %% MOVE THIS TO SETTER IN PROCESS
          if self.lazyLoad && ~self.lazyEval
             self.loadableListener_{1} = addlistener(self,'values','PreGet',@self.isLoadable);
             self.loadableListener_{2} = addlistener(self,'loadable',@self.loadOnDemand);
@@ -129,7 +130,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          end
          
          % Set the offset
-         self.cumulOffset = 0;
          if isempty(par.offset)
             self.offset = 0;
          else
@@ -154,13 +154,13 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       end % constructor
       
       function set.tStart(self,tStart)
-         if ~isempty(self.tEnd)
-            assert(tStart < self.tEnd,'SampledProcess:tEnd:InputValue',...
-                  'tStart must be less than tEnd.');
-         end
          assert(isscalar(tStart) && isnumeric(tStart),...
             'SampledProcess:tStart:InputFormat',...
             'tStart must be a numeric scalar.');
+         if ~isempty(self.tEnd)
+            assert(tStart < self.tEnd,'SampledProcess:tStart:InputValue',...
+                  'tStart must be less than tEnd.');
+         end
          
          if isa(self.values_{1},'DataSource')
             self.tStart = tStart;
@@ -179,13 +179,13 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       end
       
       function set.tEnd(self,tEnd)
+         assert(isscalar(tEnd) && isnumeric(tEnd),...
+            'SampledProcess:tEnd:InputFormat',...
+            'tEnd must be a numeric scalar.');
          if ~isempty(self.tStart)
             assert(self.tStart < tEnd,'SampledProcess:tEnd:InputValue',...
                   'tEnd must be greater than tStart.');
          end
-         assert(isscalar(tEnd) && isnumeric(tEnd),...
-            'SampledProcess:tEnd:InputFormat',...
-            'tEnd must be a numeric scalar.');
          
          if isa(self.values_{1},'DataSource')
             self.tEnd = tEnd;
