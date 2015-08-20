@@ -42,7 +42,7 @@ if iscell(window)
 else
    assert((size(window,2)==2),'Process:checkWindow:InputFormat',...
       'Window must have two columns');
-   if n > 1
+   if (n>1) && (size(window,1)==1)
       window = repmat(window,n,1);
    end
    if any(window(:,1)>=window(:,2))
