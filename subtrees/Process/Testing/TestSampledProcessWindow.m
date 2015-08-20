@@ -6,10 +6,34 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
    end
    
    properties (TestParameter)
-      Fs = {1 200.2 2048} % test at different sampling frequencies
+      Fs = {1 2048.1} % test at different sampling frequencies
    end
    
    methods (Test)
+      function errorFormatScalar(testCase,Fs)
+         values = (0:2*ceil(Fs))'; % times range from 0 to at least 2 seconds
+         s = SampledProcess('values',values,'Fs',Fs);
+         win = 1;
+
+         testCase.assertError(@() set(s,'window',win),'Process:checkWindow:InputFormat');
+      end
+      
+      function errorFormatVector(testCase,Fs)
+         values = (0:2*ceil(Fs))'; % times range from 0 to at least 2 seconds
+         s = SampledProcess('values',values,'Fs',Fs);
+         win = [1 2]';
+
+         testCase.assertError(@() set(s,'window',win),'Process:checkWindow:InputFormat');
+      end
+      
+      function errorAscending(testCase,Fs)
+         values = (0:2*ceil(Fs))'; % times range from 0 to at least 2 seconds
+         s = SampledProcess('values',values,'Fs',Fs);
+         win = [1 -1.5];
+
+         testCase.assertError(@() set(s,'window',win),'Process:checkWindow:InputValue');
+      end
+      
       function setterSingleValidWindow(testCase,Fs)
          values = (0:2*ceil(Fs))'; % times range from 0 to at least 2 seconds
          win = [1 1.5];
@@ -244,9 +268,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          s.setInclusiveWindow();
          
          testCase.assertEqual(s(1).window,[s.tStart s.tEnd]);
-      end
-      
-      % errors
+      end      
    end
    
 end

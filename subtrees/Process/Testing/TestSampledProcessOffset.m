@@ -25,6 +25,13 @@ classdef TestSampledProcessOffset < matlab.unittest.TestCase
    end
    
    methods (Test)
+      function errorNumOffsets(testCase)
+         s = testCase.s;
+         offset = [1.5 2.5];
+
+         testCase.assertError(@() set(s,'offset',offset),'Process:checkOffset:InputFormat');
+      end
+      
       function setterOffset(testCase)
          s = testCase.s;
          offset = 1.5;
@@ -84,11 +91,44 @@ classdef TestSampledProcessOffset < matlab.unittest.TestCase
          testCase.assertEqual(s(1).offset,offset(1));
          testCase.assertEqual(s(2).offset,offset(2));
       end
-      %cumul
-
-      % rewindow properly handles offset/cumulOffset
       
-      % reset
+      function cumulOffset(testCase)
+         s = testCase.s;
+         offset1 = 1.5;
+         offset2 = -2.5;
+         
+         testCase.assertEqual(s.cumulOffset,0);
+         
+         s.offset = offset1;
+
+         testCase.assertEqual(s.cumulOffset,offset1);
+         
+         s.offset = offset2;
+         times = offset1 + offset2 + SampledProcess.tvec(0,s.dt,size(testCase.values,1));
+
+         testCase.assertEqual(s.cumulOffset,offset1 + offset2);
+         testCase.assertEqual(s.times,{times},testCase.tolType,testCase.tol);
+      end
+
+      function cumulOffsetAfterWindow(testCase)
+         s = testCase.s;
+         offset1 = 1.5;
+         offset2 = -2.5;
+         win = [1 2]; % in original times
+         
+         s.offset = offset1;
+         s.offset = offset2;
+         s.window = win;
+         
+         times = SampledProcess.tvec(0,s.dt,size(testCase.values,1));
+         % Window applies to original times
+         ind = (times>=win(1)) & (times<=win(2));
+         times = offset1 + offset2 + times(ind);
+
+         testCase.assertEqual(s.offset,offset2);
+         testCase.assertEqual(s.cumulOffset,offset1 + offset2);
+         testCase.assertEqual(s.times,{times},testCase.tolType,testCase.tol);
+      end
    end
    
 end
