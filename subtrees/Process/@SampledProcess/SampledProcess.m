@@ -49,7 +49,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.addParameter('tStart',0,@isnumeric);
          p.addParameter('tEnd',[],@isnumeric);
          p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
-         p.addParameter('lazyEval',false,@(x) islogical(x) || isscalar(x));
+         p.addParameter('deferredEval',false,@(x) islogical(x) || isscalar(x));
          p.parse(varargin{:});
          par = p.Results;
          
@@ -57,29 +57,13 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.info = par.info;
          
          % Listeners and status for lazy loading/evaluation
-         self.lazyEval = par.lazyEval;         
+         self.deferredEval = par.deferredEval;         
          self.lazyLoad = par.lazyLoad;
-         %% MOVE THIS TO SETTER IN PROCESS
-         if self.lazyLoad && ~self.lazyEval
-            self.loadableListener_{1} = addlistener(self,'values','PreGet',@self.isLoadable);
-            self.loadableListener_{2} = addlistener(self,'loadable',@self.loadOnDemand);
-            self.isLoaded = false;
-         elseif self.lazyEval
-            self.runnableListener_{1} = addlistener(self,'values','PreGet',@self.isRunnable);
-            self.runnableListener_{2} = addlistener(self,'runnable',@self.evalOnDemand);
-            if self.lazyLoad
-               % No listener for loadable since callback for runnable checks
-               self.loadableListener_{1} = addlistener(self,'loadable',@self.loadOnDemand);
-               self.isLoaded = false;
-            else
-               self.isLoaded = true;
-            end
-         end
-         
+                  
          % Set sampling frequency and values_/values, times_/times
          if isa(par.values,'DataSource')
             assert(isempty(par.Fs),'SampledProcess:Fs:InputValue',...
-               'Fs must be specified by DataSource during construction');
+               'Fs is specified by DataSource during construction');
             self.Fs_ = par.values.Fs;
             self.Fs = self.Fs_;
             if self.lazyLoad
@@ -145,7 +129,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.offset_ = self.offset;
          
          % Set running_ bool, which was true (constructor calls not queued)
-         if self.lazyEval
+         if self.deferredEval
             self.running_ = false;
          end
          

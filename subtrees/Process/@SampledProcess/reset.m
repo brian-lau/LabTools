@@ -47,7 +47,7 @@ for i = 1:numel(self)
    self(i).Fs = self(i).Fs_;
 
    % Turn deferred execution back on
-   if self(i).lazyEval
+   if self(i).deferredEval
       self(i).running_ = false;
    end
    
@@ -58,7 +58,7 @@ for i = 1:numel(self)
       end
       self(i).queue = queue;
       
-      if ~self(i).lazyEval
+      if ~self(i).deferredEval
          evalOnDemand(self);
       end
    else

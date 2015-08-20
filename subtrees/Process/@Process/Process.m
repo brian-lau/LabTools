@@ -30,7 +30,14 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       times = {}          % Current event/sample times
       values = {}         % Current attribute/value associated with each time
    end
+   properties(SetAccess = protected)
+      lazyLoad = false    % Boolean to defer constructing values from values_
+      deferredEval = false% Boolean to defer method evaluations (see addToQueue)
+      queue = {}          % Method evaluation queue/history
+      isLoaded = true     % Boolean indicates whether values constructed
+   end
    properties(SetAccess = protected, Dependent, Transient)
+      isRunnable = false  %
       isValidWindow       % Boolean if window(s) within tStart and tEnd
    end
    properties(SetAccess = protected, Hidden)
@@ -38,19 +45,14 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       offset_             % Original offset
       reset_ = false      % Reset bit
       running_ = true     % Boolean indicating eager evaluation
-      runnableListener_ = {}
-      loadableListener_ = {}
+      loadListener_@event.proplistener
+      evalListener_@event.listener
    end
-   properties(SetAccess = protected)
-      lazyLoad = false    % Boolean to defer constructing values from values_
-      lazyEval = false    % Boolean to defer method evaluations (see addToQueue)
-      queue = {}          % Method evaluation queue/history
-      isLoaded = true     % Boolean indicates whether values constructed
+   properties(SetAccess = immutable)
       version = '0.4.0'   % Version string
    end
    events
-      runnable            % Elements in queue require evaluation
-      loadable            % Values must be constructed from values_
+      runImmediately
    end
    
    %%
@@ -84,11 +86,10 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    
    methods(Access = protected)
       discardBeforeStart(self)
-      discardAfterEnd(self)      
+      discardAfterEnd(self)
+      
       addToQueue(self,varargin)
-      isLoadable(self,~,~)
       loadOnDemand(self,varargin)
-      isRunnable(self,~,~)
       evalOnDemand(self,varargin)
    end
 
@@ -108,9 +109,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % setWindow, applyWindow
 
          %------- Add to function queue ----------
-         if ~self.running_ || ~self.lazyEval
+         if ~self.running_ || ~self.deferredEval
             addToQueue(self,window);
-            if self.lazyEval
+            if self.deferredEval
                return;
             end
          end
@@ -146,9 +147,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % setOffset, applyOffset
          
          %------- Add to function queue ----------
-         if ~self.running_ || ~self.lazyEval
+         if ~self.running_ || ~self.deferredEval
             addToQueue(self,offset);
-            if self.lazyEval
+            if self.deferredEval
                return;
             end
          end
@@ -162,9 +163,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       
       function set.labels(self,labels)
          %------- Add to function queue ----------
-         if ~self.running_ || ~self.lazyEval
+         if ~self.running_ || ~self.deferredEval
             addToQueue(self,labels);
-            if self.lazyEval
+            if self.deferredEval
                return;
             end
          end
@@ -177,9 +178,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       
       function set.quality(self,quality)
          %------- Add to function queue ----------
-         if ~self.running_ || ~self.lazyEval
+         if ~self.running_ || ~self.deferredEval
             addToQueue(self,quality);
-            if self.lazyEval
+            if self.deferredEval
                return;
             end
          end
@@ -193,14 +194,52 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function isValidWindow = get.isValidWindow(self)
          isValidWindow = (self.window(:,1)>=self.tStart) & ...
                          (self.window(:,2)<=self.tEnd);
-      end      
+      end
+      
+      function set.lazyLoad(self,bool)
+         assert(isscalar(bool)&&islogical(bool),'err');
+         if isempty(self.loadListener_)
+            self.loadListener_ = addlistener(self,'values','PreGet',@self.loadOnDemand);
+         else
+            self.loadListener_.Enabled = bool;
+         end
+         
+         if ~bool
+            loadOnDemand(self);
+         end
+         self.isLoaded = ~bool;
+         self.lazyLoad = bool;
+      end
+      
+      function set.deferredEval(self,bool)
+         assert(isscalar(bool)&&islogical(bool),'err');
+         if isempty(self.evalListener_)
+            self.evalListener_ = addlistener(self,'runImmediately',@self.evalOnDemand);
+         else
+            self.evalListener_.Enabled = bool;
+         end
+         
+         if ~bool
+            run(self);
+         end
+         self.deferredEval = bool;
+      end
+      
+      function isRunnable = get.isRunnable(self)
+         isRunnable = false;
+         if any(~[self.queue{:,3}])
+            isRunnable = true;
+         end
+      end
       
       % Assignment for object arrays
       self = setWindow(self,window)
       self = setOffset(self,offset)
       
-      self = flushQueue(self)
       self = clearQueue(self)
+      self = disableQueue(self)
+      self = enableQueue(self)
+      self = run(self,varargin)
 
       self = setInclusiveWindow(self)
       self = reset(self,n)

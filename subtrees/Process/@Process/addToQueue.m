@@ -10,7 +10,7 @@ function addToQueue(self,varargin)
 stack = dbstack('-completenames');
 f = stack(2).name; % maybe take from end of stack?
 
-% Setter calls using set()format (hgsetget)
+% Setter calls using set() format (hgsetget)
 if strfind(f,'.set.')
    temp = regexp(f,'\.','split');
    varargin = [temp(3) varargin];
@@ -21,6 +21,6 @@ for i = 1:numel(self)
    n = size(self(i).queue,1) + 1;
    self(i).queue{n,1} = f;
    self(i).queue{n,2} = varargin;
-   self(i).queue{n,3} = ~self(i).lazyEval;
+   self(i).queue{n,3} = ~self(i).deferredEval;
    %self(i).queue{n,4} = nout;
 end
