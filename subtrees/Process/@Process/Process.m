@@ -22,7 +22,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       offset              % Time offset relative to window
                           % Note that window is applied without offset 
                           % so times can be outside of the window property
-      cumulOffset         % Cumulative offset
+      cumulOffset = 0     % Cumulative offset
       labels              % Label for each non-leading dimension
       quality             % Scalar information for each non-leading dimension
    end
