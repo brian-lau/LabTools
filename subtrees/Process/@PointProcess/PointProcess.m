@@ -35,7 +35,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          p.FunctionName = 'PointProcess constructor';
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
          p.addParameter('times',{},@(x) isnumeric(x) || iscell(x));
-         p.addParameter('values',{},@(x) isvector(x) || iscell(x) );
+         p.addParameter('values',{},@(x) ismatrix(x) || iscell(x) );
          p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
          p.addParameter('quality',[],@isnumeric);
          p.addParameter('window',[],@isnumeric);
@@ -43,13 +43,17 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          p.addParameter('tStart',[],@isnumeric);
          p.addParameter('tEnd',[],@isnumeric);
          p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
-         p.addParameter('lazyEval',false,@(x) islogical(x) || isscalar(x));
+         p.addParameter('deferredEval',false,@(x) islogical(x) || isscalar(x));
          p.parse(varargin{:});
          par = p.Results;
          
          % Hashmap with process information
          self.info = par.info;
          
+         % Lazy loading/evaluation
+         self.deferredEval = par.deferredEval;         
+         self.lazyLoad = par.lazyLoad;
+
          if isempty(par.times)
             if ~isempty(par.values)
                warning('PointProcess:Constructor:InputCount',...
@@ -67,7 +71,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                [eventTimes{1},tInd{1}] = sortrows(times);
             else
                for i = 1:numel(times);
-                  if isrow(times{i}) && ...
+                  if isrow(times{i}) && ... % FIXME: this is hacky...
                      ~(isa(self,'EventProcess')&&(numel(times{i})==2))
                      times{i} = times{i}';
                   end
@@ -79,17 +83,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                values = cellfun(@(x) ones(size(x,1),1),eventTimes,'uni',0);
             else
                values = par.values;
-               if iscell(values)
-                  assert(numel(values) == numel(eventTimes),...
-                     'PointProcess:constuctor:InputSize',...
-                     'Incorrect # of cell arrays, # of ''times'' must equal # of ''values''');
-                  assert(all(cellfun(@(x,y) numel(x)==size(y,1),...
-                     values,eventTimes)),'PointProcess:constuctor:InputSize',...
-                     'Cell arrays not matched in dims, # of ''times'' must equal # of ''values''');
-                  for i = 1:numel(values)
-                     values{i} = reshape(values{i}(tInd{i}),size(eventTimes{i},1),1);
-                  end
-               elseif ismatrix(values) % one PointProcess
+               if ismatrix(values) % one PointProcess
                   if isrow(values) && ...
                         ~(isa(self,'EventProcess')&&(numel(values)==2)) && ...
                         (numel(values) == numel(eventTimes{1}))
@@ -100,15 +94,24 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                      error('incorrect number of values');
                   end
                else
-                  error('PointProcess:tStart:InputType',...
-                     'Invalid data type for values');
+                  assert(numel(values) == numel(eventTimes),...
+                     'PointProcess:constuctor:InputSize',...
+                     'Incorrect # of cell arrays, # of ''times'' must equal # of ''values''');
+                  assert(all(cellfun(@(x,y) numel(x)==size(y,1),...
+                     values,eventTimes)),'PointProcess:constuctor:InputSize',...
+                     'Cell arrays not matched in dims, # of ''times'' must equal # of ''values''');
+                  for i = 1:numel(values)
+                     values{i} = reshape(values{i}(tInd{i}),size(eventTimes{i},1),1);
+                  end
                end
             end
          end
          
-         % If we have event times
+         % Set times/values
          self.times_ = eventTimes;
          self.values_ = values;
+         self.times = self.times_;
+         self.values = self.values_;
 
          % Define the start and end times of the process
          if isempty(par.tStart)
@@ -123,10 +126,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
             self.tEnd = par.tEnd;
          end
          
-         %%%% 
-         self.times = self.times_;
-         self.values = self.values_;
-         
          % Set the window
          if isempty(par.window)
             self.setInclusiveWindow();
@@ -135,7 +134,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          end
          
          % Set the offset
-         self.cumulOffset = 0;
          if isempty(par.offset)
             self.offset = 0;
          else
@@ -151,9 +149,12 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          self.offset_ = self.offset;
          
          % Set running_ bool, which was true (constructor calls not queued)
-         if self.lazyEval
+         if self.deferredEval
             self.running_ = false;
          end
+         
+         % Don't expose constructor history
+         clearQueue(self);
       end % constructor
       
       function set.tStart(self,tStart)
