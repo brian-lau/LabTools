@@ -56,7 +56,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          % Hashmap with process information
          self.info = par.info;
          
-         % Listeners and status for lazy loading/evaluation
+         % Lazy loading/evaluation
          self.deferredEval = par.deferredEval;         
          self.lazyLoad = par.lazyLoad;
                   
@@ -188,11 +188,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       end
       
       function set.Fs(self,Fs)
-         persistent resampling; % Avoid recursive setting
-         
          assert(isscalar(Fs)&&isnumeric(Fs)&&(Fs>0),'SampledProcess:Fs:InputValue',...
             'Fs must be scalar, numeric and > 0');
-                  
+
          %------- Add to function queue ----------
          if ~self.running_ || ~self.deferredEval
             addToQueue(self,Fs);
@@ -202,15 +200,19 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          end
          %----------------------------------------
 
+         stack = dbstack('-completenames');
          if isempty(self.Fs)
+            %disp('empty');
             self.Fs = Fs;
-            resampling = false;
-         elseif (self.Fs ~= Fs) && ~resampling
-            resampling = true;
+         elseif any(strcmp({stack.name},'reset'))
+            %disp('reset');
+            self.Fs = Fs;
+         elseif any(strcmp({stack.name},'resample'))
+            %disp('from resample');
+            self.Fs = Fs;
+         elseif strcmp(stack(1).name,'SampledProcess.set.Fs')
+            %disp('to resample');
             resample(self,Fs);
-         else
-            self.Fs = Fs;
-            resampling = false;
          end
       end
       
