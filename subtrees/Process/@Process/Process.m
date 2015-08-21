@@ -20,8 +20,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties
       offset              % Time offset relative to window
-                          % Note that window is applied without offset 
-                          % so times can be outside of the window property
       cumulOffset = 0     % Cumulative offset
       labels              % Label for each non-leading dimension
       quality             % Scalar information for each non-leading dimension
@@ -45,8 +43,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       offset_             % Original offset
       reset_ = false      % Reset bit
       running_ = true     % Boolean indicating eager evaluation
-      loadListener_@event.proplistener
-      evalListener_@event.listener
+      loadListener_@event.proplistener % lazyLoad listener
+      evalListener_@event.listener     % deferredEval listener
    end
    properties(SetAccess = immutable)
       version = '0.4.0'   % Version string
@@ -103,6 +101,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function set.window(self,window)
          % Set the window property
          % Window applies to times without offset origin.
+         % Note that window is applied without offset so times can be 
+         % outside of the window property.
          % For setting window of object arrays, use setWindow.
          %
          % SEE ALSO

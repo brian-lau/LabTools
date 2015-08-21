@@ -1,7 +1,4 @@
 classdef TestSampledProcessOffset < matlab.unittest.TestCase
-   %UNTITLED5 Summary of this class goes here
-   %   Detailed explanation goes here
-   
    properties
       tolType = 'AbsTol'
       tol = eps;

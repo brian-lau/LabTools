@@ -200,18 +200,18 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          end
          %----------------------------------------
 
+         if self.Fs == Fs
+            return;
+         end
+         
          stack = dbstack('-completenames');
          if isempty(self.Fs)
-            %disp('empty');
             self.Fs = Fs;
          elseif any(strcmp({stack.name},'reset'))
-            %disp('reset');
             self.Fs = Fs;
          elseif any(strcmp({stack.name},'resample'))
-            %disp('from resample');
             self.Fs = Fs;
          elseif strcmp(stack(1).name,'SampledProcess.set.Fs')
-            %disp('to resample');
             resample(self,Fs);
          end
       end
