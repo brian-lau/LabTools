@@ -2,7 +2,8 @@
 
 function self = resample(self,newFs)
 
-assert(isnumeric(newFs)&&isscalar(newFs),...
+assert(isnumeric(newFs)&&isscalar(newFs)&&(newFs>0),...
+   'SampledProcess:resample:InputValue',...
    'New sampling frequency must be a numeric scalar.');
 
 for i = 1:numel(self)
