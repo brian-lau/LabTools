@@ -13,7 +13,7 @@ classdef TestSampledProcessResample < matlab.unittest.TestCase
       function setup(testCase)
          dt = 1/testCase.Fs;
          testCase.t = (0:dt:1)'; % times range from 0 to 1 second
-         testCase.values = repmat(cos(100*2*pi*testCase.t),1,3);
+         testCase.values = repmat(cos(100*2*pi*testCase.t),1,2);
          testCase.s = SampledProcess('values',testCase.values,'Fs',testCase.Fs);
       end
    end
@@ -99,6 +99,41 @@ classdef TestSampledProcessResample < matlab.unittest.TestCase
          testCase.assertEqual(s.times,{t},testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,{z},testCase.tolType,testCase.tol);
       end
+      
+      % array
+      function resampleSameFsArray(testCase)
+         s = testCase.s;
+         s(2) = SampledProcess('values',testCase.values,'Fs',testCase.Fs);
+         newFs = testCase.Fs2;
+
+         resample(s,newFs);
+         [t,z] = testCase.resample(testCase.t,testCase.values,testCase.Fs,newFs);
+         
+         testCase.assertEqual(s(1).Fs,testCase.Fs2);
+         testCase.assertEqual(s(1).times,{t},testCase.tolType,testCase.tol);
+         testCase.assertEqual(s(1).values,{z},testCase.tolType,testCase.tol);
+         testCase.assertEqual(s(2).Fs,testCase.Fs2);
+         testCase.assertEqual(s(2).times,{t},testCase.tolType,testCase.tol);
+         testCase.assertEqual(s(2).values,{z},testCase.tolType,testCase.tol);
+      end
+      
+      function setSameFsArray(testCase)
+         s = testCase.s;
+         s(2) = SampledProcess('values',testCase.values,'Fs',testCase.Fs);
+         newFs = testCase.Fs2;
+
+         set(s,'Fs',newFs);
+         [t,z] = testCase.resample(testCase.t,testCase.values,testCase.Fs,newFs);
+         
+         testCase.assertEqual(s(1).Fs,testCase.Fs2);
+         testCase.assertEqual(s(1).times,{t},testCase.tolType,testCase.tol);
+         testCase.assertEqual(s(1).values,{z},testCase.tolType,testCase.tol);
+         testCase.assertEqual(s(2).Fs,testCase.Fs2);
+         testCase.assertEqual(s(2).times,{t},testCase.tolType,testCase.tol);
+         testCase.assertEqual(s(2).values,{z},testCase.tolType,testCase.tol);
+      end
+      
+      % array different Fs? 
    end
    
    methods(Static)
