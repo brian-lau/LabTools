@@ -9,7 +9,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       times_              % Original event/sample times
       values_             % Original attribute/values
    end
-   properties(SetAccess = protected)
+   properties
       Fs                  % Sampling frequency
    end
    properties(SetAccess = protected, Dependent, Transient)
@@ -185,6 +185,33 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
                self.setInclusiveWindow();
             end
          end         
+      end
+      
+      function set.Fs(self,Fs)
+         persistent resampling; % Avoid recursive setting
+         
+         assert(isscalar(Fs)&&isnumeric(Fs)&&(Fs>0),'SampledProcess:Fs:InputValue',...
+            'Fs must be scalar, numeric and > 0');
+                  
+         %------- Add to function queue ----------
+         if ~self.running_ || ~self.deferredEval
+            addToQueue(self,Fs);
+            if self.deferredEval
+               return;
+            end
+         end
+         %----------------------------------------
+
+         if isempty(self.Fs)
+            self.Fs = Fs;
+            resampling = false;
+         elseif (self.Fs ~= Fs) && ~resampling
+            resampling = true;
+            resample(self,Fs);
+         else
+            self.Fs = Fs;
+            resampling = false;
+         end
       end
       
       function dt = get.dt(self)
