@@ -83,7 +83,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                values = cellfun(@(x) ones(size(x,1),1),eventTimes,'uni',0);
             else
                values = par.values;
-               if ismatrix(values) % one PointProcess
+               if ismatrix(values) && ~iscell(values) % one PointProcess
                   if isrow(values) && ...
                         ~(isa(self,'EventProcess')&&(numel(values)==2)) && ...
                         (numel(values) == numel(eventTimes{1}))
