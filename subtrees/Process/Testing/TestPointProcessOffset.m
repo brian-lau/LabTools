@@ -10,7 +10,7 @@ classdef TestPointProcessOffset < matlab.unittest.TestCase
    methods(TestMethodSetup)
       function setup(testCase)
          testCase.times = (1:10)';
-         testCasevalues = (1:10)';
+         testCase.values = (1:10)';
          testCase.p = PointProcess('times',testCase.times,'values',testCase.values);
       end
    end

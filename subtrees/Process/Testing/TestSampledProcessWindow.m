@@ -267,8 +267,8 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          s.window = win;         
          s.setInclusiveWindow();
          
-         testCase.assertEqual(s(1).window,[s.tStart s.tEnd]);
-      end      
+         testCase.assertEqual(s.window,[s.tStart s.tEnd]);
+      end
    end
    
 end
