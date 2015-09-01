@@ -1,15 +1,16 @@
+% Point processes
+
 % removed requirement of unique eventTimes (overlapping spikes, etc),
 % should default to unique values, possibly check for unique values when
 % passed in
 %
 % uniformValues = true should allow concatonation of values as arrays
 
-classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process         
+classdef(CaseInsensitiveProperties) PointProcess < Process         
    properties(AbortSet)
       tStart % Start time of process
       tEnd   % End time of process
    end
-   % These dependent properties all apply the window property
    properties(SetAccess = protected, Dependent = true, Transient = true)
       count  % # of events in window
    end
@@ -22,22 +23,12 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
             return;
          end
 
-         if (nargin==1) && ~isstruct(varargin{1})
-            times = varargin{1};
-            assert(isnumeric(times) || iscell(times),...
+         if mod(nargin,2)==1 && ~isstruct(varargin{1})
+            assert(isnumeric(varargin{1}) || iscell(varargin{1}),...
                'PointProcess:Constructor:InputFormat',...
                   ['Single inputs must be passed in as array of event times'...
                ', or cell array of arrays of event times.']);
-            if isnumeric(times)
-               varargin{1} = 'times';
-               varargin{2} = times;
-            else
-               assert(all(cellfun(@isnumeric,times)),...
-                  'PointProcess:Constructor:InputFormat',...
-                  'Each element of cell array must be a numeric array.');
-               varargin{1} = 'times';
-               varargin{2} = times;
-            end
+            varargin = {'times' varargin{:}};
          end
          
          p = inputParser;
@@ -82,7 +73,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
                [eventTimes,tInd] = cellfun(@(x) sortrows(x),times,'uni',0);
             end
 
-
             if isempty(par.values)
                values = cellfun(@(x) ones(size(x,1),1),eventTimes,'uni',0);
             else
@@ -116,14 +106,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          
          % If we have event times
          self.times_ = eventTimes;
-%          if all(cellfun(@(x) isa(x,'handle'),values))
-%             m = cell.flatten(cellfun(@(x) methods(x),values,'uni',0));
-%             assert(any(strcmp(m,'copy')),'PointProcess:constructor:InputFormat',...
-%                'handle arrays must have a copy method');
-%             self.values_ = cellfun(@(x) copy(x),values,'uni',0);
-%          else
-            self.values_ = values;
-%          end
+         self.values_ = values;
 
          % Define the start and end times of the process
          if isempty(par.tStart)
@@ -136,19 +119,24 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          else
             self.tEnd = par.tEnd;
          end
-
+         
+         %%%% 
+         self.times = self.times_;
+         self.values = self.values_;
+         
          % Set the window
          if isempty(par.window)
             self.setInclusiveWindow();
          else
-            self.window = self.checkWindow(par.window,size(par.window,1));
+            self.window = checkWindow(par.window,size(par.window,1));
          end
          
          % Set the offset
+         self.cumulOffset = 0;
          if isempty(par.offset)
             self.offset = 0;
          else
-            self.offset = self.checkOffset(par.offset,size(par.offset,1));
+            self.offset = checkOffset(par.offset,size(par.offset,1));
          end         
 
          self.labels = par.labels;
@@ -156,7 +144,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
 
          % Store original window and offset for resetting
          self.window_ = self.window;
-         self.offset_ = self.offset;
+         self.offset_ = self.offset;         
       end % constructor
       
       function set.tStart(self,tStart)
@@ -210,8 +198,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
          end
       end
       
-      self = setInclusiveWindow(self)
-      self = reset(self)
       obj = chop(self,shiftToWindow)
       self = sync(self,event,varargin)
       [s,labels] = extract(self,reqLabels)
@@ -226,19 +212,12 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) PointProcess < Process
       
       %% Display
       [h,yOffset] = plot(self,varargin)
-      [h,yOffset] = raster(self,varargin)
-      
-      %% Operators
-      plus(x,y)
-      minus(x,y)
-      bool = eq(x,y)
+      [h,yOffset] = raster(self,varargin)     
    end
      
    methods(Access = protected)
       applyWindow(self)
-      applyOffset(self,undo)
-      discardBeforeStart(self)
-      discardAfterEnd(self)
+      applyOffset(self,offset)
    end
 
    methods(Static)

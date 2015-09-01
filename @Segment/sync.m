@@ -41,11 +41,10 @@ for i = 1:numel(self)
    if isempty(p.Results.event)
       % Pull event out of EventProcess
       if isempty(p.Results.eventProcessName)
-         temp = extract(self(i),'EventProcess','type');
-         if numel(temp) > 1
+         if numel(self(i).eventProcess) > 1
             error('Multiple EventProcesses in Segment, specify by name');
-         else
-            temp = temp{1};
+          else
+            temp = self(i).eventProcess;
          end
       else
          temp = extract(self(i),p.Results.eventProcessName,'label');
@@ -56,7 +55,7 @@ for i = 1:numel(self)
       % FIXME, check dimensions for scalar event
       event = p.Results.event(i);
    end
-try
+
    if numel(event) == 1
       if ~strcmp(event.name,'NULL')
          if isempty(syncPars)
@@ -64,18 +63,13 @@ try
          else
             cellfun(@(x) x.sync(event,syncPars),self(i).processes,'uni',0);
          end
-         self(i).validSync = true;
-      else
-         self(i).validSync = false;
       end
+      self(i).validSync = event;
    elseif numel(event) > 1
       %TODO pick according to policy
       self(i).validSync = numel(event);
+      error('multiple events, policy selector not done');
    else
-      %error('incorrect number of events');
-      self(i).validSync = false;
+      error('incorrect number of events');
    end
-catch,
-   keyboard;
-end
 end

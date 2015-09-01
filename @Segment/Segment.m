@@ -1,14 +1,6 @@
 % Class for collecting Sampled, Point and EventProcesses with common start
 % and end time.
-% x Probably should place tStart/tEnd
-% x must check for common start and end times!
-%   tStart and tEnd are fixed across processes, which could end up with
-%   problems of NaN-padding...
 
-% o methods for 
-%   o adding processes
-%   o chopping
-% 
 classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & matlab.mixin.Copyable
    properties
       info@containers.Map % Information about segment
@@ -21,18 +13,17 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       type
    end
    properties
+      sampledProcess
+      pointProcess
+      eventProcess
       labels
       tStart
       tEnd
       window
       offset
    end
-   properties(SetAccess = protected, Hidden = true)
-      window_  % Original window
-      offset_  % Original offset
-   end
    properties(SetAccess = protected)
-      version = '0.0.0'
+      version = '0.1.0'
    end
    
    methods
@@ -75,37 +66,65 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
                self.processes = cat(2,self.processes,{par.process});
             end
             if isempty(par.tStart)
-               self.tStart = min([cellfun(@(x) x.tStart,self.processes) 0]);
+               tStart = unique(cellfun(@(x) x.tStart,self.processes));
+               if numel(tStart) > 1
+                  error('Segment:Constructor:InputFormat',...
+                     'Start times for all processes must be equal');
+               end
             else
                self.tStart = par.tStart;
             end
             if isempty(par.tEnd)
-               self.tEnd = max([max(cellfun(@(x) x.tEnd,self.processes))  self.tStart]);
+               tEnd = unique(cellfun(@(x) x.tEnd,self.processes));
+               if numel(tEnd) > 1
+                  error('Segment:Constructor:InputFormat',...
+                     'End times for all processes must be equal');
+               end
             else
                self.tEnd = par.tEnd;
             end
                         
             if isempty(par.window)
-               self.window = [self.tStart self.tEnd];
+               window = cell.uniqueRows(cellfun(@(x) x.window,self.processes','uni',0));
+               if numel(window) > 1
+                  error('Segment:Constructor:InputFormat',...
+                     'Windows for all processes must be equal');
+               end
             else
-               self.window = par.offset;
+               self.window = par.window;
             end
             if isempty(par.offset)
-               self.offset = min(cellfun(@(x) x.offset,self.processes));
+               offset = cell.uniqueRows(cellfun(@(x) x.offset,self.processes','uni',0));
+               if numel(offset) > 1
+                  error('Segment:Constructor:InputFormat',...
+                     'Offsets for all processes must be equal');
+               end
             else
                self.offset = par.offset;
             end
          end
 
          self.labels = p.Results.labels;
-         
-         % Store original window and offset for resetting
-         self.window_ = self.window;
-         self.offset_ = self.offset;
       end
       
       function list = get.type(self)
          list = cellfun(@(x) class(x),self.processes,'uni',0);
+      end
+      
+      function proc = get.sampledProcess(self)
+         proc = extract(self,'SampledProcess','type');
+      end
+      
+      function proc = get.pointProcess(self)
+         proc = extract(self,'PointProcess','type');
+      end
+      
+      function proc = get.eventProcess(self)
+         proc = extract(self,'EventProcess','type');
+      end
+      
+      function tStart = get.tStart(self)
+         tStart = unique(cellfun(@(x) x.tStart,self.processes));
       end
       
       function set.tStart(self,tStart)
@@ -115,6 +134,10 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          self.tStart = tStart;
       end
 
+      function tEnd = get.tEnd(self)
+         tEnd = unique(cellfun(@(x) x.tEnd,self.processes));
+      end
+      
       function set.tEnd(self,tEnd)
          for i = 1:numel(self.processes)
             self.processes{i}.tEnd = tEnd;
@@ -122,24 +145,32 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          self.tEnd = tEnd;
       end
       
+      function offset = get.offset(self)
+         offset = cell.uniqueRows(cellfun(@(x) x.offset,self.processes','uni',0));
+         offset = offset{1};
+      end
+      
       function set.offset(self,offset)
          for i = 1:numel(self.processes)
             self.processes{i}.offset = offset;
          end
-         self.offset = offset;
       end
 
+      function window = get.window(self)
+         window = cell.uniqueRows(cellfun(@(x) x.window,self.processes','uni',0));
+         window = window{1};
+      end
+      
       function set.window(self,window)
          for i = 1:numel(self.processes)
             self.processes{i}.window = window;
          end
-         self.window = window;
       end
       
       function set.labels(self,labels)
          n = numel(self.processes);
          if isempty(labels)
-            self.labels = arrayfun(@(x) ['pid' num2str(x)],1:n,'uni',0);
+            self.labels = arrayfun(@(x) ['sid' num2str(x)],1:n,'uni',0);
          elseif iscell(labels)
             assert(all(cellfun(@ischar,labels)),'Segment:labels:InputType',...
                'Labels must be strings');
@@ -154,7 +185,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
             error('Segment:labels:InputType','Incompatible label type');
          end
       end
-      
+            
       self = sync(self,event,varargin)
       proc = extract(self,request,flag)
       self = reset(self)

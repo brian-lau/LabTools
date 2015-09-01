@@ -13,50 +13,53 @@ if isempty(self.times_)
    return;
 end
 
-% NaN-pad when window extends beyond process. This extension is
-% done to the nearest sample that fits in the window.
-nWindow = size(self.window,1);
-window = self.window;
-minWin = min(window(:,1));
-maxWin = max(window(:,2));
-if (minWin<self.tStart) && (maxWin>self.tEnd)
-   pre = self.extendPre(self.tStart,minWin,1/self.Fs_); % TODO Fs_ or Fs???
-   preV = nan(size(pre,1),size(self.values_,2));
-   post = self.extendPost(self.tEnd,maxWin,1/self.Fs_);
-   postV = nan(size(post,1),size(self.values_,2));
-   times = [pre ; self.times_ ; post];
-   values = [preV ; self.values_ ; postV];
-elseif (minWin<self.tStart) && (maxWin<=self.tEnd)
-   pre = self.extendPre(self.tStart,minWin,1/self.Fs_); % TODO Fs_ or Fs???
-   preV = nan(size(pre,1),size(self.values_,2));
-   times = [pre ; self.times_];
-   values = [preV ; self.values_];
-elseif (minWin>=self.tStart) && (maxWin>self.tEnd)
-   post = self.extendPost(self.tEnd,maxWin,1/self.Fs_);
-   postV = nan(size(post,1),size(self.values_,2));
-   times = [self.times_ ; post];
-   values = [self.values_ ; postV];
-else
-   times = self.times_;
-   values = self.values_;
+nWindowReq = size(self.window,1);
+nWindowOrig = numel(self.values);
+if nWindowOrig > 1
+   assert(nWindowReq==nWindowOrig,'monkey!');
 end
 
-windowedTimes = cell(nWindow,1);
-windowedValues = cell(nWindow,1);
-windowIndex = cell(nWindow,1);
-isValidWindow = false(nWindow,1);
-for i = 1:nWindow
+window = self.window;
+windowedTimes = cell(nWindowReq,1);
+windowedValues = cell(nWindowReq,1);
+for i = 1:nWindowReq
+   minWin = min(window(i,1));
+   maxWin = max(window(i,2));
+   if nWindowOrig == 1
+      idx = 1;
+   else
+      idx = i;
+   end
+   % NaN-pad when window extends beyond process. This extension is
+   % done to the nearest sample that fits in the window.
+   tStart = min(self.times{idx});
+   tEnd = max(self.times{idx});
+   dim = size(self.values{idx});
+   dim = dim(2:end); % leading dim is always time
+   if (minWin<tStart) && (maxWin>tEnd)
+      [pre,preV] = self.extendPre(tStart,minWin,1/self.Fs,dim);
+      [post,postV] = self.extendPost(tEnd,maxWin,1/self.Fs,dim);
+      times = [pre ; self.times{idx} ; post];
+      values = [preV ; self.values{idx} ; postV];
+   elseif (minWin<tStart) && (maxWin<=tEnd)
+      [pre,preV] = self.extendPre(tStart,minWin,1/self.Fs,dim);
+      times = [pre ; self.times{idx}];
+      values = [preV ; self.values{idx}];
+   elseif (minWin>=tStart) && (maxWin>tEnd)
+      [post,postV] = self.extendPost(tEnd,maxWin,1/self.Fs,dim);
+      times = [self.times{idx} ; post];
+      values = [self.values{idx} ; postV];
+   else
+      times = self.times{idx};
+      values = self.values{idx};
+   end
+   
    ind = (times>=window(i,1)) & (times<=window(i,2));
    windowedTimes{i,1} = times(ind);
-   windowedValues{i,1} = values(ind,:); % FIXME, only works for 2D
-   windowIndex{i,1} = find(ind);
-   if (window(i,1)>=self.tStart) && (window(i,2)<=self.tEnd)
-      isValidWindow(i) = true;
-   else
-      isValidWindow(i) = false;
-   end
+   
+   % Index to allow expansion to arbitrary trailing dimensions
+   idx = repmat({':'},1,numel(dim));
+   windowedValues{i,1} = values(ind,idx{:});
 end
 self.times = windowedTimes;
 self.values = windowedValues;
-self.index = windowIndex;
-self.isValidWindow = isValidWindow;

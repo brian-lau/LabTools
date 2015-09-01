@@ -36,16 +36,13 @@ else
    window = p.Results.window;
 end
 
-% if (size(window,1)>1) && (nObj>1)
-%    window = repmat(window,nObj,1);
-% end
-% 
 % Window at original sample times
 if (size(window,1)>1) || (numel(offset)>1)
    window = bsxfun(@plus,window,offset);
+   window = bsxfun(@plus,window,-vec([self.cumulOffset]));
    window = num2cell(window,2);
 else
-   window = window + offset;
+   window = window + offset - self.cumulOffset;
 end
 
 self.setWindow(window);

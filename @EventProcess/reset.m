@@ -7,12 +7,22 @@
 function self = reset(self)
 
 for i = 1:numel(self)
+   self(i).times = self(i).times_;
+   self(i).values = self(i).values_;
+
+   self(i).reset_ = true;
    self(i).window = self(i).window_;
-   % Directly apply window in case window_ = window
-   self(i).offset = 'windowIsReset';
+   self(i).reset_ = false;
+   
+   % Directly apply window in case window_ = window 
+   % FIXME should actually check if window is different before applying
    applyWindow(self(i));
-   self(i).offset = self(i).offset_;
    
    % Reset events
-   cellfun(@(x) x.reset,self(i).values,'uni',0);
+   for j = 1:length(self(i).values)
+      reset(self(i).values{j});
+   end
+   
+   self(i).cumulOffset = 0;
+   self(i).offset = self(i).offset_;
 end

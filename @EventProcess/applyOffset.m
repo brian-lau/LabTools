@@ -1,16 +1,6 @@
 % Offset times,
 
-function applyOffset(self,undo)
-
-if nargin == 1
-   undo = false;
-end
-
-if undo
-   offset = -self.offset;
-else
-   offset = self.offset;
-end
+function applyOffset(self,offset)
 
 nTimes = size(self.times,2);
 for i = 1:numel(offset)
@@ -19,10 +9,10 @@ for i = 1:numel(offset)
 
       % Adjust times stored in Events
       temp = self.values{i,j};
-
-      if ~isempty(temp)
-         [temp.tStart] = list([temp.tStart] + offset(i));
-         [temp.tEnd] = list([temp.tEnd] + offset(i));
+      for k = 1:numel(temp)
+         temp(k).tStart = self.times{i,j}(k,1);
+         temp(k).tEnd = self.times{i,j}(k,2);
       end
+      self.values{i,j} = temp;
    end
 end

@@ -1,4 +1,4 @@
-function [h,yOffset] = plot(self,varargin)
+function h = plot(self,varargin)
 
 p = inputParser;
 p.KeepUnmatched= true;

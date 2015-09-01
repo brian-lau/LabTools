@@ -1,7 +1,7 @@
 % TODO
 % o common timescale
 % o gui elements allowing scrolling
-function [h,yOffset] = plot(self,varargin)
+function h = plot(self,varargin)
 
 p = inputParser;
 p.KeepUnmatched= true;
@@ -21,7 +21,17 @@ else
 end
 hold on;
 
+if numel(self) > 1
+   for i = 1:numel(self)
+      subplot(numel(self),1,i); hold on
+      plot(self(i).times{1},self(i).values{1});
+   end
+   return
+end
+
+% FIXME multiple windows?
 values = self.values{1};
+values = reshape(values,self.dim{1}(1),prod(self.dim{1}(2:end)));
 t = self.times{1};
 if p.Results.stack
    n = size(values,2);
