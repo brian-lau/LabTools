@@ -1,20 +1,13 @@
-function [pre,preV] = extendPre(tStartOld,tStartNew,dt,dim)
+% Extend a time vector if new tStart preceeds old tStart
+
+function [preT,preV] = extendPre(tStartOld,tStartNew,dt,dim)
 
 if tStartNew < tStartOld
-   pre = flipud(((tStartOld-dt):-dt:tStartNew)');
+   preT = flipud(((tStartOld-dt):-dt:tStartNew)');
 else
-   pre = [];
+   preT = [];
 end
 
 if nargout == 2
-   preV = nan([size(pre,1) row(dim)]);
+   preV = nan([size(preT,1) row(dim)]);
 end
-
-% function pre = extendPre(tStartOld,tStartNew,dt)
-% 
-% if tStartNew < tStartOld
-%    pre = flipud(((tStartOld-dt):-dt:tStartNew)');
-% else
-%    pre = [];
-% end
-% 

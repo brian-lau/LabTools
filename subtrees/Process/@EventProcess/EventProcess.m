@@ -1,20 +1,22 @@
 % Event processes
 
 classdef(CaseInsensitiveProperties) EventProcess < PointProcess         
-   properties(SetAccess = private, Dependent = true, Transient = true)
-      duration  % # of events in window
-      isValidEvent
+   properties(SetAccess = private, Dependent, Transient)
+      duration           % duration of events in windows
+      isValidEvent       % start/end time of events in windows?
    end
    properties
       nullEvent = metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN)
    end
+   
+   %%
    methods
       %% Constructor
       function self = EventProcess(varargin)
          p = inputParser;
          p.KeepUnmatched= true;
          p.FunctionName = 'EventProcess constructor';
-         p.addParamValue('events',[],@(x) isa(x,'metadata.Event') );
+         p.addParameter('events',[],@(x) isa(x,'metadata.Event') );
          p.parse(varargin{:});
 
          args = p.Unmatched;
@@ -65,6 +67,7 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       %% Display
       h = plot(self,varargin)
    end
+   
    methods(Access = protected)
       applyOffset(self,offset)
    end

@@ -1,3 +1,8 @@
+% Create a time vector given:
+%   t0 - start time
+%   dt - sample time (1/sampling frequency)
+%   n  - # of samples
+
 function t = tvec(t0,dt,n)
 
 assert(isscalar(t0),'SampledProcess:tvec:InputFormat');

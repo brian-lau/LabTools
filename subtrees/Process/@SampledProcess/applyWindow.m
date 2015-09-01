@@ -1,4 +1,4 @@
-% Window original event times, setting
+% Window event times, setting
 %     times
 %     values
 %     index
@@ -14,7 +14,7 @@ if isempty(self.times_)
 end
 
 nWindowReq = size(self.window,1);
-nWindowOrig = numel(self.values);
+nWindowOrig = numel(self.times);
 if nWindowOrig > 1
    assert(nWindowReq==nWindowOrig,'monkey!');
 end
@@ -30,36 +30,24 @@ for i = 1:nWindowReq
    else
       idx = i;
    end
+   
+   times = self.times{idx};
+   values = self.values{idx};
+   tStart = min(times);
+   tEnd = max(times);
+   dim = size(values);
+   dim = dim(2:end); % leading dim is always time
+   trailingInd = repmat({':'},1,numel(dim));
+   
    % NaN-pad when window extends beyond process. This extension is
    % done to the nearest sample that fits in the window.
-   tStart = min(self.times{idx});
-   tEnd = max(self.times{idx});
-   dim = size(self.values{idx});
-   dim = dim(2:end); % leading dim is always time
-   if (minWin<tStart) && (maxWin>tEnd)
-      [pre,preV] = self.extendPre(tStart,minWin,1/self.Fs,dim);
-      [post,postV] = self.extendPost(tEnd,maxWin,1/self.Fs,dim);
-      times = [pre ; self.times{idx} ; post];
-      values = [preV ; self.values{idx} ; postV];
-   elseif (minWin<tStart) && (maxWin<=tEnd)
-      [pre,preV] = self.extendPre(tStart,minWin,1/self.Fs,dim);
-      times = [pre ; self.times{idx}];
-      values = [preV ; self.values{idx}];
-   elseif (minWin>=tStart) && (maxWin>tEnd)
-      [post,postV] = self.extendPost(tEnd,maxWin,1/self.Fs,dim);
-      times = [self.times{idx} ; post];
-      values = [self.values{idx} ; postV];
-   else
-      times = self.times{idx};
-      values = self.values{idx};
-   end
+   [preT,preV] = self.extendPre(tStart,minWin,1/self.Fs,dim);
+   [postT,postV] = self.extendPost(tEnd,maxWin,1/self.Fs,dim);
    
    ind = (times>=window(i,1)) & (times<=window(i,2));
-   windowedTimes{i,1} = times(ind);
-   
-   % Index to allow expansion to arbitrary trailing dimensions
-   idx = repmat({':'},1,numel(dim));
-   windowedValues{i,1} = values(ind,idx{:});
+   windowedTimes{i,1} = [preT ; times(ind) ; postT];
+   windowedValues{i,1} = [preV ; values(ind,trailingInd{:}) ; postV];
 end
+
 self.times = windowedTimes;
 self.values = windowedValues;

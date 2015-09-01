@@ -1,63 +1,66 @@
-% TODO 
-%   x should we allow initial process be multiply windowed???
-%   o labels can be numeric? 
-%   o dimLabels?
-% move checkWindows/checkOffset into package? private (faster)?
-% set only in constructor
-%   - clock, timeUnit
+% Abstract class for process
 classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties
       info@containers.Map % Information about process
    end
-   properties(SetAccess = protected)
+   properties(SetAccess = immutable)
       timeUnit            % Time representation (TODO)
       clock               % Clock info (drift-correction, TODO)
    end
+   properties(Abstract)
+      tStart              % Start time of process
+      tEnd                % End time of process
+   end
+   properties(Abstract, SetAccess = protected, Hidden)
+      times_              % Original event/sample times
+      values_             % Original attribute/values
+   end
    properties(AbortSet)
-      % tStart/tEnd are defined in subclasses since setters are different for each
-      %tStart             % Start time of process
-      %tEnd               % End time of process
       window              % [min max] time window of interest
    end
    properties
       offset              % Time offset relative to window
-                          % Note that window is applied without offset, 
-                          % so times can be outside of the window property
-      cumulOffset         % Cumulative offset
+      cumulOffset = 0     % Cumulative offset
+      labels              % Label for each non-leading dimension
+      quality             % Scalar information for each non-leading dimension
    end
-   properties
-      labels              % Label for each element
-      quality             % Scalar information for each element
-   end
-   properties(SetAccess = protected, Transient = true)
-      % Window-dependent, but only calculated on window change
-      % http://blogs.mathworks.com/loren/2012/03/26/considering-performance-in-object-oriented-matlab-code/
-      times = {}          % Event/sample times
-      values = {}         % Attribute/value associated with each time
-   end
-   properties(SetAccess = protected, Dependent = true, Transient = true)
-      isValidWindow       % Boolean if window(s) within tStart and tEnd
-   end
-   properties(SetAccess = protected, Hidden = true)
-      times_              % Original event/sample times
-      values_             % Original attribute/values
-      window_             % Original window
-      offset_             % Original offset
-      reset_ = false      % reset bit
+   properties(SetAccess = protected, Transient, GetObservable)
+      times = {}          % Current event/sample times
+      values = {}         % Current attribute/value associated with each time
    end
    properties(SetAccess = protected)
-      version = '0.1.0'
+      lazyLoad = false    % Boolean to defer constructing values from values_
+      deferredEval = false% Boolean to defer method evaluations (see addToQueue)
+      queue = {}          % Method evaluation queue/history
+      isLoaded = true     % Boolean indicates whether values constructed
+   end
+   properties(SetAccess = protected, Dependent, Transient)
+      isRunnable = false  %
+      isValidWindow       % Boolean if window(s) within tStart and tEnd
+   end
+   properties(SetAccess = protected, Hidden)
+      window_             % Original window
+      offset_             % Original offset
+      reset_ = false      % Reset bit
+      running_ = true     % Boolean indicating eager evaluation
+      loadListener_@event.proplistener % lazyLoad listener
+      evalListener_@event.listener     % deferredEval listener
+   end
+   properties(SetAccess = immutable)
+      version = '0.4.0'   % Version string
+   end
+   events
+      runImmediately
    end
    
+   %%
    methods(Abstract)
       chop(self,shiftToWindow)
       s = sync(self,event,varargin)
       [s,labels] = extract(self,reqLabels)
-      %windowfun(self,fun)
-      %windowFun(self,fun,nOpt,varargin) % apply applyFunc func?
       apply(self,fun) % apply applyFunc func?
       %copy?
-      %plot
+      plot(self)
       
       % remove % delete by label
       
@@ -69,16 +72,23 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       % tail
       
       obj = loadobj(S)
+      % saveobj
    end
    
    methods(Abstract, Access = protected)
       applyWindow(self);
       applyOffset(self,offset);
+      checkLabels(self)
+      checkQuality(self)
    end
    
    methods(Access = protected)
       discardBeforeStart(self)
       discardAfterEnd(self)
+      
+      addToQueue(self,varargin)
+      loadOnDemand(self,varargin)
+      evalOnDemand(self,varargin)
    end
 
    methods
@@ -91,22 +101,34 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function set.window(self,window)
          % Set the window property
          % Window applies to times without offset origin.
-         % Does not work for arrays of objects. Use setWindow for that.
+         % Note that window is applied without offset so times can be 
+         % outside of the window property.
+         % For setting window of object arrays, use setWindow.
          %
          % SEE ALSO
-         % setWindow, applyWindow         
+         % setWindow, applyWindow
+
+         %------- Add to function queue ----------
+         if ~self.running_ || ~self.deferredEval
+            addToQueue(self,window);
+            if self.deferredEval
+               return;
+            end
+         end
+         %----------------------------------------
+         
          self.window = checkWindow(window,size(window,1));
          if ~self.reset_
             nWindow = size(self.window,1);
-            if isempty(self.window) || ((nWindow==1) && (size(self.times,1)==1))
-               % For one current & requested window, allow rewindowing current values
+            % Rewindow if current and requested # of windows matches
+            if isempty(self.window) || (nWindow == size(self.times,1))
                % Reset offset
                applyOffset(self,-self.cumulOffset);
                % Expensive, only call when windows are changed (AbortSet=true)
                applyWindow(self);
                applyOffset(self,self.cumulOffset);
-            else
-               % Reset the process, 
+            else % Different windows are ambiguous, start for original
+               % Reset the process
                self.times = self.times_;
                self.values = self.values_;
                
@@ -119,73 +141,109 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
      
       function set.offset(self,offset)
          % Set the offset property
-         % Does not work for arrays of objects. Use setOffset for that.
+         % For setting offset of object arrays, use setOffset.
          %
          % SEE ALSO
          % setOffset, applyOffset
+         
+         %------- Add to function queue ----------
+         if ~self.running_ || ~self.deferredEval
+            addToQueue(self,offset);
+            if self.deferredEval
+               return;
+            end
+         end
+         %----------------------------------------
+
          newOffset = checkOffset(offset,size(self.window,1));
          self.offset = newOffset;
          applyOffset(self,newOffset);
          self.cumulOffset = self.cumulOffset + newOffset;
       end
       
-      % Assignment for object arrays
-      self = setWindow(self,window)
-      self = setOffset(self,offset)
-            
       function set.labels(self,labels)
-         dim = size(self.values_{1});
-         if numel(dim) > 2
-            dim = dim(2:end);
-         else
-            dim(1) = 1;
+         %------- Add to function queue ----------
+         if ~self.running_ || ~self.deferredEval
+            addToQueue(self,labels);
+            if self.deferredEval
+               return;
+            end
          end
-         n = prod(dim);
-         if isempty(labels)
-            self.labels = arrayfun(@(x) ['id' num2str(x)],reshape(1:n,dim),'uni',0);
-         elseif iscell(labels)
-            assert(all(cellfun(@ischar,labels)),'Process:labels:InputType',...
-               'Labels must be strings');
-            assert(numel(labels)==numel(unique(labels)),'Process:labels:InputType',...
-               'Labels must be unique');
-            assert(numel(labels)==n,'Process:labels:InputFormat',...
-               '# labels does not match # of signals');
-            self.labels = labels;
-         elseif (n==1) && ischar(labels)
-            self.labels = {labels};
-         else
-            error('Process:labels:InputType','Incompatible label type');
-         end
+         %----------------------------------------
+         
+         % Wrap abstract method
+         labels = checkLabels(self,labels);
+         self.labels = labels;
       end
       
       function set.quality(self,quality)
-         dim = size(self.values_{1});
-         if numel(dim) > 2
-            dim = dim(2:end);
-         else
-            dim(1) = 1;
+         %------- Add to function queue ----------
+         if ~self.running_ || ~self.deferredEval
+            addToQueue(self,quality);
+            if self.deferredEval
+               return;
+            end
          end
-         assert(isnumeric(quality),'Process:quality:InputFormat',...
-            'Must be numeric');
+         %----------------------------------------
          
-         if isempty(quality)
-            quality = ones(dim);
-            self.quality = quality;
-         elseif all(size(quality)==dim)
-            self.quality = quality(:)';
-         elseif numel(quality)==1
-            self.quality = repmat(quality,dim);
-         else
-            error('bad quality');
-         end
+         % Wrap abstract method
+         quality = checkQuality(self,quality);
+         self.quality = quality;
       end
       
       function isValidWindow = get.isValidWindow(self)
-         isValidWindow = (self.window(:,1)>=self.tStart) & (self.window(:,2)<=self.tEnd);
+         isValidWindow = (self.window(:,1)>=self.tStart) & ...
+                         (self.window(:,2)<=self.tEnd);
       end
       
+      function set.lazyLoad(self,bool)
+         assert(isscalar(bool)&&islogical(bool),'err');
+         if isempty(self.loadListener_)
+            self.loadListener_ = addlistener(self,'values','PreGet',@self.loadOnDemand);
+         else
+            self.loadListener_.Enabled = bool;
+         end
+         
+         if ~bool
+            loadOnDemand(self);
+         end
+         self.isLoaded = ~bool;
+         self.lazyLoad = bool;
+      end
+      
+      function set.deferredEval(self,bool)
+         assert(isscalar(bool)&&islogical(bool),'err');
+         if isempty(self.evalListener_)
+            self.evalListener_ = addlistener(self,'runImmediately',@self.evalOnDemand);
+         else
+            self.evalListener_.Enabled = bool;
+         end
+         
+         if ~bool
+            run(self);
+         end
+         self.deferredEval = bool;
+      end
+      
+      function isRunnable = get.isRunnable(self)
+         isRunnable = false;
+         if any(~[self.queue{:,3}])
+            isRunnable = true;
+         end
+      end
+      
+      % Assignment for object arrays
+      self = setWindow(self,window)
+      self = setOffset(self,offset)
+      
+      self = clearQueue(self)
+      self = disableQueue(self)
+      self = enableQueue(self)
+      self = run(self,varargin)
+
       self = setInclusiveWindow(self)
-      self = reset(self)
+      self = reset(self,n)
+      self = undo(self,n)
       self = map(self,func,varargin)
       % Keep current data/transformations as original
       self = fix(self)
@@ -194,12 +252,5 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       bool = infoHasKey(self,key)
       bool = infoHasValue(self,value,varargin)
       info = copyInfo(self)
-
-
-      %% Operators
-      plus(x,y)
-      minus(x,y)
-      bool = eq(x,y)
    end
-   
 end

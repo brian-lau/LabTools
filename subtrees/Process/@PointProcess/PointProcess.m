@@ -1,20 +1,19 @@
-% Point processes
-
-% removed requirement of unique eventTimes (overlapping spikes, etc),
-% should default to unique values, possibly check for unique values when
-% passed in
-%
-% uniformValues = true should allow concatonation of values as arrays
+% Point process
 
 classdef(CaseInsensitiveProperties) PointProcess < Process         
    properties(AbortSet)
-      tStart % Start time of process
-      tEnd   % End time of process
+      tStart              % Start time of process
+      tEnd                % End time of process
    end
-   properties(SetAccess = protected, Dependent = true, Transient = true)
-      count  % # of events in window
+   properties(SetAccess = protected, Hidden)
+      times_              % Original event/sample times
+      values_             % Original attribute/values
+   end
+   properties(SetAccess = protected, Dependent, Transient)
+      count               % # of events in each window
    end
    
+   %%
    methods
       %% Constructor
       function self = PointProcess(varargin)
@@ -28,30 +27,37 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                'PointProcess:Constructor:InputFormat',...
                   ['Single inputs must be passed in as array of event times'...
                ', or cell array of arrays of event times.']);
-            varargin = {'times' varargin{:}};
+            varargin = [{'times'} varargin];
          end
          
          p = inputParser;
          p.KeepUnmatched= false;
          p.FunctionName = 'PointProcess constructor';
-         p.addParamValue('info',containers.Map('KeyType','char','ValueType','any'));
-         p.addParamValue('times',{},@(x) isnumeric(x) || iscell(x));
-         p.addParamValue('values',{},@(x) isvector(x) || iscell(x) );
-         p.addParamValue('labels',{},@(x) iscell(x) || ischar(x));
-         p.addParamValue('quality',[],@isnumeric);
-         p.addParamValue('window',[],@isnumeric);
-         p.addParamValue('offset',0,@isnumeric);
-         p.addParamValue('tStart',[],@isnumeric);
-         p.addParamValue('tEnd',[],@isnumeric);
+         p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
+         p.addParameter('times',{},@(x) isnumeric(x) || iscell(x));
+         p.addParameter('values',{},@(x) ismatrix(x) || iscell(x) );
+         p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
+         p.addParameter('quality',[],@isnumeric);
+         p.addParameter('window',[],@isnumeric);
+         p.addParameter('offset',0,@isnumeric);
+         p.addParameter('tStart',[],@isnumeric);
+         p.addParameter('tEnd',[],@isnumeric);
+         p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
+         p.addParameter('deferredEval',false,@(x) islogical(x) || isscalar(x));
          p.parse(varargin{:});
          par = p.Results;
          
+         % Hashmap with process information
          self.info = par.info;
          
+         % Lazy loading/evaluation
+         self.deferredEval = par.deferredEval;         
+         self.lazyLoad = par.lazyLoad;
+
          if isempty(par.times)
             if ~isempty(par.values)
                warning('PointProcess:Constructor:InputCount',...
-                  'Values ignored without event times');
+                  'Values without associated event times were ignored.');
             end
             eventTimes = {};
             values = {};
@@ -65,7 +71,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                [eventTimes{1},tInd{1}] = sortrows(times);
             else
                for i = 1:numel(times);
-                  if isrow(times{i}) && ...
+                  if isrow(times{i}) && ... % FIXME: this is hacky...
                      ~(isa(self,'EventProcess')&&(numel(times{i})==2))
                      times{i} = times{i}';
                   end
@@ -77,17 +83,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                values = cellfun(@(x) ones(size(x,1),1),eventTimes,'uni',0);
             else
                values = par.values;
-               if iscell(values)
-                  assert(numel(values) == numel(eventTimes),...
-                     'PointProcess:constuctor:InputSize',...
-                     'Incorrect # of cell arrays, # of ''times'' must equal # of ''values''');
-                  assert(all(cellfun(@(x,y) numel(x)==size(y,1),...
-                     values,eventTimes)),'PointProcess:constuctor:InputSize',...
-                     'Cell arrays not matched in dims, # of ''times'' must equal # of ''values''');
-                  for i = 1:numel(values)
-                     values{i} = reshape(values{i}(tInd{i}),size(eventTimes{i},1),1);
-                  end
-               elseif ismatrix(values) % one PointProcess
+               if ismatrix(values) && ~iscell(values) % one PointProcess
                   if isrow(values) && ...
                         ~(isa(self,'EventProcess')&&(numel(values)==2)) && ...
                         (numel(values) == numel(eventTimes{1}))
@@ -98,15 +94,24 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                      error('incorrect number of values');
                   end
                else
-                  error('PointProcess:tStart:InputType',...
-                     'Invalid data type for values');
+                  assert(numel(values) == numel(eventTimes),...
+                     'PointProcess:constuctor:InputSize',...
+                     'Incorrect # of cell arrays, # of ''times'' must equal # of ''values''');
+                  assert(all(cellfun(@(x,y) numel(x)==size(y,1),...
+                     values,eventTimes)),'PointProcess:constuctor:InputSize',...
+                     'Cell arrays not matched in dims, # of ''times'' must equal # of ''values''');
+                  for i = 1:numel(values)
+                     values{i} = reshape(values{i}(tInd{i}),size(eventTimes{i},1),1);
+                  end
                end
             end
          end
          
-         % If we have event times
+         % Set times/values
          self.times_ = eventTimes;
          self.values_ = values;
+         self.times = self.times_;
+         self.values = self.values_;
 
          % Define the start and end times of the process
          if isempty(par.tStart)
@@ -114,37 +119,42 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          else
             self.tStart = par.tStart;
          end
+         
          if isempty(par.tEnd)
             self.tEnd = max([max(cat(1,eventTimes{:}))  self.tStart]);
          else
             self.tEnd = par.tEnd;
          end
          
-         %%%% 
-         self.times = self.times_;
-         self.values = self.values_;
-         
          % Set the window
          if isempty(par.window)
             self.setInclusiveWindow();
          else
-            self.window = checkWindow(par.window,size(par.window,1));
+            self.window = par.window;
          end
          
          % Set the offset
-         self.cumulOffset = 0;
          if isempty(par.offset)
             self.offset = 0;
          else
-            self.offset = checkOffset(par.offset,size(par.offset,1));
+            self.offset = par.offset;
          end         
 
+         % Assign labels/quality
          self.labels = par.labels;
          self.quality = par.quality;
 
          % Store original window and offset for resetting
          self.window_ = self.window;
-         self.offset_ = self.offset;         
+         self.offset_ = self.offset;
+         
+         % Set running_ bool, which was true (constructor calls not queued)
+         if self.deferredEval
+            self.running_ = false;
+         end
+         
+         % Don't expose constructor history
+         clearQueue(self);
       end % constructor
       
       function set.tStart(self,tStart)
@@ -218,6 +228,53 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
    methods(Access = protected)
       applyWindow(self)
       applyOffset(self,offset)
+      
+      function l = checkLabels(self,labels)
+         dim = size(self.values_{1});
+         if numel(dim) > 2
+            dim = dim(2:end);
+         else
+            dim(1) = 1;
+         end
+         n = prod(dim);
+         if isempty(labels)
+            l = arrayfun(@(x) ['id' num2str(x)],reshape(1:n,dim),'uni',0);
+         elseif iscell(labels)
+            assert(all(cellfun(@ischar,labels)),'Process:labels:InputType',...
+               'Labels must be strings');
+            assert(numel(labels)==numel(unique(labels)),'Process:labels:InputType',...
+               'Labels must be unique');
+            assert(numel(labels)==n,'Process:labels:InputFormat',...
+               '# labels does not match # of signals');
+            l = labels;
+         elseif (n==1) && ischar(labels)
+            l = {labels};
+         else
+            error('Process:labels:InputType','Incompatible label type');
+         end
+      end
+      
+      function q = checkQuality(self,quality)
+         dim = size(self.values_{1});
+         if numel(dim) > 2
+            dim = dim(2:end);
+         else
+            dim(1) = 1;
+         end
+         assert(isnumeric(quality),'Process:quality:InputFormat',...
+            'Must be numeric');
+         
+         if isempty(quality)
+            quality = ones(dim);
+            q = quality;
+         elseif all(size(quality)==dim)
+            q = quality(:)';
+         elseif numel(quality)==1
+            q = repmat(quality,dim);
+         else
+            error('bad quality');
+         end
+      end
    end
 
    methods(Static)

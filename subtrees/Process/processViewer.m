@@ -1,4 +1,4 @@
-function gui = processViewer(seg)
+function processViewer(seg)
 % Data is shared between all child functions by declaring the variables
 % here (all functions are nested). We keep things tidy by putting
 % all GUI stuff in one structure and all data stuff in another.

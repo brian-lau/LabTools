@@ -1,16 +1,16 @@
 % TODO
 % o common timescale
 % o gui elements allowing scrolling
-function h = plot(self,varargin)
+function varargout = plot(self,varargin)
 
 p = inputParser;
 p.KeepUnmatched= true;
 p.FunctionName = 'SampledProcess plot method';
-p.addParamValue('handle',[],@(x) isnumeric(x) || ishandle(x));
-p.addParamValue('stack',0,@(x) isnumeric(x) || islogical(x));
-p.addParamValue('sep',3,@(x) isscalar(x));
+p.addParameter('handle',[],@(x) isnumeric(x) || ishandle(x));
+p.addParameter('stack',0,@(x) isnumeric(x) || islogical(x));
+p.addParameter('sep',3,@(x) isscalar(x));
 p.parse(varargin{:});
-params = p.Unmatched;
+%params = p.Unmatched;
 
 if isempty(p.Results.handle) || ~ishandle(p.Results.handle)
    figure;
@@ -24,7 +24,8 @@ hold on;
 if numel(self) > 1
    for i = 1:numel(self)
       subplot(numel(self),1,i); hold on
-      plot(self(i).times{1},self(i).values{1});
+      y = self(i).values{1};
+      plot(self(i).times{1},y);
    end
    return
 end
@@ -40,4 +41,8 @@ if p.Results.stack
    plot(repmat([t(1) t(end)]',1,n),[sf' , sf']','--','color',[.7 .7 .7 .4]);
 else
    plot(t,values);
+end
+
+if nargout >= 1
+   varargout{1} = h;
 end
