@@ -227,6 +227,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       
       function isRunnable = get.isRunnable(self)
          isRunnable = false;
+
          if any(~[self.queue{:,3}])
             isRunnable = true;
          end

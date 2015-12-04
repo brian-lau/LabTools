@@ -35,9 +35,9 @@ for i = 1:nWindow
    else
       shift = 0;
    end
-   
-   obj(i).times_ = self.times{i} - shift;
-   obj(i).values_ = self.values{i};
+
+   obj(i).times_{1} = self.times{i} - shift;
+   obj(i).values_{1} = self.values{i};
    % Take current Fs, which may be different from original Fs_
    obj(i).Fs_ = self.Fs;
    obj(i).Fs = self.Fs;

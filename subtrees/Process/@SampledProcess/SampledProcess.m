@@ -145,7 +145,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             assert(tStart < self.tEnd,'SampledProcess:tStart:InputValue',...
                   'tStart must be less than tEnd.');
          end
-         
+
          if isa(self.values_{1},'DataSource')
             self.tStart = tStart;
          else

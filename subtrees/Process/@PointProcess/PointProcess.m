@@ -159,11 +159,11 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       
       function set.tStart(self,tStart)
          if ~isempty(self.tEnd)
-            if tStart > self.tEnd
+            if tStart >= self.tEnd
                error('PointProcess:tStart:InputValue',...
                   'tStart must be less than tEnd.');
-            elseif tStart == self.tEnd
-               self.tEnd = self.tEnd + eps(self.tEnd);
+%             elseif tStart == self.tEnd
+%                self.tEnd = self.tEnd + eps(self.tEnd);
             end
          end
          if isscalar(tStart) && isnumeric(tStart)
@@ -173,18 +173,18 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                'tStart must be a numeric scalar.');
          end
          self.discardBeforeStart();
-         if ~isempty(self.tEnd)
-            self.setInclusiveWindow();
-         end
+%          if ~isempty(self.tEnd)
+%             self.setInclusiveWindow();
+%          end
       end
       
       function set.tEnd(self,tEnd)
          if ~isempty(self.tStart)
-            if self.tStart > tEnd
+            if self.tStart >= tEnd
                error('PointProcess:tEnd:InputValue',...
                   'tEnd must be greater than tStart.');
-            elseif self.tStart == tEnd
-               tEnd = tEnd + eps(tEnd);
+%             elseif self.tStart == tEnd
+%                tEnd = tEnd + eps(tEnd);
             end
          end
          if isscalar(tEnd) && isnumeric(tEnd)
@@ -194,9 +194,9 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                'tEnd must be a numeric scalar.');
          end
          self.discardAfterEnd();
-         if ~isempty(self.tStart)
-            self.setInclusiveWindow();
-         end
+%          if ~isempty(self.tStart)
+%             self.setInclusiveWindow();
+%          end
       end
       
       function count = get.count(self)
