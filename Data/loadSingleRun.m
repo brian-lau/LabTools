@@ -21,9 +21,8 @@ addParamValue(par,'W',2,@isscalar);
 addParamValue(par,'threshold',300,@isscalar);
 
 % Highpass filter cutoff, 0 skips highpass filtering
-addParamValue(par,'highpass',1.5,@isscalar);
-addParamValue(par,'highpass_order',[],@isscalar);
-addParamValue(par,'highpass_tbw',1,@isscalar);
+addParamValue(par,'Fpass',1.5,@isscalar);
+addParamValue(par,'Fstop',0.001,@isscalar);
 
 % detrend
 
@@ -95,13 +94,9 @@ if par.Results.threshold
    s.map(@(x) f(x),'fix',true);
 end
 
-if par.Results.highpass
+if par.Results.Fpass
    fprintf('Highpass filtering\n');
-   if isempty(par.Results.highpass_order)
-      highpass(s,par.Results.highpass,'order',s.Fs,'tbw',par.Results.highpass_tbw,'fix',true);      
-   else
-      highpass(s,par.Results.highpass,'order',par.Results.highpass_order,'tbw',par.Results.highpass_tbw,'fix',true);
-   end
+   highpass(s,'Fpass',par.Results.Fpass,'Fstop',par.Results.Fstop,'fix',true); 
 end
 
 if par.Results.deline
@@ -118,15 +113,15 @@ if par.Results.trim
    s.window = [2 s.window(end)-2];
    s.chop();
 end   
-% detrend(s);
-% s.chop();
 
 if (par.Results.resample < s.Fs) && par.Results.resample
    fprintf('Resampling\n');
    origFs = s.Fs;
-   s.resample(par.Results.resample,'fix',true);
+   s.resample(par.Results.resample);
+   fix(s);
    if exist('t','var')
-      t.resample(par.Results.resample,'fix',true);
+      t.resample(par.Results.resample);
+      fix(t);
    end
 else
    origFs = s.Fs;
