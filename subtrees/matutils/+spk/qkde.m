@@ -46,7 +46,7 @@ if nargin < 4
    dt = 1;
 end
 
-g = kernel(bw,dt,flag);
+g = spk.kernel(bw,dt,flag);
 y = histc(data,x);
 
 % For short kernels, convolution in the time-domain is faster
