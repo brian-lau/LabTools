@@ -230,7 +230,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       applyOffset(self,offset)
       
       function l = checkLabels(self,labels)
-         dim = size(self.values_{1});
+         dim = size(self.times_);
          if numel(dim) > 2
             dim = dim(2:end);
          else

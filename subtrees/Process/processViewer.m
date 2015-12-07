@@ -282,6 +282,8 @@ updateSelectTab();
    end
 %-------------------------------------------------------------------------%
    function updateViews()
+      %ind = gui.ArraySlider.Value;
+      %[data.plotS,data.plotP,data.plotE] = countProcesses(seg(ind));
       updateViewPanelP();
       updateViewPanelS();
       updateEvents();
@@ -311,10 +313,13 @@ updateSelectTab();
       axes(ax);
       
       cla(ax); hold on;
+      try
       plot(data.segment(ind).sampledProcess,'handle',ax,...
          'stack',gui.StackButton.Value,...
          'sep',gui.ScaleSlider.Value*data.sd);
       axis tight;
+      catch
+      end
    end
 %-------------------------------------------------------------------------%
    function plotP()
@@ -323,8 +328,11 @@ updateSelectTab();
       axes(ax);
       
       cla(ax);
+      try
       raster(data.segment(ind).pointProcess,'handle',ax,'style','tick');
-      axis([get(ax,'xlim') 0.5 max(get(ax,'ylim'))]);
+      axis tight;%axis([get(ax,'xlim') 0.5 max(get(ax,'ylim'))]);
+      catch
+      end
    end
 %-------------------------------------------------------------------------%
    function plotE()
@@ -498,11 +506,15 @@ updateSelectTab();
          .where(@(x) isprop(x.info(key),prop) || isfield(x.info(key),prop))...
          .where(@(x) ~isempty(x.info(key).(prop)))...
          .select(@(x) x.info(key).(prop));
-      
+
       if str.count > 0
-         str = str.distinct().toArray();
-         if islogical(str)
-            str = double(str);
+         if iscell(str.array)
+            str = str.distinct().toList();
+         else
+            str = str.distinct().toArray();
+            if islogical(str)
+               str = double(str);
+            end
          end
          gui.SelectValuePopup.String = str;
       else
@@ -530,7 +542,9 @@ updateSelectTab();
             .where(@(x) isprop(x.info(key),prop) || isfield(x.info(key),prop))...
             .where(@(x) x.info(key).(prop) == value).toArray();
       else
-         
+         temp = q.where(@(x) isKey(x.info,key))...
+            .where(@(x) isprop(x.info(key),prop) || isfield(x.info(key),prop))...
+            .where(@(x) strcmp(x.info(key).(prop),value)).toArray();
       end
 
       data = createData(temp);
