@@ -233,6 +233,14 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
       end
       
+      function bool = hasLabel(self,label)
+         n = numel(self);
+         bool = false(n,1);
+         for i = 1:n
+            bool(i) = any(cellfun(@isequal,self(i).labels,repmat({label},1,numel(self(i).count))));
+         end
+      end
+      
       % Assignment for object arrays
       self = setWindow(self,window)
       self = setOffset(self,offset)
@@ -246,6 +254,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       self = reset(self,n)
       self = undo(self,n)
       self = map(self,func,varargin)
+      
       % Keep current data/transformations as original
       self = fix(self)
 
