@@ -46,13 +46,13 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          p = inputParser;
          p.KeepUnmatched= false;
          p.FunctionName = 'Segment constructor';
-         p.addParamValue('info',containers.Map('KeyType','char','ValueType','any'));
-         p.addParamValue('process',[],@(x) iscell(x) || all(isa(x,'Process')) );
-         p.addParamValue('labels',{},@(x) iscell(x) || ischar(x));
-         p.addParamValue('window',[],@isnumeric);
-         p.addParamValue('offset',0,@isnumeric);
-         p.addParamValue('tStart',[],@isnumeric);
-         p.addParamValue('tEnd',[],@isnumeric);
+         p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
+         p.addParameter('process',[],@(x) iscell(x) || all(isa(x,'Process')) );
+         p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
+         p.addParameter('window',[],@isnumeric);
+         p.addParameter('offset',0,@isnumeric);
+         p.addParameter('tStart',[],@isnumeric);
+         p.addParameter('tEnd',[],@isnumeric);
          p.parse(varargin{:});
          par = p.Results;
 
@@ -188,6 +188,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
             
       self = sync(self,event,varargin)
       proc = extract(self,request,flag)
+      obj = restrictByInfo(self,key,prop,value,varargin)
       self = reset(self)
       
       % add process
@@ -195,6 +196,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       %plot
    end
    methods(Static)
-      obj = loadobj(S)
+      %obj = loadobj(S)
    end
 end

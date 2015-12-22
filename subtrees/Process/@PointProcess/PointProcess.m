@@ -36,7 +36,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
          p.addParameter('times',{},@(x) isnumeric(x) || iscell(x));
          p.addParameter('values',{},@(x) ismatrix(x) || iscell(x) );
-         p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
+         p.addParameter('labels',{},@(x) iscell(x) || ischar(x) || isa(x,'metadata.Label'));
          p.addParameter('quality',[],@isnumeric);
          p.addParameter('window',[],@isnumeric);
          p.addParameter('offset',0,@isnumeric);
@@ -240,14 +240,14 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          if isempty(labels)
             l = arrayfun(@(x) ['id' num2str(x)],reshape(1:n,dim),'uni',0);
          elseif iscell(labels)
-            assert(all(cellfun(@ischar,labels)),'Process:labels:InputType',...
-               'Labels must be strings');
-            assert(numel(labels)==numel(unique(labels)),'Process:labels:InputType',...
-               'Labels must be unique');
+            %assert(all(cellfun(@ischar,labels)),'Process:labels:InputType',...
+            %   'Labels must be strings');
+            %assert(numel(labels)==numel(unique(labels)),'Process:labels:InputType',...
+            %   'Labels must be unique');
             assert(numel(labels)==n,'Process:labels:InputFormat',...
                '# labels does not match # of signals');
             l = labels;
-         elseif (n==1) && ischar(labels)
+         elseif (n==1) %&& ischar(labels)
             l = {labels};
          else
             error('Process:labels:InputType','Incompatible label type');
