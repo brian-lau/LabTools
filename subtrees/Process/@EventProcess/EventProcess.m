@@ -71,5 +71,9 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
    methods(Access = protected)
       applyOffset(self,offset)
    end
+   
+   methods(Static)
+      obj = loadobj(S)
+   end
 end
 
