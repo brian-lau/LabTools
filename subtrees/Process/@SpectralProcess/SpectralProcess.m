@@ -1,25 +1,30 @@
-% Regularly sampled processes
-% If multiple processes, currently cannot be multidimensional,
-% time = rows
+% Regularly sampled process
 
-classdef(CaseInsensitiveProperties, TruncatedProperties) SpectralProcess < Process   
-   properties(AbortSet)%(AbortSet, Access=?Segment)
-      tStart % Start time of process
-      tEnd   % End time of process
+classdef(CaseInsensitiveProperties) SpectralProcess < Process   
+   properties(AbortSet)
+      tStart              % Start time of process
+      tEnd                % End time of process
    end
-   properties(SetAccess = protected)
-      %Fs % Sampling frequency
+   properties(SetAccess = protected, Hidden)
+      times_              % Original event/sample times
+      f_
+      values_             % Original attribute/values
+   end
+   properties(SetAccess = protected, Transient, GetObservable)
+      f = {}         
+   end
+   properties
       tWin
       tWinstep
    end
-   properties(SetAccess = protected, Dependent = true, Transient = true)
-      dim
-      %dt
+   properties(SetAccess = protected, Dependent, Transient)
+      dim                 % Dimensionality of each window
    end   
-   properties(SetAccess = protected, Hidden = true)
-      %Fs_ % Original sampling frequency
-   end
+%    properties(SetAccess = protected, Hidden)
+%       Fs_                 % Original sampling frequency
+%    end
    
+   %%
    methods
       %% Constructor
       function self = SpectralProcess(varargin)
@@ -28,159 +33,173 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SpectralProcess < Proce
            return;
          end
          
-         if nargin == 1
-            values = varargin{1};
-            assert(isnumeric(values),...
+         if mod(nargin,2)==1 && ~isstruct(varargin{1})
+            assert(isnumeric(varargin{1}) || isa(varargin{1},'DataSource'),...
                'SampledProcess:Constructor:InputFormat',...
                'Single inputs must be passed in as array of numeric values');
-            if isnumeric(values)
-               varargin{1} = 'values';
-               varargin{2} = values;
-            end
+            varargin = [{'values'} varargin];
          end
 
          p = inputParser;
          p.KeepUnmatched= false;
          p.FunctionName = 'SampledProcess constructor';
-         p.addParamValue('info',containers.Map('KeyType','char','ValueType','any'));
-%          p.addParamValue('Fs',1);
-         p.addParamValue('tWin',[],@isscalar);
-         p.addParamValue('values',[],@ismatrix);
-         p.addParamValue('labels',{},@(x) iscell(x) || ischar(x));
-         p.addParamValue('quality',[],@isnumeric);
-         p.addParamValue('window',[],@isnumeric);
-         p.addParamValue('offset',[],@isnumeric);
-         p.addParamValue('tStart',0,@isnumeric);
-         p.addParamValue('tEnd',[],@isnumeric);
+         p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
+         %p.addParameter('Fs',[],@(x) isnumeric(x) && isscalar(x));
+         p.addParameter('values',[],@(x) isnumeric(x) || isa(x,'DataSource'));
+         p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
+         p.addParameter('quality',[],@isnumeric);
+         p.addParameter('window',[],@isnumeric);
+         p.addParameter('offset',[],@isnumeric);
+         p.addParameter('tStart',0,@isnumeric);
+         p.addParameter('tEnd',[],@isnumeric);
+         p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
+         p.addParameter('deferredEval',false,@(x) islogical(x) || isscalar(x));
          p.parse(varargin{:});
+         par = p.Results;
          
-         self.info = p.Results.info;
+         % Hashmap with process information
+         self.info = par.info;
          
-         % Create values array
-         if isvector(p.Results.values)
-            self.values_ = p.Results.values(:);
-         else
-            % Assume leading dimension is time
-            % FIXME, should probably force to 2D? Actually, maybe not,
-            % allow user to preserve dimensions after leading
-            self.values_ = p.Results.values;
+         % Lazy loading/evaluation
+         self.deferredEval = par.deferredEval;         
+         self.lazyLoad = par.lazyLoad;
+                  
+         % Set sampling frequency and values_/values, times_/times
+         if isa(par.values,'DataSource')
+            %%%
+         else % in-memory matrix
+%             if isempty(par.Fs)
+%                self.Fs_ = 1;
+%             else
+%                self.Fs_ = par.Fs;
+%             end
+%             self.Fs = self.Fs_;
+            self.values_ = {par.values};
+            self.values = self.values_;
+            dim = size(self.values_{1});
          end
-%          self.Fs_ = p.Results.Fs;
-%          self.Fs = self.Fs_;
-%         dt = 1/self.Fs_;
-         self.times_ = self.tvec(p.Results.tStart,dt,(size(self.values_,1)));
+         self.times_ = {self.tvec(par.tStart,self.dt,dim(1))};
+         self.times = self.times_;
          
+         assert(numel(self.times_{1}) > 1,'SampledProcess:values:InputValue',...
+            'Need more than 1 sample to define SampledProcess');
+
          % Define the start and end times of the process
-         self.tStart = p.Results.tStart;
-         if isempty(p.Results.tEnd)
-            self.tEnd = self.times_(end);
+         if isa(par.values,'DataSource')
+            % tStart is taken from DataSource
+            self.tStart = par.values.tStart;
          else
-            self.tEnd = p.Results.tEnd;
+            self.tStart = par.tStart;
          end
-         
+      
+         if isempty(par.tEnd) || isa(par.values,'DataSource')
+            self.tEnd = self.times_{1}(end);
+         else
+            self.tEnd = par.tEnd;
+         end
+                  
          % Set the window
-         if isempty(p.Results.window)
+         if isempty(par.window)
             self.setInclusiveWindow();
          else
-            self.window = self.checkWindow(p.Results.window,size(p.Results.window,1));
+            self.window = par.window;
          end
          
          % Set the offset
-         if isempty(p.Results.offset)
+         if isempty(par.offset)
             self.offset = 0;
          else
-            self.offset = self.checkOffset(p.Results.offset,size(p.Results.offset,1));
-         end         
+            self.offset = par.offset;
+         end
 
-         % Create labels
-         self.labels = p.Results.labels;
-         
-         self.quality = p.Results.quality;
+         % Assign labels/quality
+         self.labels = par.labels;         
+         self.quality = par.quality;
 
          % Store original window and offset for resetting
          self.window_ = self.window;
          self.offset_ = self.offset;
-      end % constructor
-
-      function set.tStart(self,tStart)
-         if ~isempty(self.tEnd)
-            if tStart > self.tEnd
-               error('SampledProcess:tStart:InputValue',...
-                  'tStart must be less than tEnd.');
-            elseif tStart == self.tEnd
-               self.tEnd = self.tEnd + eps(self.tEnd);
-            end
+         
+         % Set running_ bool, which was true (constructor calls not queued)
+         if self.deferredEval
+            self.running_ = false;
          end
-         if isscalar(tStart) && isnumeric(tStart)
-            pre = self.extendPre(self.tStart,tStart,1/self.Fs_);
-            preV = nan(size(pre,1),size(self.values_,2));
-            self.times_ = [pre ; self.times_];
-            self.values_ = [preV ; self.values_];
+         
+         % Don't expose constructor history
+         clearQueue(self);
+      end % constructor
+      
+      function set.tStart(self,tStart)
+         assert(isscalar(tStart) && isnumeric(tStart),...
+            'SampledProcess:tStart:InputFormat',...
+            'tStart must be a numeric scalar.');
+         if ~isempty(self.tEnd)
+            assert(tStart < self.tEnd,'SampledProcess:tStart:InputValue',...
+                  'tStart must be less than tEnd.');
+         end
+
+         if isa(self.values_{1},'DataSource')
             self.tStart = tStart;
          else
-            error('SampledProcess:tStart:InputFormat',...
-               'tStart must be a numeric scalar.');
-         end
-         self.discardBeforeStart();
-         if ~isempty(self.tEnd)
-            self.setInclusiveWindow();
+            dim = size(self.values_{1});
+            [pre,preV] = self.extendPre(self.tStart,tStart,1/self.Fs_,dim(2:end));
+            self.times_ = {[pre ; self.times_{1}]};
+            self.values_ = {[preV ; self.values_{1}]};
+            self.tStart = tStart;
+            self.discardBeforeStart();
+            
+            if ~isempty(self.tEnd)
+               self.setInclusiveWindow();
+            end
          end
       end
       
       function set.tEnd(self,tEnd)
+         assert(isscalar(tEnd) && isnumeric(tEnd),...
+            'SampledProcess:tEnd:InputFormat',...
+            'tEnd must be a numeric scalar.');
          if ~isempty(self.tStart)
-            if self.tStart > tEnd
-               error('SampledProcess:tEnd:InputValue',...
+            assert(self.tStart < tEnd,'SampledProcess:tEnd:InputValue',...
                   'tEnd must be greater than tStart.');
-            elseif self.tStart == tEnd
-               tEnd = tEnd + eps(tEnd);
-            end
          end
-         if isscalar(tEnd) && isnumeric(tEnd)
-            post = self.extendPost(self.tEnd,tEnd,1/self.Fs_);
-            postV = nan(size(post,1),size(self.values_,2));
-            self.times_ = [self.times_ ; post];
-            self.values_ = [self.values_ ; postV];
+         
+         if isa(self.values_{1},'DataSource')
             self.tEnd = tEnd;
          else
-            error('SampledProcess:tEnd:InputFormat',...
-               'tEnd must be a numeric scalar.');
-         end
-         self.discardAfterEnd();
-         if ~isempty(self.tStart)
-            self.setInclusiveWindow();
-         end
+            dim = size(self.values_{1});
+            [post,postV] = self.extendPost(self.tEnd,tEnd,1/self.Fs_,dim(2:end));
+            self.times_ = {[self.times_{1} ; post]};
+            self.values_ = {[self.values_{1} ; postV]};
+            self.tEnd = tEnd;
+            self.discardAfterEnd();
+            
+            if ~isempty(self.tStart)
+               self.setInclusiveWindow();
+            end
+         end         
       end
-      
-%       function dt = get.dt(self)
-%          dt = 1/self.Fs;
-%       end
       
       function dim = get.dim(self)
          dim = cellfun(@(x) size(x),self.values,'uni',false);
       end
-      
-      % 
-      self = setInclusiveWindow(self)
-      self = reset(self)
+            
+      %
       obj = chop(self,shiftToWindow)
       s = sync(self,event,varargin)
 
-      % Transform
-      self = filter(self,b,varargin)
-      [self,b] = highpass(self,corner,varargin)
-      [self,b] = lowpass(self,corner,varargin)
-      [self,b] = bandpass(self,corner,varargin)
-      self = resample(self,newFs,varargin)
-      %self = smooth(self)
-      self = detrend(self)
-      self = map(self,func,varargin)
+      % In-place transformations
+%       self = filter(self,b,varargin)
+%       [self,h,d] = lowpass(self,varargin)
+%       [self,h,d] = highpass(self,varargin)
+%       [self,h,d] = bandpass(self,varargin)
+%       self = detrend(self)
+%       self = resample(self,newFs,varargin)
+      %decimate
+      %interp
 
       % Output
       [s,labels] = extract(self,reqLabels)
       output = apply(self,fun,nOpt,varargin)
-
-%       dat = convert2Fieldtrip(self)
       
       % Visualization
       plot(self,varargin)
@@ -188,15 +207,56 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) SpectralProcess < Proce
    
    methods(Access = protected)
       applyWindow(self)
-      applyOffset(self,undo)
-      discardBeforeStart(self)
-      discardAfterEnd(self)
+      applyOffset(self,offset)
+      
+      function l = checkLabels(self,labels)
+         dim = size(self.values_{1});
+         if numel(dim) > 2
+            dim = dim(2:end);
+         else
+            dim(1) = 1;
+         end
+         n = prod(dim);
+         if isempty(labels)
+            l = arrayfun(@(x) ['id' num2str(x)],reshape(1:n,dim),'uni',0);
+         elseif iscell(labels)
+            assert(numel(labels)==n,'Process:labels:InputFormat',...
+               '# labels does not match # of signals');
+            l = labels;
+         elseif (n==1)
+            l = {labels};
+         else
+            error('Process:labels:InputType','Incompatible label type');
+         end
+      end
+      
+      function q = checkQuality(self,quality)
+         dim = size(self.values_{1});
+         if numel(dim) > 2
+            dim = dim(2:end);
+         else
+            dim(1) = 1;
+         end
+         assert(isnumeric(quality),'Process:quality:InputFormat',...
+            'Must be numeric');
+         
+         if isempty(quality)
+            quality = ones(dim);
+            q = quality;
+         elseif all(size(quality)==dim)
+            q = quality(:)';
+         elseif numel(quality)==1
+            q = repmat(quality,dim);
+         else
+            error('bad quality');
+         end
+      end
    end
    
    methods(Static)
       obj = loadobj(S)
       t = tvec(t0,dt,n)
-      pre = extendPre(tStartOld,tStartNew,dt)
-      post = extendPost(tEndOld,tEndNew,dt)
+      [pre,preV] = extendPre(tStartOld,tStartNew,dt,dim)
+      [post,postV] = extendPost(tEndOld,tEndNew,dt,dim)
    end
 end
