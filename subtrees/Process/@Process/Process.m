@@ -1,4 +1,4 @@
-% Abstract class for process
+% Abstract Process class 
 classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties
       info@containers.Map % Information about process
@@ -31,18 +31,22 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties(SetAccess = protected)
       lazyLoad = false    % Boolean to defer constructing values from values_
       deferredEval = false% Boolean to defer method evaluations (see addToQueue)
+   end
+   properties(SetAccess = protected)
       queue = {}          % Method evaluation queue/history
       isLoaded = true     % Boolean indicates whether values constructed
    end
    properties(SetAccess = protected, Dependent, Transient)
-      isRunnable = false  %
-      isValidWindow       % Boolean if window(s) within tStart and tEnd
+      isRunnable = false  % Boolean indicating if queue contains runnable items
+      isValidWindow       % Boolean indicating if window(s) within tStart and tEnd
    end
    properties(SetAccess = protected, Hidden)
       window_             % Original window
       offset_             % Original offset
       reset_ = false      % Reset bit
       running_ = true     % Boolean indicating eager evaluation
+   end
+   properties(SetAccess = protected, Hidden, Transient)
       loadListener_@event.proplistener % lazyLoad listener
       evalListener_@event.listener     % deferredEval listener
    end
@@ -89,6 +93,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       addToQueue(self,varargin)
       loadOnDemand(self,varargin)
       evalOnDemand(self,varargin)
+      revalOnDemand(self)
    end
 
    methods
@@ -225,10 +230,18 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          self.deferredEval = bool;
       end
       
+      function set.queue(self,queue)
+         assert(iscell(queue),'err');
+         % TODO size check?
+         % TODO, what if queue exists & is not empty or run? clear or flush
+         % or add?
+         self.queue = queue;
+      end
+      
       function isRunnable = get.isRunnable(self)
          isRunnable = false;
 
-         if any(~[self.queue{:,3}])
+         if ~isempty(self.queue) && any(~[self.queue{:,3}])
             isRunnable = true;
          end
       end
@@ -261,6 +274,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       keys = infoKeys(self,flatBool)
       bool = infoHasKey(self,key)
       bool = infoHasValue(self,value,varargin)
-      info = copyInfo(self)
+      info = copyInfo(self)      
+      
+      function bool = checkVersion(self,req)
+         ver = self.version;
+         bool = checkVersion(ver,req);
+      end
    end
 end
