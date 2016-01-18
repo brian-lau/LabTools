@@ -23,8 +23,8 @@ hold on;
 
 if numel(self) > 1
    for i = 1:numel(self)
-      h = subplot(numel(self),1,i); hold on
-      plot(self(i),'handle',h,varargin{:});
+      g = subplot(numel(self),1,i); hold on
+      plot(self(i),'handle',g,varargin{:});
    end
    return
 end
