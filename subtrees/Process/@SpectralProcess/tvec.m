@@ -1,7 +1,7 @@
-function t = tvec(t0,tWinstep,n)
+function t = tvec(t0,tStep,n)
 
-assert(isscalar(t0),'SpectralProcess:tvec:InputFormat');
-assert(isscalar(tWinstep),'SpectralProcess:tvec:InputFormat');
-assert(isscalar(n),'SpectralProcess:tvec:InputFormat');
+assert(isscalar(t0),'SampledProcess:tvec:InputFormat','1st input must be scalar');
+assert(isscalar(tStep),'SampledProcess:tvec:InputFormat','2nd input must be scalar');
+assert(isscalar(n),'SampledProcess:tvec:InputFormat','3rd input must be scalar');
 
-t = t0 + (0:tWinstep:(tWinstep*(n-1)))';
+t = t0 + (0:tStep:(tStep*(n-1)))';

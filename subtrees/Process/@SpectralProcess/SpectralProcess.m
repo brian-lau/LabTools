@@ -5,24 +5,19 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       tStart              % Start time of process
       tEnd                % End time of process
    end
+   % intervals? 
    properties(SetAccess = protected, Hidden)
       times_              % Original event/sample times
-      f_
       values_             % Original attribute/values
    end
-   properties(SetAccess = protected, Transient, GetObservable)
-      f = {}         
-   end
-   properties
-      tWin
-      tWinstep
+   properties(SetAccess = protected)
+      tBlock
+      tStep
+      f
    end
    properties(SetAccess = protected, Dependent, Transient)
       dim                 % Dimensionality of each window
    end   
-%    properties(SetAccess = protected, Hidden)
-%       Fs_                 % Original sampling frequency
-%    end
    
    %%
    methods
@@ -52,6 +47,9 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          p.addParameter('offset',[],@isnumeric);
          p.addParameter('tStart',0,@isnumeric);
          p.addParameter('tEnd',[],@isnumeric);
+         p.addParameter('tBlock',[],@isnumeric);
+         p.addParameter('tStep',[],@isnumeric);
+         p.addParameter('f',[],@isnumeric);
          p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
          p.addParameter('deferredEval',false,@(x) islogical(x) || isscalar(x));
          p.parse(varargin{:});
@@ -68,30 +66,28 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          if isa(par.values,'DataSource')
             %%%
          else % in-memory matrix
-%             if isempty(par.Fs)
-%                self.Fs_ = 1;
-%             else
-%                self.Fs_ = par.Fs;
-%             end
-%             self.Fs = self.Fs_;
             self.values_ = {par.values};
             self.values = self.values_;
             dim = size(self.values_{1});
          end
-         self.times_ = {self.tvec(par.tStart,self.dt,dim(1))};
+         %keyboard
+         self.tStep = par.tStep;
+         self.times_ = {self.tvec(par.tStart,self.tStep,dim(1))};
          self.times = self.times_;
          
-         assert(numel(self.times_{1}) > 1,'SampledProcess:values:InputValue',...
-            'Need more than 1 sample to define SampledProcess');
+%          assert(numel(self.times_{1}) > 1,'SampledProcess:values:InputValue',...
+%             'Need more than 1 sample to define SampledProcess');
 
          % Define the start and end times of the process
          if isa(par.values,'DataSource')
-            % tStart is taken from DataSource
-            self.tStart = par.values.tStart;
+%             % tStart is taken from DataSource
+%             self.tStart = par.values.tStart;
          else
             self.tStart = par.tStart;
          end
-      
+         
+         self.f = vec(par.f);
+         
          if isempty(par.tEnd) || isa(par.values,'DataSource')
             self.tEnd = self.times_{1}(end);
          else
@@ -134,7 +130,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             'SampledProcess:tStart:InputFormat',...
             'tStart must be a numeric scalar.');
          if ~isempty(self.tEnd)
-            assert(tStart < self.tEnd,'SampledProcess:tStart:InputValue',...
+            assert(tStart <= self.tEnd,'SampledProcess:tStart:InputValue',...
                   'tStart must be less than tEnd.');
          end
 
@@ -142,7 +138,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             self.tStart = tStart;
          else
             dim = size(self.values_{1});
-            [pre,preV] = self.extendPre(self.tStart,tStart,1/self.Fs_,dim(2:end));
+            [pre,preV] = self.extendPre(self.tStart,tStart,self.tStep,dim(2:end));
             self.times_ = {[pre ; self.times_{1}]};
             self.values_ = {[preV ; self.values_{1}]};
             self.tStart = tStart;
@@ -159,7 +155,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             'SampledProcess:tEnd:InputFormat',...
             'tEnd must be a numeric scalar.');
          if ~isempty(self.tStart)
-            assert(self.tStart < tEnd,'SampledProcess:tEnd:InputValue',...
+            assert(self.tStart <= tEnd,'SampledProcess:tEnd:InputValue',...
                   'tEnd must be greater than tStart.');
          end
          
@@ -167,7 +163,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             self.tEnd = tEnd;
          else
             dim = size(self.values_{1});
-            [post,postV] = self.extendPost(self.tEnd,tEnd,1/self.Fs_,dim(2:end));
+            [post,postV] = self.extendPost(self.tEnd,tEnd,self.tStep,dim(2:end));
             self.times_ = {[self.times_{1} ; post]};
             self.values_ = {[self.values_{1} ; postV]};
             self.tEnd = tEnd;
@@ -178,7 +174,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             end
          end         
       end
-      
+            
       function dim = get.dim(self)
          dim = cellfun(@(x) size(x),self.values,'uni',false);
       end
@@ -188,14 +184,6 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       s = sync(self,event,varargin)
 
       % In-place transformations
-%       self = filter(self,b,varargin)
-%       [self,h,d] = lowpass(self,varargin)
-%       [self,h,d] = highpass(self,varargin)
-%       [self,h,d] = bandpass(self,varargin)
-%       self = detrend(self)
-%       self = resample(self,newFs,varargin)
-      %decimate
-      %interp
 
       % Output
       [s,labels] = extract(self,reqLabels)
@@ -211,10 +199,12 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       
       function l = checkLabels(self,labels)
          dim = size(self.values_{1});
-         if numel(dim) > 2
-            dim = dim(2:end);
+         if numel(dim) > 3
+            dim = dim(3:end);
+         elseif numel(dim) == 3
+            dim = [1 dim(3)];
          else
-            dim(1) = 1;
+            dim = [1 1];
          end
          n = prod(dim);
          if isempty(labels)
@@ -232,10 +222,12 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       
       function q = checkQuality(self,quality)
          dim = size(self.values_{1});
-         if numel(dim) > 2
-            dim = dim(2:end);
+         if numel(dim) > 3
+            dim = dim(3:end);
+         elseif numel(dim) == 3
+            dim = [1 dim(3)];
          else
-            dim(1) = 1;
+            dim = [1 1];
          end
          assert(isnumeric(quality),'Process:quality:InputFormat',...
             'Must be numeric');
