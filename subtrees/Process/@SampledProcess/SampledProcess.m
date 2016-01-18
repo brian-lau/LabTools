@@ -89,9 +89,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.times_ = {self.tvec(par.tStart,self.dt,dim(1))};
          self.times = self.times_;
          
-         assert(numel(self.times_{1}) > 1,'SampledProcess:values:InputValue',...
-            'Need more than 1 sample to define SampledProcess');
-
          % Define the start and end times of the process
          if isa(par.values,'DataSource')
             % tStart is taken from DataSource
@@ -142,7 +139,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             'SampledProcess:tStart:InputFormat',...
             'tStart must be a numeric scalar.');
          if ~isempty(self.tEnd)
-            assert(tStart < self.tEnd,'SampledProcess:tStart:InputValue',...
+            assert(tStart <= self.tEnd,'SampledProcess:tStart:InputValue',...
                   'tStart must be less than tEnd.');
          end
 
@@ -167,7 +164,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             'SampledProcess:tEnd:InputFormat',...
             'tEnd must be a numeric scalar.');
          if ~isempty(self.tStart)
-            assert(self.tStart < tEnd,'SampledProcess:tEnd:InputValue',...
+            assert(self.tStart <= tEnd,'SampledProcess:tEnd:InputValue',...
                   'tEnd must be greater than tStart.');
          end
          
@@ -241,6 +238,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       % Output
       [s,labels] = extract(self,reqLabels)
       output = apply(self,fun,nOpt,varargin)
+      obj = toSpectralProcess(self)
       
       % Visualization
       plot(self,varargin)

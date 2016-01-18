@@ -45,7 +45,7 @@ else
    if (n>1) && (size(window,1)==1)
       window = repmat(window,n,1);
    end
-   if any(window(:,1)>=window(:,2))
+   if any(window(:,1)>window(:,2))
       error('Process:checkWindow:InputValue',...
          'First element of window must be less than second');
    end
