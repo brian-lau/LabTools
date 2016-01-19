@@ -4,6 +4,7 @@
 %method stft, chronux, wavelet, stockwell
 %params
 %link
+% correct time vector?
 % tBlock = 0.5;
 % tStep= 0.1;
 %f = 0:500;
@@ -23,7 +24,6 @@ else
    p.parse(varargin{:});
    params = p.Unmatched;
 end
-
 par = p.Results;
 
 % FIXME, handle simple power spectral density (tStep = 0)
@@ -41,7 +41,7 @@ tStep = nStep*self.dt;
 
 switch lower(par.method)
    case {'stft' 'spectrogram'}
-      window = nBlock;
+      window = nBlock; % use Hanning window default
       noverlap = nBlock - nStep;
       n = numel(self.labels);
       for i = 1:n
@@ -84,4 +84,4 @@ obj = SpectralProcess(S,...
    'window',self.window...
    );
 
-   % cumuloffset
+obj.cumulOffset = self.cumulOffset;
