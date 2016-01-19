@@ -238,7 +238,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       % Output
       [s,labels] = extract(self,reqLabels)
       output = apply(self,fun,nOpt,varargin)
-      obj = toSpectralProcess(self)
+      obj = toSpectralProcess(self,varargin)
       
       % Visualization
       plot(self,varargin)

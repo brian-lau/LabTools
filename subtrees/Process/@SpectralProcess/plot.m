@@ -7,10 +7,13 @@ p = inputParser;
 p.KeepUnmatched= true;
 p.FunctionName = 'SpectralProcess plot method';
 p.addParameter('handle',[],@(x) isnumeric(x) || ishandle(x));
-p.addParameter('colorbar',0,@(x) isnumeric(x) || islogical(x));
-p.addParameter('colormap',0,@(x) isnumeric(x) || islogical(x));
+p.addParameter('colorbar',true,@(x) isnumeric(x) || islogical(x));
+p.addParameter('colormap','parula',@(x) ischar(x) || isnumeric(x));
+p.addParameter('log',true,@islogical);
 p.parse(varargin{:});
 %params = p.Unmatched;
+
+par = p.Results;
 
 if isempty(p.Results.handle) || ~ishandle(p.Results.handle)
    figure;
@@ -35,19 +38,31 @@ t = self.times{1};
 f = self.f;
 
 n = numel(self.labels);
-if numel(t) == 1
-   for i = 1:n
-      subplot(n,1,i); hold on;
-      plot(f,10*log10(abs(values(:,:,i)')));
-      axis tight;
+for i = 1:n
+   subplot(n,1,i); hold on;
+   
+   if par.log
+      v = 10*log10(abs(values(:,:,i)'));
+   else
+      v = abs(values(:,:,i)');
    end
-else
-   for i = 1:n
-      subplot(n,1,i); hold on;
-      imagesc('Xdata',t,'Ydata',f,'CData',10*log10(abs(values(:,:,i)')));
-      axis tight;
-      colorbar;
+   
+   if numel(t) == 1
+      plot(f,v);
+   else
+      args = {t,f,v};
+      surf(args{:},'edgecolor','none');
+      view(0,90);
+      shading interp; %colormap(parula(128));
+%      imagesc('Xdata',t,'Ydata',f,'CData',v);
+      
+      colormap(par.colormap);
+      if par.colorbar
+         colorbar;
+      end
    end
+   title(self.labels{i});
+   axis tight;
 end
 
 if nargout >= 1

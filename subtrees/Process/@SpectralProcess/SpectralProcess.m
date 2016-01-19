@@ -1,4 +1,4 @@
-% Regularly sampled process
+% Time-frequency process
 
 classdef(CaseInsensitiveProperties) SpectralProcess < Process   
    properties(AbortSet)
@@ -11,9 +11,10 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       values_             % Original attribute/values
    end
    properties(SetAccess = protected)
-      tBlock
-      tStep
-      f
+      params              
+      tBlock              % Duration of each spectral estimate
+      tStep               % Duration of step taken for each spectral estimate
+      f                   % Frequencies 
    end
    properties(SetAccess = protected, Dependent, Transient)
       dim                 % Dimensionality of each window
@@ -39,7 +40,6 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          p.KeepUnmatched= false;
          p.FunctionName = 'SampledProcess constructor';
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
-         %p.addParameter('Fs',[],@(x) isnumeric(x) && isscalar(x));
          p.addParameter('values',[],@(x) isnumeric(x) || isa(x,'DataSource'));
          p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
          p.addParameter('quality',[],@isnumeric);
@@ -47,6 +47,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          p.addParameter('offset',[],@isnumeric);
          p.addParameter('tStart',0,@isnumeric);
          p.addParameter('tEnd',[],@isnumeric);
+         p.addParameter('params',[]);
          p.addParameter('tBlock',[],@isnumeric);
          p.addParameter('tStep',[],@isnumeric);
          p.addParameter('f',[],@isnumeric);
@@ -70,14 +71,12 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             self.values = self.values_;
             dim = size(self.values_{1});
          end
-         %keyboard
+         self.params = par.params;
+         self.tBlock = par.tBlock;
          self.tStep = par.tStep;
          self.times_ = {self.tvec(par.tStart,self.tStep,dim(1))};
          self.times = self.times_;
          
-%          assert(numel(self.times_{1}) > 1,'SampledProcess:values:InputValue',...
-%             'Need more than 1 sample to define SampledProcess');
-
          % Define the start and end times of the process
          if isa(par.values,'DataSource')
 %             % tStart is taken from DataSource
@@ -173,6 +172,20 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
                self.setInclusiveWindow();
             end
          end         
+      end
+      
+      function set.tBlock(self,tBlock)
+         assert(isscalar(tBlock) && isnumeric(tBlock) && (tBlock>0),...
+            'SampledProcess:tBlock:InputFormat',...
+            'tBlock must be a numeric scalar > 0.');
+         self.tBlock = tBlock;
+      end
+      
+      function set.tStep(self,tStep)
+         assert(isscalar(tStep) && isnumeric(tStep) && (tStep>=0),...
+            'SampledProcess:tStep:InputFormat',...
+            'tStep must be a numeric scalar >= 0.');
+         self.tStep = tStep;
       end
             
       function dim = get.dim(self)
