@@ -13,6 +13,8 @@ p.addOptional('commonTime',true,@(x) islogical(x));
 p.addOptional('interpMethod',[],@(x) ischar(x));
 p.parse(event,varargin{:});
 
+par = p.Results;
+
 nObj = numel(self);
 if (numel(event)==1) && (nObj>1)
    event = repmat(event,size(self));
@@ -21,7 +23,7 @@ assert(numel(event)==numel(self),'SampledProcess:sync:InputValue',...
    'numel(event) should match numel(SampledProcess)');
 
 if all(isa(event,'metadata.Event'))
-   if p.Results.eventStart
+   if par.eventStart
       offset = [event.tStart]';
    else
       offset = [event.tEnd]';
@@ -30,7 +32,7 @@ else
    offset = event(:);
 end
 
-if isempty(p.Results.window) % FIXME: not working?
+if isempty(par.window) % FIXME: not working?
    % find window that includes all data
    temp = vertcat(self.window);
    temp = bsxfun(@minus,temp,offset);
@@ -38,7 +40,7 @@ if isempty(p.Results.window) % FIXME: not working?
    window = self.checkWindow(window,size(window,1));
    clear temp;
 else
-   window = p.Results.window;
+   window = par.window;
 end
 
 origWindow = window;
@@ -53,8 +55,8 @@ end
 
 self.setWindow(window);
 
-if p.Results.commonTime
-   if isempty(p.Results.interpMethod)
+if par.commonTime
+   if isempty(par.interpMethod)
       dt = 1/self(1).Fs; % FIXME, Fs uniformity check
       t = SampledProcess.tvec(origWindow(1),dt,diff(origWindow)/dt);
       
@@ -78,7 +80,7 @@ if p.Results.commonTime
       t = SampledProcess.tvec(origWindow(1),dt,n);
       
       for i = 1:numel(values)
-         temp = interp1(times{i},values{i},t,p.Results.interpMethod);
+         temp = interp1(times{i},values{i},t,par.interpMethod);
          % Replace times & values in SampledProcess
          self(i).times = {t};
          self(i).values = {temp};

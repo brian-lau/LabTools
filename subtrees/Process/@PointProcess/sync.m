@@ -8,6 +8,8 @@ p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2))
 p.addOptional('eventStart',true,@(x) isscalar(x) && islogical(x)); 
 p.parse(event,varargin{:});
 
+par = p.Results;
+
 nObj = numel(self);
 if (numel(event)==1) && (nObj>1)
    event = repmat(event,size(self));
@@ -16,7 +18,7 @@ assert(numel(event)==numel(self),'PointProcess:sync:InputValue',...
    'numel(event) should match numel(PointProcess)');
 
 if isa(event,'metadata.Event')
-   if p.Results.eventStart
+   if par.eventStart
       offset = [event.tStart]';
    else
       offset = [event.tEnd]';
@@ -25,7 +27,7 @@ else
    offset = event(:);
 end
 
-if isempty(p.Results.window)
+if isempty(par.window)
    % find window that includes all data
    temp = vertcat(self.window);
    temp = bsxfun(@minus,temp,offset);
@@ -33,7 +35,7 @@ if isempty(p.Results.window)
    window = self.checkWindow(window,size(window,1));
    clear temp;
 else
-   window = p.Results.window;
+   window = par.window;
 end
 
 % Window at original sample times
