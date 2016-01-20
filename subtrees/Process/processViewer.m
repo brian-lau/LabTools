@@ -330,7 +330,7 @@ updateSelectTab();
       cla(ax);
       try
       raster(data.segment(ind).pointProcess,'handle',ax,'style','tick');
-      axis tight;%axis([get(ax,'xlim') 0.5 max(get(ax,'ylim'))]);
+      axis([get(ax,'xlim') 0.5 max(get(ax,'ylim'))]);
       catch
       end
    end
