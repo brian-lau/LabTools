@@ -9,7 +9,15 @@
 % tStep= 0.1;
 %f = 0:500;
 
-function obj = toSpectralProcess(self,varargin)
+function obj = tfr(self,varargin)
+
+nObj = numel(self);
+if nObj > 1
+   for i = 1:nObj
+      obj(i) = tfr(self(i),varargin{:});
+   end
+   return
+end
 
 if (nargin > 1) && isa(varargin{1},'inputParser')
    p = varargin{1};
@@ -19,12 +27,16 @@ else
    p.FunctionName = 'SpectralProcess toSpectrogram method';
    p.addParameter('method','chronux',@ischar);
    p.addParameter('tBlock',1,@(x) isnumeric(x) && isscalar(x));
-   p.addParameter('tStep',0.5,@(x) isnumeric(x) && isscalar(x));
+   p.addParameter('tStep',[],@(x) isnumeric(x) && isscalar(x));
    p.addParameter('f',0:100,@(x) isnumeric(x) && isvector(x));
    p.parse(varargin{:});
    params = p.Unmatched;
 end
 par = p.Results;
+
+if isempty(par.tStep)
+   par.tStep = par.tBlock/2;
+end
 
 % FIXME, handle simple power spectral density (tStep = 0)
 % if tStep == 0
@@ -57,7 +69,7 @@ switch lower(par.method)
    case {'stockwell', 'strans'}
    case {'wavelet', 'cwt'}
       f0 = 5/(2*pi);
-      scales = helperCWTTimeFreqVector(max(.1,min(par.f)),max(par.f),f0,self.dt,32);
+      scales = getScales(max(.1,min(par.f)),max(par.f),f0,self.dt,32);
       
       n = numel(self.labels);
       for i = 1:n
@@ -83,5 +95,26 @@ obj = SpectralProcess(S,...
    'offset',self.offset,...
    'window',self.window...
    );
-
 obj.cumulOffset = self.cumulOffset;
+
+function scales = getScales(minfreq,maxfreq,f0,dt,NumVoices)
+%   scales = helperCWTTimeFreqVector(minfreq,maxfreq,f0,dt,NumVoices)
+%   minfreq = minimum frequency in cycles/unit time. minfreq must be
+%   positive.
+%   maxfreq = maximum frequency in cycles/unit time
+%   f0 - center frequency of the wavelet in cycles/unit time
+%   dt - sampling interval
+%   NumVoices - number of voices per octave
+%
+%   This function helperCWTTimeFreqPlot is only in support of
+%   CWTTimeFrequencyExample and PhysiologicSignalAnalysisExample. 
+%   It may change in a future release.
+
+a0 = 2^(1/NumVoices);
+minscale = f0/(maxfreq*dt);
+maxscale = f0/(minfreq*dt);
+minscale = floor(NumVoices*log2(minscale));
+maxscale = ceil(NumVoices*log2(maxscale));
+scales = a0.^(minscale:maxscale).*dt;
+
+
