@@ -19,20 +19,28 @@ y(:,3) = chirp(t,1,2,300,'q');       % Start @ 1Hz, cross 300Hz at t=2sec
 
 s = SampledProcess(y,'Fs',1000);
 
+y1 = chirp([0:0.0001:2]',1,2,20,'q');       % Start @ 100Hz, cross 100Hz at t=1sec
+y2 = chirp([0:0.001:2]',1,2,20,'q');       % Start @ 100Hz, cross 200Hz at t=1sec
+y3 = chirp([0:0.005:2]',1,2,20,'q');       % Start @ 1Hz, cross 300Hz at t=2sec
+
+s(1) = SampledProcess(y1,'Fs',1/.0001);
+s(2) = SampledProcess(y2,'Fs',1/.001);
+s(3) = SampledProcess(y3,'Fs',1/.005);
+
 
 %load quadchirp;
 %s = SampledProcess(quadchirp','Fs',1000);
 t = [0:0.001:2]';                    % 2 secs @ 1kHz sample rate
 s = SampledProcess(chirp(t,100,2,100,'q'),'Fs',1000);
-tf = toSpectralProcess(s,'method','cwt','f',[.1 500]);
+tf = tfr(s,'method','cwt','f',[.1 500]);
 plot(tf);
 plot(tf,'log',false);
 
-tf = toSpectralProcess(s,'method','stft','tBlock',.1,'tStep',.02,'f',[.1:500]);
+tf = tfr(s,'method','stft','tBlock',.1,'tStep',.02,'f',[.1:500]);
 plot(tf);
 plot(tf,'log',false);
 
-tf = toSpectralProcess(s,'method','chronux','tBlock',.1,'tStep',.02,'f',[.1:500]);
+tf = tfr(s,'method','chronux','tBlock',.1,'tStep',.02,'f',[.1:500]);
 plot(tf);
 plot(tf,'log',false);
 
@@ -40,4 +48,25 @@ plot(tf,'log',false);
 load quadchirp;
 s = SampledProcess(quadchirp','Fs',1000);
 s.offset = -2;
-tf = toSpectralProcess(s,'method','cwt','f',[.1 500]);
+tf = tfr(s,'method','cwt','f',[.1 500]);
+plot(tf,'log',false);
+
+%%
+t = [0:0.001:2]';                    % 2 secs @ 1kHz sample rate
+y1 = chirp(t,100,2,100,'q');
+y2 = chirp(t,200,2,200,'q');
+s = SampledProcess([y1;y1+y2],'Fs',1000);
+s.offset = -2;
+tf = tfr(s,'method','cwt','f',[.1 500]);
+
+
+t = [0:0.001:2]';                    % 2 secs @ 1kHz sample rate
+y1 = chirp(t,10,2,10,'q');
+y2 = chirp(t,60,2,60,'q');
+s(1) = SampledProcess([y1;y1+y2],'Fs',1000);
+s(2) = SampledProcess([y1*.25;y1+y2],'Fs',1000);
+s.setOffset(-2)
+tf = tfr(s,'method','stft','f',1:100,'tBlock',.5,'tStep',.02);
+plot(tf,'log',false);
+tf.normalize('event',0,'window',[-1.75 -1.],'method','subtract');
+plot(tf,'log',false);

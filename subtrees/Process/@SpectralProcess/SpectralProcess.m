@@ -197,7 +197,8 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       s = sync(self,event,varargin)
 
       % In-place transformations
-
+      self = normalize(self,varargin)
+      
       % Output
       [s,labels] = extract(self,reqLabels)
       output = apply(self,fun,nOpt,varargin)
