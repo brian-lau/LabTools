@@ -7,20 +7,24 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    end
    properties(SetAccess = private)
       processes
-      validSync
    end
-   properties(SetAccess = private, Dependent = true)
+   properties(Dependent = true)
       type
    end
    properties
-      sampledProcess
-      pointProcess
-      eventProcess
       labels
       tStart
       tEnd
       window
       offset
+   end
+   properties(SetAccess = private)
+      validSync
+   end
+   properties(Dependent = true)
+      sampledProcess
+      pointProcess
+      eventProcess
    end
    properties(SetAccess = protected)
       version = '0.1.0'
