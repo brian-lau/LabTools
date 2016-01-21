@@ -1,5 +1,5 @@
 % GUI Layout Toolbox
-% Version 2.1.2 (R2014b) 29-May-2015
+% Version 2.2 (R2016a) 18-December-2015
 %
 % Panels
 %   uix.Panel      - arrange a single element inside a standard panel
@@ -21,6 +21,7 @@
 %
 % Other
 %   uix.Empty      - create an empty space
+%   uix.Text       - create an alignable, clickable text control
 
 %  Copyright 2009-2015 The MathWorks, Inc.
-%  $Revision: 1120 $ $Date: 2015-05-29 11:47:29 +0100 (Fri, 29 May 2015) $
+%  $Revision: 1218 $ $Date: 2015-12-18 17:40:54 -0600 (Fri, 18 Dec 2015) $
