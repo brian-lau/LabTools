@@ -238,7 +238,10 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       % Output
       [s,labels] = extract(self,reqLabels)
       output = apply(self,fun,nOpt,varargin)
-      obj = toSpectralProcess(self,varargin)
+      obj = psd(self,varargin)
+      obj = tfr(self,varargin)
+      obj = coh(self,varargin)
+      obj = pac(self,varargin)
       
       % Visualization
       plot(self,varargin)
