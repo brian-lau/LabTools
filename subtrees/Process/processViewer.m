@@ -25,12 +25,18 @@ updateSelectTab();
       
       data.segment = segment;
       [data.plotS,data.plotP,data.plotE] = countProcesses(seg(1));
+      [data.S,data.P,data.E] = currentProcesses(seg(1));
    end % createData
 
    function [nS,nP,nE] = countProcesses(seg)
       nS = sum(strcmp(seg.type,'SampledProcess'));
       nP = sum(strcmp(seg.type,'PointProcess'));
       nE = sum(strcmp(seg.type,'EventProcess'));
+   end
+   function [S,P,E] = currentProcesses(seg)
+      S = seg.labels(strcmp(seg.type,'SampledProcess'));
+      P = seg.labels(strcmp(seg.type,'PointProcess'));
+      E = seg.labels(strcmp(seg.type,'EventProcess'));
    end
 %-------------------------------------------------------------------------%
    function gui = createInterface()
@@ -194,9 +200,13 @@ updateSelectTab();
          lowerTab1,lowerTab2] = createControlPanels(hbox)
       controlBox = uix.VBox('Parent',hbox,'Spacing',5,...
          'Units','pixels');
-      controlBoxUpper = uix.BoxPanel('Parent',controlBox,'Units','pixels');
-      controlBoxLower = uix.BoxPanel('Parent',controlBox,'Units','pixels');
-      set(controlBox,'Heights',[300 450]);
+      controlBoxUpper = uix.BoxPanel('Parent',controlBox,'Units','pixels',...
+               'Title','ControlBoxUpper','TitleColor',[.5 .5 .5],...
+               'BorderType','beveledout');
+      controlBoxLower = uix.BoxPanel('Parent',controlBox,'Units','pixels',...
+               'Title','ControlBoxLower','TitleColor',[.5 .5 .5],...
+               'BorderType','beveledout');
+      set(controlBox,'Heights',[310 450]);
       
       h1 = uitabgroup('Parent',controlBoxUpper,'Units','pixels');
       upperTab1 = uitab(h1,'title','View','Units','pixels');
@@ -208,45 +218,39 @@ updateSelectTab();
    end
 %-------------------------------------------------------------------------%
    function [ViewGrid,ViewPanelS,ViewPanelP] = createViewPanels(hbox,data)
-      ViewGrid = uix.GridFlex('Parent',hbox,'Spacing',5);
-      heights = [];
+      ViewGrid = uix.TabPanel('Parent',hbox,'Padding',5,'FontSize',18);
+
+      labels = cat(2,data.segment.labels);
+      type = cat(2,data.segment.type);
+      labels = labels(~strcmp(type,'EventProcess'));
+      type = type(~strcmp(type,'EventProcess'));
+      [uLabels,I] = unique(labels);
+      uType = type(I);
+      
+
       if data.plotS
-         for i = 1:data.plotS
-            ViewPanelS(i) = uix.BoxPanel('Parent',ViewGrid,...
-               'Title','Sampled Process','TitleColor',[.5 .5 .5],...
-               'BorderType','beveledout','FontSize',16,'FontAngle','italic');
+         labelsS = uLabels(strcmp(uType,'SampledProcess'));
+%         labelsS = data.segment(ind).labels(strcmp(data.segment(ind).type,'SampledProcess'));
+         for i = 1:numel(labelsS)
+            ViewPanelS(i) = uix.BoxPanel('Parent',ViewGrid,'Tag',labelsS{i});
             axS(i) = axes( 'Parent', uicontainer('Parent',ViewPanelS(i)),...
-               'Position',[.075 .1 .9 .8],...
-               'tickdir','out','Tag',['Sampled Process Axis ' num2str(i)],...
+               'tickdir','out','Tag',labelsS{i},...
                'ActivePositionProperty','outerposition');
-            heights = [heights -1.75];
          end
-      else
-         ViewPanelS = uix.BoxPanel('Parent',ViewGrid,...
-            'Title','Sampled Process','TitleColor',[.5 .5 .5],...
-            'BorderType','beveledout','FontSize',16,'FontAngle','italic');
-         heights = [heights 0];
       end
       if data.plotP
-         for i = 1:data.plotP
-            ViewPanelP(i) = uix.BoxPanel('Parent',ViewGrid,...
-               'Title','Point Process','TitleColor',[.5 .5 .5],...
-               'BorderType','beveledout','FontSize',16,'FontAngle','italic');
+         labelsP = uLabels(strcmp(uType,'PointProcess'));
+%         labelsP = data.segment(ind).labels(strcmp(data.segment(ind).type,'PointProcess'));
+         for i = 1:numel(labelsP)
+            ViewPanelP(i) = uix.BoxPanel('Parent',ViewGrid,'Tag',labelsP{i});
             axP(i) = axes( 'Parent', uicontainer('Parent',ViewPanelP(i)),...
-               'Position', [.075 .2 .9 .6],...
-               'tickdir','out','Tag',['Point Process Axis ' num2str(i)],...
+               'tickdir','out','Tag',labelsP{i},...
                'ActivePositionProperty','outerposition');
-            heights = [heights -1];
          end
-      else
-         ViewPanelP = uix.BoxPanel('Parent',ViewGrid,...
-            'Title','Point Process','TitleColor',[.5 .5 .5],...
-            'BorderType','beveledout','FontSize',16,'FontAngle','italic');
-         heights = [heights 0];
       end
-      
-      ViewGrid.Heights = heights;
-      
+
+      ViewGrid.TabTitles = cat(2,labelsS,labelsP);
+      ViewGrid.TabWidth = 200;
       if exist('axS','var') && exist('axP','var')
          linkaxes([axS,axP],'x');
       end
@@ -282,67 +286,68 @@ updateSelectTab();
    end
 %-------------------------------------------------------------------------%
    function updateViews()
-      %ind = gui.ArraySlider.Value;
-      %[data.plotS,data.plotP,data.plotE] = countProcesses(seg(ind));
-      updateViewPanelP();
-      updateViewPanelS();
-      updateEvents();
+      ind = gui.ArraySlider.Value;
+      [data.plotS,data.plotP,data.plotE] = countProcesses(seg(ind));
+      [data.S,data.P,data.E] = currentProcesses(seg(ind));
+%keyboard
+      delete(gui.ViewGrid);
+      [gui.ViewGrid,gui.ViewPanelS,gui.ViewPanelP] = ...
+         createViewPanels(gui.HBox,data);
+      updateViewPanelP(ind);
+      updateViewPanelS(ind);
+      updateEvents(ind);
    end % updateViews
 %-------------------------------------------------------------------------%
-   function updateViewPanelS()
+   function updateViewPanelS(ind)
       if data.plotS
-         plotS();
+         plotS(ind);
       end
    end
 %-------------------------------------------------------------------------%
-   function updateViewPanelP()
+   function updateViewPanelP(ind)
       if data.plotP
-         plotP();
+         plotP(ind);
       end
    end
 %-------------------------------------------------------------------------%
-   function updateEvents()
+   function updateEvents(ind)
       if get(gui.EventsButton,'Value')
-         plotE();
+         plotE(ind);
       end
    end
 %-------------------------------------------------------------------------%
-   function plotS()
-      ind = gui.ArraySlider.Value;
-      ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
-      axes(ax);
+   function plotS(ind)
+      labelsS = data.segment(ind).labels(strcmp(data.segment(ind).type,'SampledProcess'));
       
-      cla(ax); hold on;
-      try
-      plot(data.segment(ind).sampledProcess,'handle',ax,...
-         'stack',gui.StackButton.Value,...
-         'sep',gui.ScaleSlider.Value*data.sd);
-      axis tight;
-      catch
+      for i = 1:numel(labelsS)
+         ax = findobj(gui.ViewPanelS,'Tag',labelsS{i},'-and','Type','Axes');
+         axes(ax); cla(ax);
+         plot(extract(data.segment(ind),labelsS{i},'labels'),'handle',ax,...
+            'stack',gui.StackButton.Value,...
+            'sep',gui.ScaleSlider.Value*data.sd);
+         axis tight;
       end
    end
 %-------------------------------------------------------------------------%
-   function plotP()
-      ind = gui.ArraySlider.Value;
-      ax = findobj(gui.ViewPanelP,'Tag','Point Process Axis 1');
-      axes(ax);
+   function plotP(ind)
+      labelsP = data.segment(ind).labels(strcmp(data.segment(ind).type,'PointProcess'));
       
-      cla(ax);
-      try
-      raster(data.segment(ind).pointProcess,'handle',ax,'style','tick');
-      axis([get(ax,'xlim') 0.5 max(get(ax,'ylim'))]);
-      catch
+      for i = 1:numel(labelsP)
+         ax = findobj(gui.ViewPanelP,'Tag',labelsP{i},'-and','Type','Axes');
+         axes(ax); cla(ax);
+         raster(extract(data.segment(ind),labelsP{i},'labels'),'handle',ax,'style','tick');
+         axis([get(ax,'xlim') 0.5 max(get(ax,'ylim'))]);
       end
    end
 %-------------------------------------------------------------------------%
-   function plotE()
-      ind = gui.ArraySlider.Value;
-
-      ax = findobj(gui.ViewPanelS,'Tag','Sampled Process Axis 1');
-      if isempty(ax)
-         ax = findobj(gui.ViewPanelP,'Tag','Point Process Axis 1');
+   function plotE(ind)
+      labelsS = data.segment(ind).labels(strcmp(data.segment(ind).type,'SampledProcess'));
+      labelsP = data.segment(ind).labels(strcmp(data.segment(ind).type,'PointProcess'));
+      labels = cat(2,labelsS,labelsP);
+      for i = 1:numel(labels)
+         ax = findobj(gui.ViewGrid,'Tag',labels{i},'-and','Type','Axes');
+         plot(data.segment(ind).eventProcess,'handle',ax);
       end
-      plot(data.segment(ind).eventProcess,'handle',ax);
    end
 %-------------------------------------------------------------------------%
    function onRedrawButton(~,~)
@@ -353,9 +358,10 @@ updateSelectTab();
 %-------------------------------------------------------------------------%
    function onEventsButton(~,~)
       if gui.EventsButton.Value
-         plotE();
+         plotE(gui.ArraySlider.Value);
       else
          delete(findobj(gui.ViewPanelS,'Tag','Event'));
+         delete(findobj(gui.ViewPanelP,'Tag','Event'));
       end
    end % redrawDemo
 
@@ -403,8 +409,13 @@ updateSelectTab();
    end % onHelp
 %-------------------------------------------------------------------------%
    function sd = getCurrentSD(ind)
-      values = data.segment(ind).sampledProcess.values{1};
-      sd = max(nanstd(values));
+      try
+         % FIXME for multiple sampledProcesses
+         values = data.segment(ind).sampledProcess.values{1};
+         sd = max(nanstd(values));
+      catch
+         sd = 1;
+      end
    end
 %-------------------------------------------------------------------------%
    function onScaleSlider( ~, ~ )
