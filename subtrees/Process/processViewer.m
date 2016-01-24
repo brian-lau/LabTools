@@ -3,9 +3,10 @@ function processViewer(seg)
 % here (all functions are nested). We keep things tidy by putting
 % all GUI stuff in one structure and all data stuff in another.
 data = createData(seg);
-if data.plotS
-   data.sd = getCurrentSD(1);
-end
+% if data.plotS
+%    data.sd = getCurrentSD(1);
+% end
+data.sd = 1;
 gui = createInterface();
 updateViews();
 updateSyncTab();
@@ -23,20 +24,20 @@ updateSelectTab();
          error('bad input');
       end
       
-      data.segment = segment;
-      [data.plotS,data.plotP,data.plotE] = countProcesses(seg(1));
-      [data.S,data.P,data.E] = currentProcesses(seg(1));
+      data.segment = segment;      
    end % createData
-
-   function [nS,nP,nE] = countProcesses(seg)
-      nS = sum(strcmp(seg.type,'SampledProcess'));
-      nP = sum(strcmp(seg.type,'PointProcess'));
-      nE = sum(strcmp(seg.type,'EventProcess'));
-   end
-   function [S,P,E] = currentProcesses(seg)
-      S = seg.labels(strcmp(seg.type,'SampledProcess'));
-      P = seg.labels(strcmp(seg.type,'PointProcess'));
-      E = seg.labels(strcmp(seg.type,'EventProcess'));
+   
+   function [processTypes,processLabels,processEnables] = countProcesses(seg,validProcesses)
+      processTypes = intersect(validProcesses,seg.type,'stable');
+      processLabels = cell(1,numel(processTypes));
+      processEnables = cell(1,numel(processTypes));
+      for i = 1:numel(processTypes)
+         ind = strcmp(seg.type,processTypes{i});
+         if any(ind)
+            processLabels{i} = seg.labels(ind);
+            processEnables{i} = true(sum(ind));
+         end
+      end
    end
 %-------------------------------------------------------------------------%
    function gui = createInterface()
@@ -65,7 +66,7 @@ updateSelectTab();
          'Show Plot Tools and Dock Figure'};
       for i = 1:numel(rmTools)
          b = findall(a,'ToolTipString',rmTools{i});
-         delete(b);%set(b,'Visible','Off');
+         delete(b);
       end
       %       hToolLegend = findall(gcf,'tag','Annotation.InsertLegend');
       %       set(hToolLegend, 'ClickedCallback',@cbLegend);
@@ -77,9 +78,9 @@ updateSelectTab();
       [gui.controlBox,gui.controlBoxUpper,gui.controlBoxLower,...
          gui.upperTab1,gui.upperTab2,gui.lowerTab1,gui.lowerTab2] = ...
          createControlPanels(gui.HBox);
-      
+           
       % Panels and axes for data
-      [gui.ViewGrid,gui.ViewPanelS,gui.ViewPanelP] = ...
+      [gui.ViewTab,gui.ViewPanel] = ...
          createViewPanels(gui.HBox,data);
       
       % Fix control panel width
@@ -217,8 +218,8 @@ updateSelectTab();
       lowerTab2 = uitab(h2,'title','Select');
    end
 %-------------------------------------------------------------------------%
-   function [ViewGrid,ViewPanelS,ViewPanelP] = createViewPanels(hbox,data)
-      ViewGrid = uix.TabPanel('Parent',hbox,'Padding',5,'FontSize',18);
+   function [ViewTab,ViewPanel] = createViewPanels(hbox,data)
+      ViewTab = uix.TabPanel('Parent',hbox,'Padding',5,'FontSize',18);
 
       labels = cat(2,data.segment.labels);
       type = cat(2,data.segment.type);
@@ -226,33 +227,20 @@ updateSelectTab();
       type = type(~strcmp(type,'EventProcess'));
       [uLabels,I] = unique(labels);
       uType = type(I);
+  
+      for i = 1:numel(uLabels)
+         ViewPanel(i) = uix.BoxPanel('Parent',ViewTab,'Tag',uLabels{i});
+         ax(i) = axes( 'Parent', uicontainer('Parent',ViewPanel(i)),...
+            'tickdir','out','Tag',uLabels{i},...
+            'ActivePositionProperty','outerposition');
+      end
       
+      % TODO handle empty case?
 
-      if data.plotS
-         labelsS = uLabels(strcmp(uType,'SampledProcess'));
-%         labelsS = data.segment(ind).labels(strcmp(data.segment(ind).type,'SampledProcess'));
-         for i = 1:numel(labelsS)
-            ViewPanelS(i) = uix.BoxPanel('Parent',ViewGrid,'Tag',labelsS{i});
-            axS(i) = axes( 'Parent', uicontainer('Parent',ViewPanelS(i)),...
-               'tickdir','out','Tag',labelsS{i},...
-               'ActivePositionProperty','outerposition');
-         end
-      end
-      if data.plotP
-         labelsP = uLabels(strcmp(uType,'PointProcess'));
-%         labelsP = data.segment(ind).labels(strcmp(data.segment(ind).type,'PointProcess'));
-         for i = 1:numel(labelsP)
-            ViewPanelP(i) = uix.BoxPanel('Parent',ViewGrid,'Tag',labelsP{i});
-            axP(i) = axes( 'Parent', uicontainer('Parent',ViewPanelP(i)),...
-               'tickdir','out','Tag',labelsP{i},...
-               'ActivePositionProperty','outerposition');
-         end
-      end
-
-      ViewGrid.TabTitles = cat(2,labelsS,labelsP);
-      ViewGrid.TabWidth = 200;
-      if exist('axS','var') && exist('axP','var')
-         linkaxes([axS,axP],'x');
+      ViewTab.TabTitles = uLabels;
+      ViewTab.TabWidth = 200;
+      if exist('ax','var')
+         linkaxes([ax],'x');
       end
    end
 %-------------------------------------------------------------------------%
@@ -287,26 +275,50 @@ updateSelectTab();
 %-------------------------------------------------------------------------%
    function updateViews()
       ind = gui.ArraySlider.Value;
-      [data.plotS,data.plotP,data.plotE] = countProcesses(seg(ind));
-      [data.S,data.P,data.E] = currentProcesses(seg(ind));
-%keyboard
-      delete(gui.ViewGrid);
-      [gui.ViewGrid,gui.ViewPanelS,gui.ViewPanelP] = ...
-         createViewPanels(gui.HBox,data);
-      updateViewPanelP(ind);
-      updateViewPanelS(ind);
+ 
+      % Determine number of initial views
+      validProcesses = {'SampledProcess' 'PointProcess' 'SpectralProcess'};
+      [gui.processTypes,gui.processLabels,gui.processEnables] = ...
+         countProcesses(data.segment(ind),validProcesses);
+
+      for i = 1:numel(gui.processTypes)
+         for j = 1:numel(gui.processLabels{i})
+            updatePlots(ind,gui.processTypes{i},gui.processLabels{i}{j});
+         end
+      end
+      
+      [~,I] = intersect(gui.ViewTab.TabTitles,cell.flatten(gui.processLabels));
+      I2 = true(size(gui.ViewTab.TabTitles));
+      I2(I) = false;
+      I2 = find(I2);
+      gui.ViewTab.TabEnables(I) = {'on'};
+      gui.ViewTab.TabEnables(I2) = {'off'};
+      for i = 1:numel(I2)
+         ax = findobj(gui.ViewPanel,'Tag',gui.ViewTab.TabTitles{I2(i)},'-and','Type','Axes');
+         cla(ax);
+         set(ax,'Visible','off');
+      end
       updateEvents(ind);
    end % updateViews
-%-------------------------------------------------------------------------%
-   function updateViewPanelS(ind)
-      if data.plotS
-         plotS(ind);
+
+   function updatePlots(ind,type,labels)
+      if ischar(labels)
+         labels = {labels};
       end
-   end
-%-------------------------------------------------------------------------%
-   function updateViewPanelP(ind)
-      if data.plotP
-         plotP(ind);
+      for i = 1:numel(labels)
+         ax = findobj(gui.ViewPanel,'Tag',labels{i},'-and','Type','Axes');
+         switch type
+            case 'SampledProcess'
+               axes(ax); cla(ax); set(ax,'Visible','on');
+               plot(extract(data.segment(ind),labels{i},'labels'),'handle',ax,...
+                  'stack',gui.StackButton.Value,...
+                  'sep',gui.ScaleSlider.Value*data.sd);
+               axis tight;
+            case 'PointProcess'
+               axes(ax); cla(ax); set(ax,'Visible','on');
+               raster(extract(data.segment(ind),labels{i},'labels'),'handle',ax,'style','tick');
+               axis([get(ax,'xlim') 0.5 max(get(ax,'ylim'))]);
+         end
       end
    end
 %-------------------------------------------------------------------------%
@@ -316,36 +328,12 @@ updateSelectTab();
       end
    end
 %-------------------------------------------------------------------------%
-   function plotS(ind)
-      labelsS = data.segment(ind).labels(strcmp(data.segment(ind).type,'SampledProcess'));
-      
-      for i = 1:numel(labelsS)
-         ax = findobj(gui.ViewPanelS,'Tag',labelsS{i},'-and','Type','Axes');
-         axes(ax); cla(ax);
-         plot(extract(data.segment(ind),labelsS{i},'labels'),'handle',ax,...
-            'stack',gui.StackButton.Value,...
-            'sep',gui.ScaleSlider.Value*data.sd);
-         axis tight;
-      end
-   end
-%-------------------------------------------------------------------------%
-   function plotP(ind)
-      labelsP = data.segment(ind).labels(strcmp(data.segment(ind).type,'PointProcess'));
-      
-      for i = 1:numel(labelsP)
-         ax = findobj(gui.ViewPanelP,'Tag',labelsP{i},'-and','Type','Axes');
-         axes(ax); cla(ax);
-         raster(extract(data.segment(ind),labelsP{i},'labels'),'handle',ax,'style','tick');
-         axis([get(ax,'xlim') 0.5 max(get(ax,'ylim'))]);
-      end
-   end
-%-------------------------------------------------------------------------%
    function plotE(ind)
       labelsS = data.segment(ind).labels(strcmp(data.segment(ind).type,'SampledProcess'));
       labelsP = data.segment(ind).labels(strcmp(data.segment(ind).type,'PointProcess'));
       labels = cat(2,labelsS,labelsP);
       for i = 1:numel(labels)
-         ax = findobj(gui.ViewGrid,'Tag',labels{i},'-and','Type','Axes');
+         ax = findobj(gui.ViewPanel,'Tag',labels{i},'-and','Type','Axes');
          plot(data.segment(ind).eventProcess,'handle',ax);
       end
    end
@@ -364,7 +352,6 @@ updateSelectTab();
          delete(findobj(gui.ViewPanelP,'Tag','Event'));
       end
    end % redrawDemo
-
 %-------------------------------------------------------------------------%
    function onMousePanButton( ~, ~ )
       zoom off;
