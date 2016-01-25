@@ -7,13 +7,13 @@ end
 proc = cell(size(self));
 for i = 1:numel(self)
    switch lower(flag)
-      case 'label'
+      case {'label', 'labels'}
          ind = cellfun(@(x) sum(strcmpi(x,request))>0,self(i).labels);
       case 'type'
-         ind = cellfun(@(x) sum(strcmpi(class(x),request))>0,self(i).processes);
+         ind = cellfun(@(x) sum(strcmpi(x,request))>0,self(i).type);
    end
    if ~any(ind)
-      proc = {};
+      proc{i} = {};
    else
       proc{i} = horzcat(self(i).processes{ind});
    end
