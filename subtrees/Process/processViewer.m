@@ -86,18 +86,7 @@ updateSelectTab();
       % Fix control panel width
       set(gui.HBox,'Widths',[225 -1]);
       
-      top = 220;
-      gui.ScaleSliderTxt = uicontrol('parent',gui.upperTab1,'Style','text',...
-         'String','Stack separation 0 SD','HorizontalAlignment','Left',...
-         'Position',[43,top-25,125,20],'Fontsize',10);
-      gui.StackButton = uicontrol('parent',gui.upperTab1,'style','checkbox',...
-         'position',[10,top,80,25],'Fontsize',14,...
-         'String','Stack','Callback',@onStackButton);
-      
-      gui.ScaleSlider = uicontrol('parent',gui.upperTab1,'style','slider',...
-         'position',[43,top-50,125-23,25],'Callback', @onScaleSlider);
-      set(gui.ScaleSlider,'Min',0,'Max',6,'Value',0);
-      
+      top = 220;      
       gui.EventsButton = uicontrol('parent',gui.upperTab1,'Style','checkbox',...
          'String','Plot Events','Fontsize',14,...
          'Position',[10,top-75,110,25],'Callback',@onEventsButton);
@@ -216,11 +205,12 @@ updateSelectTab();
       h2 = uitabgroup('Parent',controlBoxLower);
       lowerTab1 = uitab(h2,'title','Sync');
       lowerTab2 = uitab(h2,'title','Select');
-   end
+   end % createControlPanels
 %-------------------------------------------------------------------------%
    function [ViewTab,ViewPanel] = createViewPanels(hbox,data)
       ViewTab = uix.TabPanel('Parent',hbox,'Padding',5,'FontSize',18);
 
+      % Find all unique processes 
       labels = cat(2,data.segment.labels);
       type = cat(2,data.segment.type);
       labels = labels(~strcmp(type,'EventProcess'));
@@ -229,10 +219,13 @@ updateSelectTab();
       uType = type(I);
   
       for i = 1:numel(uLabels)
-         ViewPanel(i) = uix.BoxPanel('Parent',ViewTab,'Tag',uLabels{i});
+         ViewPanel(i) = uix.VBox('Parent',ViewTab,'Tag',uLabels{i});
+         createViewPanelControl(ViewPanel(i),uType{i},uLabels{i});
          ax(i) = axes( 'Parent', uicontainer('Parent',ViewPanel(i)),...
             'tickdir','out','Tag',uLabels{i},...
             'ActivePositionProperty','outerposition');
+         
+         set(ViewPanel(i), 'Heights', [100 -2],'Spacing',5);
       end
       
       % TODO handle empty case?
@@ -240,7 +233,23 @@ updateSelectTab();
       ViewTab.TabTitles = uLabels;
       ViewTab.TabWidth = 200;
       if exist('ax','var')
-         linkaxes([ax],'x');
+         linkaxes(ax,'x');
+      end
+   end
+%-------------------------------------------------------------------------%
+   function ViewPanelControl = createViewPanelControl(ViewPanel,type,tag)
+      ViewPanelControl = uipanel('Parent',ViewPanel,'Units','pixels','Tag',tag);
+      switch type
+         case 'SampledProcess'
+            uicontrol('parent',ViewPanelControl,'Style','text',...
+               'String','Stack separation 0 SD','HorizontalAlignment','Left',...
+               'Position',[15,35,125,25],'Fontsize',10,'Tag','StackSliderText');
+            StackSlider = uicontrol('parent',ViewPanelControl,'style','slider',...
+               'position',[15,15,125,25],'Callback', @onStackSlider,'Tag','StackSlider');
+            set(StackSlider,'Min',0,'Max',6,'Value',0);
+            uicontrol('parent',ViewPanelControl,'style','checkbox',...
+               'position',[5,65,80,25],'Fontsize',14,'Tag','Stack',...
+               'String','Stack','Callback',@onStackButton);
       end
    end
 %-------------------------------------------------------------------------%
@@ -276,17 +285,19 @@ updateSelectTab();
    function updateViews()
       ind = gui.ArraySlider.Value;
  
-      % Determine number of initial views
+      % Determine number of active views
       validProcesses = {'SampledProcess' 'PointProcess' 'SpectralProcess'};
       [gui.processTypes,gui.processLabels,gui.processEnables] = ...
          countProcesses(data.segment(ind),validProcesses);
-
+      % Update active views
       for i = 1:numel(gui.processTypes)
          for j = 1:numel(gui.processLabels{i})
             updatePlots(ind,gui.processTypes{i},gui.processLabels{i}{j});
+            updateEvents(ind,gui.processLabels{i}{j});
          end
       end
-      
+
+      % Toggle visibility off on inactive views
       [~,I] = intersect(gui.ViewTab.TabTitles,cell.flatten(gui.processLabels));
       I2 = true(size(gui.ViewTab.TabTitles));
       I2(I) = false;
@@ -298,9 +309,8 @@ updateSelectTab();
          cla(ax);
          set(ax,'Visible','off');
       end
-      updateEvents(ind);
    end % updateViews
-
+%-------------------------------------------------------------------------%
    function updatePlots(ind,type,labels)
       if ischar(labels)
          labels = {labels};
@@ -310,9 +320,12 @@ updateSelectTab();
          switch type
             case 'SampledProcess'
                axes(ax); cla(ax); set(ax,'Visible','on');
+               viewPanelControl = findobj(gui.ViewPanel,'Tag',labels{i});
+               stack = findobj(viewPanelControl,'Tag','Stack','-depth',1);
+               stackSlider = findobj(viewPanelControl,'Tag','StackSlider','-depth',1);
                plot(extract(data.segment(ind),labels{i},'labels'),'handle',ax,...
-                  'stack',gui.StackButton.Value,...
-                  'sep',gui.ScaleSlider.Value*data.sd);
+                  'stack',stack.Value,...
+                  'sep',stackSlider.Value*data.sd);
                axis tight;
             case 'PointProcess'
                axes(ax); cla(ax); set(ax,'Visible','on');
@@ -322,34 +335,32 @@ updateSelectTab();
       end
    end
 %-------------------------------------------------------------------------%
-   function updateEvents(ind)
+   function updateEvents(ind,labels)
       if get(gui.EventsButton,'Value')
-         plotE(ind);
+         plotE(ind,labels);
       end
    end
 %-------------------------------------------------------------------------%
-   function plotE(ind)
-      labelsS = data.segment(ind).labels(strcmp(data.segment(ind).type,'SampledProcess'));
-      labelsP = data.segment(ind).labels(strcmp(data.segment(ind).type,'PointProcess'));
-      labels = cat(2,labelsS,labelsP);
+   function plotE(ind,labels)
+      if nargin < 2
+         labelsS = data.segment(ind).labels(strcmp(data.segment(ind).type,'SampledProcess'));
+         labelsP = data.segment(ind).labels(strcmp(data.segment(ind).type,'PointProcess'));
+         labels = cat(2,labelsS,labelsP);
+      end
+      if ischar(labels)
+         labels = {labels};
+      end
       for i = 1:numel(labels)
          ax = findobj(gui.ViewPanel,'Tag',labels{i},'-and','Type','Axes');
          plot(data.segment(ind).eventProcess,'handle',ax);
       end
    end
 %-------------------------------------------------------------------------%
-   function onRedrawButton(~,~)
-      fig.interactivemouse('OFF');
-      gui.MousePanButton.Value = 0;
-      updateViews();
-   end % redrawDemo
-%-------------------------------------------------------------------------%
    function onEventsButton(~,~)
       if gui.EventsButton.Value
          plotE(gui.ArraySlider.Value);
       else
-         delete(findobj(gui.ViewPanelS,'Tag','Event'));
-         delete(findobj(gui.ViewPanelP,'Tag','Event'));
+         delete(findobj(gui.ViewPanel,'Tag','Event'));
       end
    end % redrawDemo
 %-------------------------------------------------------------------------%
@@ -362,8 +373,6 @@ updateSelectTab();
    function onArraySlider( ~, ~ )
       if gui.ArraySlider.Value >= gui.ArraySlider.Max
          gui.ArraySlider.Value = 1;
-         %       elseif get(gui.ArraySlider,'Value') == get(gui.ArraySlider,'Min')
-         %          set(gui.ArraySlider,'Value',get(gui.ArraySlider,'Max'));
       else
          gui.ArraySlider.Value = ceil(gui.ArraySlider.Value');
       end
@@ -372,32 +381,40 @@ updateSelectTab();
          num2str(numel(data.segment))];
       updateViews();
       updateSyncTab();
-   end % onHelp
+   end % onArraySlider
 %-------------------------------------------------------------------------%
-   function onStackButton( ~, ~ )
-      if data.plotS
-         gui.MousePanButton.Value = 0;
-         fig.interactivemouse('OFF');
-         
-         ind = gui.ArraySlider.Value;
-         data.sd = getCurrentSD(ind);
-         
-         if gui.StackButton.Value
-            gui.ScaleSlider.Value = 3;
-            gui.ScaleSliderTxt.String = 'Stack separation 3 SD';
-         else
-            gui.ScaleSlider.Value = 0;
-            gui.ScaleSliderTxt.String = 'Stack separation 0 SD';
-         end
-         
-         updateViewPanelS();
-         updateEvents();
+   function onStackButton(source,~)
+      ind = gui.ArraySlider.Value;
+      
+      viewPanelControl = get(source,'Parent');      
+      stack = findobj(viewPanelControl,'Tag','Stack');
+      stackSliderText = findobj(viewPanelControl,'Tag','StackSliderText');
+      stackSlider = findobj(viewPanelControl,'Tag','StackSlider');
+
+      if stack.Value
+         stackSlider.Value = 3;
+         stackSliderText.String = 'Stack separation 3 SD';
+      else
+         stackSlider.Value = 0;
+         stackSliderText.String = 'Stack separation 0 SD';
       end
-   end % onHelp
+      updatePlots(ind,'SampledProcess',viewPanelControl.Tag)
+      updateEvents(ind,viewPanelControl.Tag);
+      
+%       if data.plotS
+%          gui.MousePanButton.Value = 0;
+%          fig.interactivemouse('OFF');
+%          
+%          ind = gui.ArraySlider.Value;
+%          data.sd = getCurrentSD(ind);
+%       end
+   end % onStackButton
 %-------------------------------------------------------------------------%
    function sd = getCurrentSD(ind)
       try
          % FIXME for multiple sampledProcesses
+         extract(data.segment(ind),labels{i},'labels')
+         
          values = data.segment(ind).sampledProcess.values{1};
          sd = max(nanstd(values));
       catch
@@ -405,17 +422,24 @@ updateSelectTab();
       end
    end
 %-------------------------------------------------------------------------%
-   function onScaleSlider( ~, ~ )
-      if gui.StackButton.Value
-         gui.ScaleSliderTxt.String = ...
-            ['Stack separation ' sprintf('%1.1f',(get(gui.ScaleSlider,'Value'))) ' SD'];
-         updateViewPanelS();
-         updateEvents();
+   function onStackSlider(source,~)
+      ind = gui.ArraySlider.Value;
+      
+      viewPanelControl = get(source,'Parent');      
+      stack = findobj(viewPanelControl,'Tag','Stack');
+      stackSliderText = findobj(viewPanelControl,'Tag','StackSliderText');
+      stackSlider = findobj(viewPanelControl,'Tag','StackSlider');
+      
+      if stack.Value
+         stackSliderText.String = ...
+            ['Stack separation ' sprintf('%1.1f',(get(stackSlider,'Value'))) ' SD'];
+         updatePlots(ind,'SampledProcess',viewPanelControl.Tag);
+         updateEvents(ind,viewPanelControl.Tag);
       else
-         gui.ScaleSlider.Value = 0;
-         gui.ScaleSliderTxt.String = 'Stack separation 0 SD';
+         stackSlider.Value = 0;
+         stackSliderText.String = 'Stack separation 0 SD';
       end
-   end % onExit
+   end % onStackSlider
 %-------------------------------------------------------------------------%
    function onSyncWindowStart(~,~)
       val = str2num(gui.SyncWindowStart.String);
@@ -464,7 +488,6 @@ updateSelectTab();
       toc
       updateViews();
       toggleBusy(gui.Window);
-      
    end
 %-------------------------------------------------------------------------%
    function onSyncResetButton(~,~)
