@@ -24,21 +24,21 @@ params = p.Unmatched;
 par = p.Results;
 
 if isempty(p.Results.handle) || ~ishandle(p.Results.handle)
-   figure;
-   h = subplot(1,1,1);
+   h = figure;
+%   h = subplot(1,1,1);
 else
    h = p.Results.handle;
-   axes(h);
+   %axes(h);
 end
-hold on;
+%hold on;
 
-if numel(self) > 1
-   for i = 1:numel(self)
-      g = subplot(numel(self),1,i); hold on
-      plot(self(i),'handle',g,varargin{:});
-   end
-   return
-end
+% if numel(self) > 1
+%    for i = 1:numel(self)
+%       g = subplot(numel(self),1,i); hold on
+%       plot(self(i),'handle',g,varargin{:});
+%    end
+%    return
+% end
 
 % FIXME multiple windows?
 values = self.values{1};
@@ -47,7 +47,7 @@ f = self.f;
 
 n = numel(self.labels);
 for i = 1:n
-   subplot(n,1,i); hold on;
+   subplot(n,1,i,'Parent',h); %hold on;
    
    if par.log
       v = 10*log10(abs(values(:,:,i)'));
@@ -71,7 +71,7 @@ for i = 1:n
          colorbar;
       end
    end
-   title(self.labels{i});
+%   title(self.labels{i});
    axis tight;
 end
 
