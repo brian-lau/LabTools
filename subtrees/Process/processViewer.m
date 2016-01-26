@@ -26,19 +26,6 @@ updateSelectTab();
       
       data.segment = segment;      
    end % createData
-   
-   function [processTypes,processLabels,processEnables] = countProcesses(seg,validProcesses)
-      processTypes = intersect(seg.type,validProcesses,'stable');
-      processLabels = cell(1,numel(processTypes));
-      processEnables = cell(1,numel(processTypes));
-      for i = 1:numel(processTypes)
-         ind = strcmp(seg.type,processTypes{i});
-         if any(ind)
-            processLabels{i} = seg.labels(ind);
-            processEnables{i} = true(sum(ind));
-         end
-      end
-   end
 %-------------------------------------------------------------------------%
    function gui = createInterface()
       gui = struct();
@@ -54,10 +41,10 @@ updateSelectTab();
          'Visible','off',...
          'HandleVisibility','on');
             
-      % + File menu
-      gui.FileMenu = uimenu(gui.Window,'Label','File');
-      uimenu(gui.FileMenu,'Label','Load','Callback',@onExit);
-      uimenu(gui.FileMenu,'Label','Exit','Callback',@onExit);
+%       % + File menu
+%       gui.FileMenu = uimenu(gui.Window,'Label','File');
+%       uimenu(gui.FileMenu,'Label','Load','Callback',@onExit);
+%       uimenu(gui.FileMenu,'Label','Exit','Callback',@onExit);
       
       % Remove some toolbar elements
       a = findall(gui.Window);
@@ -80,7 +67,7 @@ updateSelectTab();
          createControlPanels(gui.HBox);
            
       % Panels and axes for data
-      [gui.ViewTab,gui.ViewPanel] = ...
+      [gui.ViewTab,gui.ViewPanel,gui.plotInfo] = ...
          createViewPanels(gui.HBox,data);
       
       % Fix control panel width
@@ -105,14 +92,14 @@ updateSelectTab();
       set(gui.ArraySlider,'SliderStep', [1 5] / max(1,n - 1),'Value',1);
       set(gui.ArraySlider,'Callback', @onArraySlider);
       
-      n = size(data.segment(1).window,1);
-      gui.WindowSliderTxt = uicontrol('parent',gui.upperTab1,'Style','text',...
-         'String',['Window 1/' num2str(n)],...
-         'Position',[20,top-200,150,25],'Fontsize',14);
-      gui.WindowSlider = uicontrol('parent',gui.upperTab1,'style','slider',...
-         'position',[20,top-225,150,25],'Callback',@(h,e)disp('slide me'));
-      set(gui.WindowSlider,'Min',1,'Max',n);
-      set(gui.WindowSlider,'SliderStep', [1 5] / max(1,n - 1),'Value', 1);
+%       n = size(data.segment(1).window,1);
+%       gui.WindowSliderTxt = uicontrol('parent',gui.upperTab1,'Style','text',...
+%          'String',['Window 1/' num2str(n)],...
+%          'Position',[20,top-200,150,25],'Fontsize',14);
+%       gui.WindowSlider = uicontrol('parent',gui.upperTab1,'style','slider',...
+%          'position',[20,top-225,150,25],'Callback',@(h,e)disp('slide me'));
+%       set(gui.WindowSlider,'Min',1,'Max',n);
+%       set(gui.WindowSlider,'SliderStep', [1 5] / max(1,n - 1),'Value', 1);
       
       % + Sync tab
       top = 350;
@@ -207,7 +194,7 @@ updateSelectTab();
       lowerTab2 = uitab(h2,'title','Select');
    end % createControlPanels
 %-------------------------------------------------------------------------%
-   function [ViewTab,ViewPanel] = createViewPanels(hbox,data)
+   function [ViewTab,ViewPanel,plotInfo] = createViewPanels(hbox,data)
       ViewTab = uix.TabPanel('Parent',hbox,'Padding',5,'FontSize',18,...
          'SelectionChangedFcn',@shit);
 
@@ -218,31 +205,40 @@ updateSelectTab();
       type = type(~strcmp(type,'EventProcess'));
       [uLabels,I] = unique(labels,'stable');
       uType = type(I);
-  
+      
+      plotInfo.uLabels = uLabels;
+      plotInfo.bool = false(1,numel(uLabels));
+      
       % Setup a separate tab for all possible processes
       for i = 1:numel(uLabels)
          ViewPanel(i) = uix.VBox('Parent',ViewTab,'Tag',uLabels{i});
+         % Each tab has a control area
          createViewPanelControl(ViewPanel(i),uType{i},[uLabels{i} '_ViewPanelControl']);
+         % Each tab has a plot area
          switch uType{i}
             case {'SampledProcess', 'PointProcess'}
-               axes('Parent', uicontainer('Parent',ViewPanel(i)),...
+               axes('Parent', uix.BoxPanel('Parent',ViewPanel(i)),...
                   'tickdir','out','Tag',uLabels{i},...
                   'ActivePositionProperty','outerposition');
             case 'SpectralProcess'
-               uipanel('Parent',ViewPanel(i),'Tag',uLabels{i});
+               h = uix.BoxPanel('Parent',ViewPanel(i));
+               % HACK to allow subplot to work properly
+               uipanel('Parent',h,'Tag',uLabels{i});
          end
          set(ViewPanel(i), 'Heights', [100 -2],'Spacing',5);
       end
-      
+      %set( h, 'DockFcn', {@nDock, 3} );
       % TODO handle empty case?
 
       ViewTab.TabTitles = uLabels;
-      ViewTab.TabWidth = 200;
+      ViewTab.TabWidth = 170;
       
 %       if exist('ax','var')
 %          linkaxes(ax,'x');
 %       end
    end
+%-------------------------------------------------------------------------%
+
 %-------------------------------------------------------------------------%
    function ViewPanelControl = createViewPanelControl(ViewPanel,type,tag)
       ViewPanelControl = uipanel('Parent',ViewPanel,'Units','pixels','Tag',tag);
@@ -293,46 +289,46 @@ updateSelectTab();
       ind = gui.ArraySlider.Value;
  
       % Determine number of active views
-      validProcesses = {'SampledProcess' 'PointProcess' 'SpectralProcess'};
-      [gui.processTypes,gui.processLabels,gui.processEnables] = ...
-         countProcesses(data.segment(ind),validProcesses);
+%      validProcesses = {'SampledProcess' 'PointProcess' 'SpectralProcess'};
+      gui.processTypes = data.segment(ind).type;
+      gui.processLabels = data.segment(ind).labels;
       
-      % Toggle visibility of active tabs
+      % Toggle visibility on for active tabs
       [~,I] = intersect(gui.ViewTab.TabTitles,cell.flatten(gui.processLabels));
       gui.ViewTab.TabEnables(I) = {'on'};
-%      shit(gui.ViewTab)
-%keyboard
-%       % Update active views
-%       for i = 1:numel(gui.processTypes)
-%          for j = 1:numel(gui.processLabels{i})
-%             ax = findobj(gui.ViewPanel,'Tag',gui.processLabels{i}{j});
-%             set(ax,'Visible','on');
-%             updatePlots(ind,gui.processTypes{i},gui.processLabels{i}{j});
-%             updateEvents(ind,gui.processLabels{i}{j});
-%          end
-%       end
+      shit()
 
-      % Toggle visibility off on inactive views
+      % Toggle visibility off for inactive tabs
       I2 = true(size(gui.ViewTab.TabTitles));
       I2(I) = false;
       I2 = find(I2);
       gui.ViewTab.TabEnables(I2) = {'off'};
+      % Also toggle off view panel
       for i = 1:numel(I2)
          ax = findobj(gui.ViewPanel,'Tag',gui.ViewTab.TabTitles{I2(i)});
          set(ax,'Visible','off');
       end
    end % updateViews
-   function shit(source,~)
+%-------------------------------------------------------------------------%
+   function shit(~,~)%(source,~)
       if exist('gui','var')
+         source = gui.ViewTab;
          ind = gui.ArraySlider.Value;
-         label = get(source.Children(source.Selection),'Tag');
-
+         label = get(source.Contents(source.Selection),'Tag');
+         
          labels = cell.flatten(gui.processLabels);
-         type = gui.processTypes{strcmp(labels,label)};
-         panel = findobj(gui.ViewPanel,'Tag',label);
-         set(panel,'Visible','on');
-         updatePlots(ind,type,label);
-         updateEvents(ind,label);
+         lind = strcmp(labels,label);
+         if any(lind)
+            panel = findobj(gui.ViewPanel,'Tag',label);
+            set(panel,'Visible','on');
+            ind2 = strcmp(gui.plotInfo.uLabels,label);
+            if ~gui.plotInfo.bool(ind2)
+               type = gui.processTypes{lind};
+               updatePlots(ind,type,label);
+               updateEvents(ind,label);
+               gui.plotInfo.bool(ind2) = true;
+            end
+         end
       end
    end
 %-------------------------------------------------------------------------%
@@ -341,27 +337,30 @@ updateSelectTab();
          labels = {labels};
       end
       for i = 1:numel(labels)
-         
          switch type
             case 'SampledProcess'
                ax = findobj(gui.ViewPanel,'Tag',labels{i},'-and','Type','Axes');
-               axes(ax); cla(ax); set(ax,'Visible','on');
+               %axes(ax); 
+               cla(ax); set(ax,'Visible','on');
                viewPanelControl = findobj(gui.ViewPanel,'Tag',[labels{i} '_ViewPanelControl']);
                stack = findobj(viewPanelControl,'Tag','Stack','-depth',1);
                stackSlider = findobj(viewPanelControl,'Tag','StackSlider','-depth',1);
+               try
                plot(extract(data.segment(ind),labels{i},'labels'),'handle',ax,...
                   'stack',stack.Value,...
                   'sep',stackSlider.Value*data.sd);
+               catch, keyboard; end
                axis tight;
             case 'PointProcess'
                ax = findobj(gui.ViewPanel,'Tag',labels{i},'-and','Type','Axes');
-               axes(ax); cla(ax); set(ax,'Visible','on');
+               %axes(ax); 
+               cla(ax); set(ax,'Visible','on');
                raster(extract(data.segment(ind),labels{i},'labels'),'handle',ax,'style','tick');
                axis([get(ax,'xlim') 0.5 max(get(ax,'ylim'))]);
             case 'SpectralProcess'
                ax = findobj(gui.ViewPanel,'Tag',labels{i},'-and','Type','UIPanel');
-               set(ax(1),'Visible','on');
-               plot(extract(data.segment(ind),labels{i},'labels'),'handle',ax(1),'colorbar',false);
+               set(ax,'Visible','on');
+               plot(extract(data.segment(ind),labels{i},'labels'),'handle',ax,'colorbar',false);
          end
       end
    end
@@ -410,6 +409,7 @@ updateSelectTab();
       gui.ArraySliderTxt.String = ...
          ['Array ' num2str(get(gui.ArraySlider,'Value')) '/'...
          num2str(numel(data.segment))];
+      gui.plotInfo.bool = false(1,numel(gui.plotInfo.uLabels));
       updateViews();
       updateSyncTab();
    end % onArraySlider
@@ -430,7 +430,7 @@ updateSelectTab();
          stackSliderText.String = 'Stack separation 0 SD';
       end
       updatePlots(ind,'SampledProcess',get(get(viewPanelControl,'Parent'),'Tag'));
-      updateEvents(ind,viewPanelControl.Tag);
+      updateEvents(ind,get(get(viewPanelControl,'Parent'),'Tag'));
       
 %       if data.plotS
 %          gui.MousePanButton.Value = 0;

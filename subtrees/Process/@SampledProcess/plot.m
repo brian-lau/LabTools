@@ -17,7 +17,7 @@ if isempty(p.Results.handle) || ~ishandle(p.Results.handle)
    h = subplot(1,1,1);
 else
    h = p.Results.handle;
-   axes(h);
+   %axes(h);
 end
 hold on;
 
@@ -39,7 +39,7 @@ if p.Results.stack
    plot(t,bsxfun(@plus,values,sf));
    plot(repmat([t(1) t(end)]',1,n),[sf' , sf']','--','color',[.7 .7 .7 .4]);
 else
-   plot(t,values);
+   plot(t,values,'Parent',h);
 end
 
 if nargout >= 1
