@@ -47,8 +47,8 @@ f = self.f;
 
 n = numel(self.labels);
 for i = 1:n
-   subplot(n,1,i,'Parent',h); %hold on;
-   
+   g = subplot(n,1,i,'Parent',h); %hold on;
+   %cla(g)
    if par.log
       v = 10*log10(abs(values(:,:,i)'));
    else
@@ -59,9 +59,9 @@ for i = 1:n
       plot(f,v);
    else
       args = {t,f,v};
-      surf(args{:},'edgecolor','none');
-      view(0,90);
-      shading interp;
+      surf(args{:},'edgecolor','none','Parent',g);
+      view(g,0,90);
+      shading(g,'interp');
 %       % imagesc cannot plot irregularly spaced data (eg, wavelet)
 %       % maybe try imagescnan FEX
 %       imagesc('Xdata',t,'Ydata',f,'CData',v);
@@ -74,7 +74,7 @@ for i = 1:n
 %   title(self.labels{i});
    axis tight;
 end
-
+%keyboard
 if nargout >= 1
    varargout{1} = h;
 end
