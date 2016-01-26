@@ -39,7 +39,8 @@ updateSelectTab();
          'Toolbar','figure',...
          'OuterPosition',[sz(1:2)+50 sz(3:4)-100],...
          'Visible','off',...
-         'HandleVisibility','on');
+         'HandleVisibility','on',...
+         'CloseRequestFcn', @closeAll );
             
 %       % + File menu
 %       gui.FileMenu = uimenu(gui.Window,'Label','File');
@@ -69,15 +70,19 @@ updateSelectTab();
       % Panels and axes for data
       [gui.ViewTab,gui.ViewPanel,gui.plotInfo] = ...
          createViewPanels(gui.HBox,data);
+      % Handle array that stores the actual BoxPanel holding each figure
+      gui.ViewPanelBoxes = findobj(gui.ViewPanel,'-property','DockFcn');
       
       % Fix control panel width
       set(gui.HBox,'Widths',[225 -1]);
       
       top = 220;      
+      gui.LinkButton = uicontrol('parent',gui.upperTab1,'Style','checkbox',...
+         'String','Link axes','Fontsize',14,...
+         'Position',[10,top-50,110,25],'Callback',@onLinkButton);
       gui.EventsButton = uicontrol('parent',gui.upperTab1,'Style','checkbox',...
          'String','Plot Events','Fontsize',14,...
          'Position',[10,top-75,110,25],'Callback',@onEventsButton);
-      
       gui.MousePanButton = uicontrol('parent',gui.upperTab1,'style','checkbox',...
          'position',[10,top-100,150,25],'Fontsize',14,...
          'String','Interactive zoom','Callback',@onMousePanButton);
@@ -217,27 +222,51 @@ updateSelectTab();
          % Each tab has a plot area
          switch uType{i}
             case {'SampledProcess', 'PointProcess'}
-               axes('Parent', uix.BoxPanel('Parent',ViewPanel(i)),...
-                  'tickdir','out','Tag',uLabels{i},...
+               axes('Parent', uix.BoxPanel('Parent',ViewPanel(i),...
+                  'Tag',[uLabels{i} '_ViewPanelBox'],'DockFcn',{@unDock, i}),...
+                  'tickdir','out','Tag',uLabels{i},'NextPlot','replacechildren',...
                   'ActivePositionProperty','outerposition');
             case 'SpectralProcess'
-               h = uix.BoxPanel('Parent',ViewPanel(i));
+               h = uix.BoxPanel('Parent',ViewPanel(i),...
+                  'Tag',[uLabels{i} '_ViewPanelBox'],'DockFcn',{@unDock, i});
                % HACK to allow subplot to work properly
                uipanel('Parent',h,'Tag',uLabels{i});
          end
          set(ViewPanel(i), 'Heights', [100 -2],'Spacing',5);
       end
-      %set( h, 'DockFcn', {@nDock, 3} );
       % TODO handle empty case?
 
       ViewTab.TabTitles = uLabels;
       ViewTab.TabWidth = 170;
-      
-%       if exist('ax','var')
-%          linkaxes(ax,'x');
-%       end
    end
 %-------------------------------------------------------------------------%
+
+   function unDock(eventSource,eventData,whichpanel)
+      panel = findobj(gui.ViewPanel(whichpanel),'-property','DockFcn');
+      panel.Docked = ~panel.Docked;
+      % Take it out of the layout
+      pos = getpixelposition(panel);
+      newfig = figure( ...
+         'Name',get( panel, 'Tag' ), ...
+         'NumberTitle','off', ...
+         'MenuBar','none', ...
+         'Toolbar','none', ...
+         'CloseRequestFcn',{@dock, whichpanel});
+      figpos = get(newfig,'Position');
+      set(newfig,'Position',[figpos(1,1:2), pos(1,3:4)] );
+      set(panel,'Parent', newfig, ...
+         'Units','Normalized',...
+         'Position',[0 0 1 1],'DockFcn','');
+   end % nDock
+   function dock(eventSource,eventData,whichpanel )
+      % Put it back into the layout
+      %newfig = get( panel(whichpanel), 'Parent' );
+      newfig = get(eventSource,'Children');
+      set( newfig, 'Parent',gui.ViewPanel(whichpanel))
+      delete( eventSource );
+      panel = findobj(gui.ViewPanel(whichpanel),'-property','DockFcn');
+      set(panel,'DockFcn',{@unDock, whichpanel});
+   end % nDock
 
 %-------------------------------------------------------------------------%
    function ViewPanelControl = createViewPanelControl(ViewPanel,type,tag)
@@ -296,16 +325,22 @@ updateSelectTab();
       % Toggle visibility on for active tabs
       [~,I] = intersect(gui.ViewTab.TabTitles,cell.flatten(gui.processLabels));
       gui.ViewTab.TabEnables(I) = {'on'};
-      shit()
+      for i = 1:numel(I)
+         ax = findobj(gui.ViewPanelBoxes,'Tag',[gui.ViewTab.TabTitles{I(i)} '_ViewPanelBox']);
+         set(ax,'Visible','on');
+      end
+      gui.plotInfo.bool(I) = false;
+      shit2(gui.processLabels)
 
       % Toggle visibility off for inactive tabs
       I2 = true(size(gui.ViewTab.TabTitles));
       I2(I) = false;
       I2 = find(I2);
       gui.ViewTab.TabEnables(I2) = {'off'};
+      
       % Also toggle off view panel
       for i = 1:numel(I2)
-         ax = findobj(gui.ViewPanel,'Tag',gui.ViewTab.TabTitles{I2(i)});
+         ax = findobj(gui.ViewPanelBoxes,'Tag',[gui.ViewTab.TabTitles{I2(i)} '_ViewPanelBox']);
          set(ax,'Visible','off');
       end
    end % updateViews
@@ -328,6 +363,30 @@ updateSelectTab();
                updateEvents(ind,label);
                gui.plotInfo.bool(ind2) = true;
             end
+            onLinkButton();
+         end
+      end
+   end
+   function shit2(c)
+      ind = gui.ArraySlider.Value;
+      if ischar(c)
+         c = {c};
+      end
+      labels = cell.flatten(gui.processLabels);
+      for i = 1:numel(c)
+         label = c{i};
+         lind = strcmp(labels,label);
+         if any(lind)
+            panel = findobj(gui.ViewPanel,'Tag',label);
+            set(panel,'Visible','on');
+            ind2 = strcmp(gui.plotInfo.uLabels,label);
+            if ~gui.plotInfo.bool(ind2)
+               type = gui.processTypes{lind};
+               updatePlots(ind,type,label);
+               updateEvents(ind,label);
+               gui.plotInfo.bool(ind2) = true;
+            end
+            onLinkButton();
          end
       end
    end
@@ -337,32 +396,34 @@ updateSelectTab();
          labels = {labels};
       end
       for i = 1:numel(labels)
+         ax = findobj(gui.ViewPanelBoxes,'Tag',[labels{i} '_ViewPanelBox']);
+         ax = ax.Contents;
          switch type
             case 'SampledProcess'
-               ax = findobj(gui.ViewPanel,'Tag',labels{i},'-and','Type','Axes');
-               %axes(ax); 
                cla(ax); set(ax,'Visible','on');
                viewPanelControl = findobj(gui.ViewPanel,'Tag',[labels{i} '_ViewPanelControl']);
                stack = findobj(viewPanelControl,'Tag','Stack','-depth',1);
                stackSlider = findobj(viewPanelControl,'Tag','StackSlider','-depth',1);
-               try
                plot(extract(data.segment(ind),labels{i},'labels'),'handle',ax,...
                   'stack',stack.Value,...
                   'sep',stackSlider.Value*data.sd);
-               catch, keyboard; end
-               axis tight;
             case 'PointProcess'
-               ax = findobj(gui.ViewPanel,'Tag',labels{i},'-and','Type','Axes');
-               %axes(ax); 
                cla(ax); set(ax,'Visible','on');
                raster(extract(data.segment(ind),labels{i},'labels'),'handle',ax,'style','tick');
-               axis([get(ax,'xlim') 0.5 max(get(ax,'ylim'))]);
+               set(ax,'ylim',[0.5 max(get(ax,'ylim'))]);
             case 'SpectralProcess'
-               ax = findobj(gui.ViewPanel,'Tag',labels{i},'-and','Type','UIPanel');
                set(ax,'Visible','on');
-               plot(extract(data.segment(ind),labels{i},'labels'),'handle',ax,'colorbar',false);
+               delete(ax.Children);
+               %arrayfun(@(x) cla(x),ax.Children);
+               %keyboard
+               temp = extract(data.segment(ind),labels{i},'labels');
+               plot(temp,'handle',ax,'colorbar',false);
+               %set(ax,'ylim',[min(temp.f) max(temp.f)]);
          end
+%         disp(['plotting ' labels{i}]);
       end
+%         disp('...')
+      drawnow
    end
 %-------------------------------------------------------------------------%
    function updateEvents(ind,labels)
@@ -381,7 +442,7 @@ updateSelectTab();
          labels = {labels};
       end
       for i = 1:numel(labels)
-         ax = findobj(gui.ViewPanel,'Tag',labels{i},'-and','Type','Axes');
+         ax = findobj(gui.ViewPanelBoxes,'Tag',labels{i},'-and','Type','Axes');
          plot(data.segment(ind).eventProcess,'handle',ax);
       end
    end
@@ -390,15 +451,24 @@ updateSelectTab();
       if gui.EventsButton.Value
          plotE(gui.ArraySlider.Value);
       else
-         delete(findobj(gui.ViewPanel,'Tag','Event'));
+         delete(findobj(gui.ViewPanelBoxes,'Tag','Event'));
       end
-   end % redrawDemo
+   end % onEventsButton
+%-------------------------------------------------------------------------%
+   function onLinkButton(~,~)
+      if gui.LinkButton.Value
+         ax = findobj(gui.ViewPanelBoxes,'Type','Axes');
+         linkaxes(ax,'x');
+      else
+%          ax = findobj(gui.ViewPanelBoxes,'Type','Axes');
+%          linkaxes(ax,'off');
+      end
+   end % onLinkButton
 %-------------------------------------------------------------------------%
    function onMousePanButton( ~, ~ )
       zoom off;
       fig.interactivemouse;
-   end % onMenuSelection
-
+   end % onMousePanButton
 %-------------------------------------------------------------------------%
    function onArraySlider( ~, ~ )
       if gui.ArraySlider.Value >= gui.ArraySlider.Max
@@ -411,6 +481,7 @@ updateSelectTab();
          num2str(numel(data.segment))];
       gui.plotInfo.bool = false(1,numel(gui.plotInfo.uLabels));
       updateViews();
+      onLinkButton();
       updateSyncTab();
    end % onArraySlider
 %-------------------------------------------------------------------------%
@@ -634,5 +705,19 @@ updateSelectTab();
    function onExit(~,~)
       delete(gui.Window);
    end % onExit
-
+%-------------------------------------------------------------------------%
+   function closeAll( ~, ~ )
+%       % User wished to close the application, so we need to tidy up
+%       panel = findobj(gui.Window,'-property','DockFcn');
+%       % Delete all windows, including undocked ones. We can do this by
+%       % getting the window for each panel in turn and deleting it.
+%       keyboard
+%       for ii=1:numel( panel )
+%          if isvalid( panel(ii) ) && ~strcmpi( panel(ii).BeingDeleted, 'on' )
+%             figh = ancestor( panel(ii), 'figure' );
+%             delete( figh );
+%          end
+%       end
+%       
+   end % closeAll
 end % EOF
