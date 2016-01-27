@@ -42,10 +42,10 @@ updateSelectTab();
          'HandleVisibility','on',...
          'CloseRequestFcn', @closeAll );
             
-%       % + File menu
-%       gui.FileMenu = uimenu(gui.Window,'Label','File');
-%       uimenu(gui.FileMenu,'Label','Load','Callback',@onExit);
-%       uimenu(gui.FileMenu,'Label','Exit','Callback',@onExit);
+      % + File menu
+      gui.FileMenu = uimenu(gui.Window,'Label','File');
+      uimenu(gui.FileMenu,'Label','Load','Callback',@onExit);
+      uimenu(gui.FileMenu,'Label','Exit','Callback',@onExit);
       
       % Remove some toolbar elements
       a = findall(gui.Window);
@@ -237,10 +237,9 @@ updateSelectTab();
       % TODO handle empty case?
 
       ViewTab.TabTitles = uLabels;
-      ViewTab.TabWidth = 170;
+      ViewTab.TabWidth = 130;
    end
 %-------------------------------------------------------------------------%
-
    function unDock(eventSource,eventData,whichpanel)
       panel = findobj(gui.ViewPanel(whichpanel),'-property','DockFcn');
       panel.Docked = ~panel.Docked;
@@ -282,12 +281,18 @@ updateSelectTab();
             uicontrol('parent',ViewPanelControl,'style','checkbox',...
                'position',[5,65,80,25],'Fontsize',14,'Tag','Stack',...
                'String','Stack','Callback',@onStackButton);
+         case 'SpectralProcess'
+            uicontrol('parent',ViewPanelControl,'style','checkbox',...
+               'position',[5,65,125,25],'Fontsize',14,'Tag','LogScale',...
+               'String','Logarithmic','Value',1,'Callback',@onLogScaleButton);
+            uicontrol('parent',ViewPanelControl,'style','checkbox',...
+               'position',[5,35,135,25],'Fontsize',14,'Tag','Shading',...
+               'String','Interp shading','Value',1,'Callback',@onShadingButton);
       end
    end
 %-------------------------------------------------------------------------%
    function updateSyncTab()
       ind = gui.ArraySlider.Value;
-      
       str = {'none' data.segment(ind).eventProcess.values{1}.name};
       gui.SyncEventsPopup.String = str;
       if isempty(data.segment(ind).validSync)
@@ -304,7 +309,6 @@ updateSelectTab();
 %-------------------------------------------------------------------------%
    function updateSelectTab()
       ind = gui.ArraySlider.Value;
-      
       str = cat(2,'none',data.segment(ind).info.keys);
       gui.SelectInfoPopup.String = str;
       gui.SelectInfoPopup.Value = 1;
@@ -316,7 +320,6 @@ updateSelectTab();
 %-------------------------------------------------------------------------%
    function updateViews()
       ind = gui.ArraySlider.Value;
- 
       % Determine number of active views
 %      validProcesses = {'SampledProcess' 'PointProcess' 'SpectralProcess'};
       gui.processTypes = data.segment(ind).type;
@@ -326,11 +329,15 @@ updateSelectTab();
       [~,I] = intersect(gui.ViewTab.TabTitles,cell.flatten(gui.processLabels));
       gui.ViewTab.TabEnables(I) = {'on'};
       for i = 1:numel(I)
-         ax = findobj(gui.ViewPanelBoxes,'Tag',[gui.ViewTab.TabTitles{I(i)} '_ViewPanelBox']);
+         ax = findobj(gui.ViewPanelBoxes,'flat','Tag',[gui.ViewTab.TabTitles{I(i)} '_ViewPanelBox']);
          set(ax,'Visible','on');
       end
       gui.plotInfo.bool(I) = false;
-      shit2(gui.processLabels)
+      
+      currentTabLabel = get(gui.ViewTab.Contents(gui.ViewTab.Selection),'Tag');
+      isNotDocked = ~[gui.ViewPanelBoxes.Docked];
+      isNotDockedLabels = gui.plotInfo.uLabels(isNotDocked);
+      shit2(cat(2,currentTabLabel,isNotDockedLabels));
 
       % Toggle visibility off for inactive tabs
       I2 = true(size(gui.ViewTab.TabTitles));
@@ -340,7 +347,8 @@ updateSelectTab();
       
       % Also toggle off view panel
       for i = 1:numel(I2)
-         ax = findobj(gui.ViewPanelBoxes,'Tag',[gui.ViewTab.TabTitles{I2(i)} '_ViewPanelBox']);
+         ax = findobj(gui.ViewPanelBoxes,'flat',...
+            'Tag',[gui.ViewTab.TabTitles{I2(i)} '_ViewPanelBox']);
          set(ax,'Visible','off');
       end
    end % updateViews
@@ -350,21 +358,7 @@ updateSelectTab();
          source = gui.ViewTab;
          ind = gui.ArraySlider.Value;
          label = get(source.Contents(source.Selection),'Tag');
-         
-         labels = cell.flatten(gui.processLabels);
-         lind = strcmp(labels,label);
-         if any(lind)
-            panel = findobj(gui.ViewPanel,'Tag',label);
-            set(panel,'Visible','on');
-            ind2 = strcmp(gui.plotInfo.uLabels,label);
-            if ~gui.plotInfo.bool(ind2)
-               type = gui.processTypes{lind};
-               updatePlots(ind,type,label);
-               updateEvents(ind,label);
-               gui.plotInfo.bool(ind2) = true;
-            end
-            onLinkButton();
-         end
+         shit2(label);
       end
    end
    function shit2(c)
@@ -383,9 +377,9 @@ updateSelectTab();
             if ~gui.plotInfo.bool(ind2)
                type = gui.processTypes{lind};
                updatePlots(ind,type,label);
-               updateEvents(ind,label);
                gui.plotInfo.bool(ind2) = true;
             end
+            updateEvents(ind,c);
             onLinkButton();
          end
       end
@@ -395,8 +389,9 @@ updateSelectTab();
       if ischar(labels)
          labels = {labels};
       end
+      
       for i = 1:numel(labels)
-         ax = findobj(gui.ViewPanelBoxes,'Tag',[labels{i} '_ViewPanelBox']);
+         ax = findobj(gui.ViewPanelBoxes,'flat','Tag',[labels{i} '_ViewPanelBox']);
          ax = ax.Contents;
          switch type
             case 'SampledProcess'
@@ -413,17 +408,18 @@ updateSelectTab();
                set(ax,'ylim',[0.5 max(get(ax,'ylim'))]);
             case 'SpectralProcess'
                set(ax,'Visible','on');
-               delete(ax.Children);
-               %arrayfun(@(x) cla(x),ax.Children);
-               %keyboard
+               logScale = findobj(gui.ViewPanel,'Tag','LogScale');
+               shading = findobj(gui.ViewPanel,'Tag','Shading');
+               if shading.Value
+                  shading = 'interp';
+               else
+                  shading = 'flat';
+               end
                temp = extract(data.segment(ind),labels{i},'labels');
-               plot(temp,'handle',ax,'colorbar',false);
-               %set(ax,'ylim',[min(temp.f) max(temp.f)]);
+               plot(temp,'handle',ax,'colorbar',false,'log',logScale.Value,'shading',shading);
+%               set(ax.Children,'ylim',[min(temp.f) max(temp.f)]);
          end
-%         disp(['plotting ' labels{i}]);
       end
-%         disp('...')
-      drawnow
    end
 %-------------------------------------------------------------------------%
    function updateEvents(ind,labels)
@@ -443,7 +439,9 @@ updateSelectTab();
       end
       for i = 1:numel(labels)
          ax = findobj(gui.ViewPanelBoxes,'Tag',labels{i},'-and','Type','Axes');
-         plot(data.segment(ind).eventProcess,'handle',ax);
+         if numel(ax) > 0
+            plot(data.segment(ind).eventProcess,'handle',ax);
+         end
       end
    end
 %-------------------------------------------------------------------------%
@@ -460,8 +458,8 @@ updateSelectTab();
          ax = findobj(gui.ViewPanelBoxes,'Type','Axes');
          linkaxes(ax,'x');
       else
-%          ax = findobj(gui.ViewPanelBoxes,'Type','Axes');
-%          linkaxes(ax,'off');
+         ax = findobj(gui.ViewPanelBoxes,'Type','Axes');
+         linkaxes(ax,'off');
       end
    end % onLinkButton
 %-------------------------------------------------------------------------%
@@ -483,6 +481,7 @@ updateSelectTab();
       updateViews();
       onLinkButton();
       updateSyncTab();
+      %drawnow
    end % onArraySlider
 %-------------------------------------------------------------------------%
    function onStackButton(source,~)
@@ -542,6 +541,18 @@ updateSelectTab();
          stackSliderText.String = 'Stack separation 0 SD';
       end
    end % onStackSlider
+%-------------------------------------------------------------------------%
+   function onLogScaleButton(source,~)
+      ind = gui.ArraySlider.Value;      
+      viewPanelControl = get(source,'Parent');      
+      updatePlots(ind,'SpectralProcess',get(get(viewPanelControl,'Parent'),'Tag'));
+   end % onLogScaleButton
+%-------------------------------------------------------------------------%
+   function onShadingButton(source,~)
+      ind = gui.ArraySlider.Value;      
+      viewPanelControl = get(source,'Parent');      
+      updatePlots(ind,'SpectralProcess',get(get(viewPanelControl,'Parent'),'Tag'));
+   end % onLogScaleButton
 %-------------------------------------------------------------------------%
    function onSyncWindowStart(~,~)
       val = str2num(gui.SyncWindowStart.String);
@@ -671,9 +682,10 @@ updateSelectTab();
       end
 
       data = createData(temp);
-      if data.plotS
-         data.sd = getCurrentSD(1);
-      end
+%       if data.plotS
+data.sd = 1;
+%          data.sd = getCurrentSD(1);
+%       end
       updateViews();
       updateSyncTab();
       updateSelectTab();
@@ -681,9 +693,10 @@ updateSelectTab();
 %-------------------------------------------------------------------------%
    function onSelectResetButton(~,~)
       data = createData(seg);
-      if data.plotS
-         data.sd = getCurrentSD(1);
-      end
+%       if data.plotS
+data.sd = 1;
+%          data.sd = getCurrentSD(1);
+%       end
       updateViews();
       updateSyncTab();
       updateSelectTab();
@@ -691,7 +704,6 @@ updateSelectTab();
 %-------------------------------------------------------------------------%
    function toggleBusy(h)
       persistent oldpointer;
-      
       if isempty(oldpointer)
          oldpointer = h.Pointer;
          gui.Window.Pointer = 'watch';
@@ -703,21 +715,19 @@ updateSelectTab();
    end
 %-------------------------------------------------------------------------%
    function onExit(~,~)
-      delete(gui.Window);
+      closeAll();
    end % onExit
 %-------------------------------------------------------------------------%
    function closeAll( ~, ~ )
-%       % User wished to close the application, so we need to tidy up
-%       panel = findobj(gui.Window,'-property','DockFcn');
-%       % Delete all windows, including undocked ones. We can do this by
-%       % getting the window for each panel in turn and deleting it.
-%       keyboard
-%       for ii=1:numel( panel )
-%          if isvalid( panel(ii) ) && ~strcmpi( panel(ii).BeingDeleted, 'on' )
-%             figh = ancestor( panel(ii), 'figure' );
-%             delete( figh );
-%          end
-%       end
-%       
+      % User wished to close the application, so we need to tidy up
+      %keyboard
+      panel = gui.ViewPanelBoxes;
+      for i = 1:numel(panel)
+         if isvalid(panel(i)) && ~panel(i).Docked
+            figh = ancestor( panel(i), 'figure' );
+            delete( figh );
+         end
+      end
+      delete(gui.Window);
    end % closeAll
 end % EOF

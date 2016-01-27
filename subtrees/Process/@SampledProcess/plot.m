@@ -17,7 +17,6 @@ if isempty(p.Results.handle) || ~ishandle(p.Results.handle)
    h = subplot(1,1,1);
 else
    h = p.Results.handle;
-   %axes(h);
 end
 hold(h,'on');
 
