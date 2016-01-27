@@ -46,6 +46,7 @@ f = self.f;
 n = numel(self.labels);
 for i = 1:n
    g = subplot(n,1,i,'Parent',h);
+   cla(g);
    if par.log
       v = 10*log10(abs(values(:,:,i)'));
    else
