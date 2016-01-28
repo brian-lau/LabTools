@@ -12,45 +12,39 @@
 % SEE ALSO
 % remove
 
-% TODO, mask by tStart/tEnd
-%   o check values dimensions?
+function self = insert(self,events,labels)
 
-function self = insert(self,times,values,labels)
+if nargin < 2
+   error('EventProcess:insert:InputFormat',...
+      'Missing events to insert');
+end
 
-if nargin < 3
-   error('PointProcess:insert:InputFormat',...
-      'There must be values for each inserted time');
-end
-if numel(times) ~= numel(values)
-   error('PointProcess:insert:InputFormat',...
-      'There must be values for each inserted time');
-end
 for i = 1:numel(self)
    if nargin < 4
       % Insert same times & values from all
       labels = self(i).labels;
    end
-   
+
    indL = find(ismember(self(i).labels,labels));
    if any(indL)
       for j = 1:numel(indL)
-         times2Insert = times;
-         values2Insert = values;
+         times2Insert = vertcat(events.time);
+         values2Insert = events;
          
          if any(times2Insert)
             % Check that we can concatenate values
             % Values must match type of present values for contcatenation
-            if isequal(class(values2Insert),class(self.values_{indL(j)})) || ...
-               (isa(values2Insert,'matlab.mixin.Heterogeneous') && isa(self.values{indL(j)},'matlab.mixin.Heterogeneous'))
+            if (isa(values2Insert,'matlab.mixin.Heterogeneous') && isa(self.values_{indL(j)},'matlab.mixin.Heterogeneous'))
                % Merge & sort
-               [self(i).times{indL(j)},I] = ...
-                  sort([self(i).times{indL(j)} ; times2Insert(:)]);
-               temp = [self(i).values{indL(j)} ; values2Insert(:)];
+               temp = [self(i).times{indL(j)} ; times2Insert];
+               [~,I] = sort(temp(:,1));
+               self(i).times{indL(j)} = temp(I,:);
+               temp = [self(i).values{indL(j)} ; values2Insert];
                self(i).values{indL(j)} = temp(I);
                inserted(j) = true;
             else
                inserted(j) = false;
-               warning('PointProcess:insert:InputFormat',...
+               warning('EventProcess:insert:InputFormat',...
                   ['times not added for ' self(i).labels{indL} ...
                   ' because value type does not match']);
             end
@@ -58,5 +52,14 @@ for i = 1:numel(self)
             inserted(j) = false;
          end
       end
+
+%       if any(inserted)
+%          oldOffset = self(i).offset;
+%          oldCumulOffset = self(i).cumulOffset;
+%          reset(self(i));
+%          applyWindow(self(i));
+%          self(i).offset = oldCumulOffset - oldOffset;
+%          self(i).offset = oldOffset;
+%       end
    end
 end

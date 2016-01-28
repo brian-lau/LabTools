@@ -18,9 +18,12 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties(AbortSet)
       window              % [min max] time window of interest
    end
+   properties(Dependent)
+      relWindow
+   end
    properties
       offset              % Time offset relative to window
-      cumulOffset = 0     % Cumulative offset
+      cumulOffset = 0     % Cumulative offset % FIXME PRIVATE?
       labels              % Label for each non-leading dimension
       quality             % Scalar information for each non-leading dimension
    end
@@ -28,7 +31,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       times = {}          % Current event/sample times
       values = {}         % Current attribute/value associated with each time
    end
-   properties(SetAccess = protected)
+   properties(SetAccess = protected) %FIXME public?
       lazyLoad = false    % Boolean to defer constructing values from values_
       deferredEval = false% Boolean to defer method evaluations (see addToQueue)
    end
@@ -45,6 +48,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       offset_             % Original offset
       reset_ = false      % Reset bit
       running_ = true     % Boolean indicating eager evaluation
+      queueing_ = true    % Boolean indicating add queueable methods
    end
    properties(SetAccess = protected, Hidden, Transient)
       loadListener_@event.proplistener % lazyLoad listener
@@ -143,7 +147,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
             end
          end
       end
-     
+      function relWindow = get.relWindow(self)
+         relWindow = self.window + self.cumulOffset;
+      end
       function set.offset(self,offset)
          % Set the offset property
          % For setting offset of object arrays, use setOffset.
