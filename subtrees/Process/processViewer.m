@@ -16,7 +16,7 @@ updateSelectTab();
    function data = createData(seg)
       if isa(seg,'SampledProcess') || isa(seg,'PointProcess')
          for i = 1:numel(seg)
-            segment(i) = Segment('process',{seg(i) EventProcess()});
+            segment(i) = Segment('process',{seg(i) EventProcess('events',metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN),'tStart',seg(i).tStart,'tEnd',seg(i).tEnd)});
          end
       elseif isa(seg,'Segment')
          segment = seg;
@@ -450,6 +450,7 @@ updateSelectTab();
          plotE(gui.ArraySlider.Value);
       else
          delete(findobj(gui.ViewPanelBoxes,'Tag','Event'));
+         delete(findobj(gui.Window,'Tag','Event')); % context menus 
       end
    end % onEventsButton
 %-------------------------------------------------------------------------%
