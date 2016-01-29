@@ -18,44 +18,49 @@ function varargout = plot(self,varargin)
 
    menu = uicontextmenu();
    % Create top-level menu item
-   m1 = uimenu('Parent',menu,'Label','Add','Callback',{@add self h});
+   topmenu = uimenu('Parent',menu,'Label','Add event');
+   validEventTypes = {'Generic' 'Artifact' 'Stimulus' 'Response'};
+   for i = 1:numel(validEventTypes)
+      uimenu('Parent',topmenu,'Label',validEventTypes{i},'Callback',{@addEvent self h validEventTypes{i}});
+   end
    set(h,'uicontextmenu',menu);
 
    values = self.values{1};
    c = fig.distinguishable_colors(numel(values));
    %c = rand(100,3);
    for i = 1:numel(values)
-      left = values(i).time(1);
-      right = values(i).time(2);
-      bottom = ylim(1);
-      top = ylim(2);
-      
-      eventMenu = uicontextmenu();
-      m1 = uimenu('Parent',eventMenu,'Label','Edit','Callback',{@editEvent self});
-      m2 = uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent self h});
-      m3 = uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent self h});
-      set([m1 m2 m3],'Tag',values(i).name);
-      
-      eFill = fill([left left right right],[bottom top top bottom],...
-         c(i,:),'FaceAlpha',0.15,'EdgeColor','none','Parent',h);
-      set(eFill,'Tag',values(i).name);
-      set(eFill,'uicontextmenu',eventMenu);
-
-      eText = text(left,top,values(i).name,'VerticalAlignment','bottom',...
-         'FontAngle','italic','Parent',h);
-      set(eText,'Tag',values(i).name);
+      plotEvent(values(i),self,h,c(i,:),ylim(2),ylim(1));
    end
-   %set(h,'xlim',xlim);
 
    if nargout >= 1
       varargout{1} = h;
    end
 end
 
-function add(source,data,obj,h)
+function plotEvent(event,obj,h,color,top,bottom)
+   left = event.time(1);
+   right = event.time(2);
+
+   eventMenu = uicontextmenu();
+   m1 = uimenu('Parent',eventMenu,'Label','Edit','Callback',{@editEvent obj});
+   m2 = uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj h});
+   m3 = uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj h});
+   set([m1 m2 m3],'Tag',event.name);
+
+   eFill = fill([left left right right],[bottom top top bottom],...
+      color,'FaceAlpha',0.15,'EdgeColor','none','Parent',h);
+   set(eFill,'Tag',event.name);
+   set(eFill,'uicontextmenu',eventMenu);
+
+   eText = text(left,top,event.name,'VerticalAlignment','bottom',...
+      'FontAngle','italic','Parent',h);
+   set(eText,'Tag',event.name);
+end
+
+function addEvent(source,data,obj,h,eventType)
    d = dragRect('xx');
    set(d,'EndDragCallback',@(hobj,evnt)disp('now drag end'));
-   keyboard
+   set(gcf,'WindowKeyPressFcn',{@clickcallback obj h eventType d});
 end
 
 function editEvent(source,~,obj)
@@ -92,4 +97,14 @@ function deleteEvent(source,~,obj,h)
    delete(g);
    m = get(source,'parent');
    delete(m);
+end
+
+function clickcallback(~,~,obj,h,eventType,d)
+   event = metadata.event.(eventType);
+   event.name = 'junk';
+   event.tStart = d.xPoints(1);
+   event.tEnd = d.xPoints(2);
+   obj.insert(event);
+   plotEvent(event,obj,h,[0 0 0],d.yPoints(2),d.yPoints(1));
+   delete(d);
 end
