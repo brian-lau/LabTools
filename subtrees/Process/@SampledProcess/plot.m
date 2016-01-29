@@ -18,6 +18,7 @@ if isempty(p.Results.handle) || ~ishandle(p.Results.handle)
 else
    h = p.Results.handle;
 end
+hold(h,'on');
 
 if numel(self) > 1
    for i = 1:numel(self)
@@ -34,7 +35,6 @@ t = self.times{1};
 if p.Results.stack
    n = size(values,2);
    sf = (0:n-1)*p.Results.sep;
-   hold(h,'on');
    plot(t,bsxfun(@plus,values,sf),'Parent',h);
    plot(repmat([t(1) t(end)]',1,n),[sf' , sf']','--','color',[.7 .7 .7 .4],'Parent',h);
 else
