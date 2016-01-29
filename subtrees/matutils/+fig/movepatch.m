@@ -1,4 +1,4 @@
-function movepatch(h,d)
+function movepatch(h,d,f)
 %MOVEIT   Move a graphical object in 2-D.
 %   Move an object in 2-D. Modify this function to add more functionality
 %   when e.g. the object is dropped. It is not perfect but could perhaps
@@ -40,20 +40,24 @@ function movepatch(h,d)
 % ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 % POSSIBILITY OF SUCH DAMAGE.
 
+if nargin < 3
+   f = [];
+end
 if nargin < 2
    d = 'xy';
 end
+
 
 % Unpack gui object
 gui = get(gcf,'UserData');
 
 % Make a fresh figure window
-set(h,'ButtonDownFcn',{@startmovit d});
+set(h,'ButtonDownFcn',{@startmovit d f});
 
 % Store gui object
 set(gcf,'UserData',gui);
 
-function startmovit(src,evnt,d)
+function startmovit(src,evnt,d,f)
 % Unpack gui object
 gui = get(gcf,'UserData');
 
@@ -65,7 +69,7 @@ set(gcf,'Pointer','custom');
 gui.currenthandle = src;
 thisfig = gcbf();
 set(thisfig,'WindowButtonMotionFcn',{@movit d});
-set(thisfig,'WindowButtonUpFcn',@stopmovit);
+set(thisfig,'WindowButtonUpFcn',{@stopmovit f});
 
 % Store starting point of the object
 gui.startpoint = get(gca,'CurrentPoint');
@@ -100,7 +104,7 @@ drawnow;
 % Store gui object
 set(gcf,'UserData',gui);
 
-function stopmovit(src,evnt)
+function stopmovit(src,evnt,f)
 % Clean up the evidence ...
 thisfig = gcbf();
 gui = get(gcf,'UserData');
@@ -109,5 +113,7 @@ set(thisfig,'WindowButtonUpFcn','');
 set(thisfig,'WindowButtonMotionFcn','');
 drawnow;
 set(gui.currenthandle,'UserData',[],'ButtonDownFcn',[]);
-set(gcf,'UserData','stop');
-%set(gcf,'UserData',[]);
+if ~isempty(f)
+   feval(f);
+end
+set(gcf,'UserData',[]);
