@@ -1,10 +1,10 @@
 function varargout = plot(self,varargin)
    p = inputParser;
-   p.KeepUnmatched= true;
+   p.KeepUnmatched = true;
    p.FunctionName = 'EventProcess plot method';
    p.addParameter('handle',[],@(x) isnumeric(x) || ishandle(x));
    p.parse(varargin{:});
-   params = p.Unmatched;
+   %params = p.Unmatched;
 
    if isempty(p.Results.handle) || ~ishandle(p.Results.handle)
       figure;
@@ -45,66 +45,69 @@ function plotEvent(event,obj,h,color,top,bottom)
    m1 = uimenu('Parent',eventMenu,'Label','Edit','Callback',{@editEvent obj});
    m2 = uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj h});
    m3 = uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj h});
-   set([m1 m2 m3],'Tag',event.name);
+   set([m1 m2 m3],'UserData',event.name,'Tag','Event');
 
    eFill = fill([left left right right],[bottom top top bottom],...
       color,'FaceAlpha',0.15,'EdgeColor','none','Parent',h);
-   set(eFill,'Tag',event.name);
+   set(eFill,'UserData',event.name,'Tag','Event');
    set(eFill,'uicontextmenu',eventMenu);
 
    eText = text(left,top,event.name,'VerticalAlignment','bottom',...
       'FontAngle','italic','Parent',h);
-   set(eText,'Tag',event.name);
+   set(eText,'UserData',event.name,'Tag','Event');
 end
 
-function addEvent(source,data,obj,h,eventType)
+function addEvent(~,~,obj,h,eventType)
    d = dragRect('xx');
-   set(d,'EndDragCallback',@(hobj,evnt)disp('now drag end'));
-   set(gcf,'WindowKeyPressFcn',{@clickcallback obj h eventType d});
+   set(gcf,'WindowKeyPressFcn',{@keypressEvent});
+   
+   function keypressEvent(~,~)
+      event = metadata.event.(eventType);
+      name = inputdlg('Event name:','Event name');
+      event.name = name{1};
+      event.tStart = d.xPoints(1);
+      event.tEnd = d.xPoints(2);
+      obj.insert(event);
+      plotEvent(event,obj,h,[0 0 0],d.yPoints(2),d.yPoints(1));
+      delete(d);
+      set(gcf,'WindowKeyPressFcn','');
+   end
 end
 
 function editEvent(source,~,obj)
-	event = find(obj,'name',source.Tag);
+	event = find(obj,'name',source.UserData);
    propertiesGUI(event);
 end
 
 function moveEvent(source,~,obj,h)
-   p = findobj(h,'Tag',source.Tag,'-and','Type','patch');
+   p = findobj(h,'UserData',source.UserData,'-and','Type','patch');
    setptr(gcf,'hand');
-   fig.movepatch(p,'x');
-   waitfor(gcf,'UserData','stop');
-   set(gcf,'UserData',[]);
-   v = get(p,'Vertices');
+   fig.movepatch(p,'x',@mouseupEvent);
    
-   q = linq(obj.values{1});
-   ind = find(q.select(@(x) strcmp(x.name,source.Tag)).toArray());
-   event = obj.values{1}(ind);
+   function mouseupEvent(~,~)
+      v = get(p,'Vertices');
+   
+      q = linq(obj.values{1});
+      ind = find(q.select(@(x) strcmp(x.name,source.UserData)).toArray());
+      event = obj.values{1}(ind);
 
-   event.tStart = v(1,1);
-   event.tEnd = v(3,1);
-   obj.values{1}(ind) = event;
-   obj.times{1}(ind,:) = [v(1,1) v(3,1)];
-   g = findobj(h,'Tag',source.Tag,'-and','Type','Text');
-   g.Position(1) = v(1,1);
+      event.tStart = v(1,1);
+      event.tEnd = v(3,1);
+      obj.values{1}(ind) = event;
+      obj.times{1}(ind,:) = [v(1,1) v(3,1)];
+      g = findobj(h,'UserData',source.UserData,'-and','Type','Text');
+      g.Position(1) = v(1,1);
+      set(gcf,'WindowKeyPressFcn','');
+   end
 end
 
 function deleteEvent(source,~,obj,h)
    % could use    get(gcf, 'CurrentObject') or perhaps hittest to resolve
    % multiple events (eg, same name)
-	event = find(obj,'name',source.Tag);
+	event = find(obj,'name',source.UserData);
    obj.remove(event.time(1));
-   g = findobj(h,'Tag',source.Tag);
+   g = findobj(h,'UserData',source.UserData);
    delete(g);
    m = get(source,'parent');
    delete(m);
-end
-
-function clickcallback(~,~,obj,h,eventType,d)
-   event = metadata.event.(eventType);
-   event.name = 'junk';
-   event.tStart = d.xPoints(1);
-   event.tEnd = d.xPoints(2);
-   obj.insert(event);
-   plotEvent(event,obj,h,[0 0 0],d.yPoints(2),d.yPoints(1));
-   delete(d);
 end
