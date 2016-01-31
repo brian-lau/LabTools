@@ -47,11 +47,17 @@ function plotEvent(event,obj,h,color,top,bottom)
    m3 = uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj h});
    set([m1 m2 m3],'UserData',event.name,'Tag','Event');
 
-   eFill = fill([left left right right],[bottom top top bottom],...
-      color,'FaceAlpha',0.15,'EdgeColor','none','Parent',h);
-   set(eFill,'UserData',event.name,'Tag','Event');
-   set(eFill,'uicontextmenu',eventMenu);
-
+   if event.duration == 0
+      eGraphic = line([left left],[bottom top],'Color',color,'Linewidth',2,'Parent',h);
+      set(eGraphic,'UserData',event.name,'Tag','Event');
+      set(eGraphic,'uicontextmenu',eventMenu);
+   else
+      eGraphic = fill([left left right right],[bottom top top bottom],...
+         color,'FaceAlpha',0.15,'EdgeColor','none','Parent',h);
+      set(eGraphic,'UserData',event.name,'Tag','Event');
+      set(eGraphic,'uicontextmenu',eventMenu);
+   end
+   
    eText = text(left,top,event.name,'VerticalAlignment','bottom',...
       'FontAngle','italic','Parent',h);
    set(eText,'UserData',event.name,'Tag','Event');
@@ -79,25 +85,37 @@ function editEvent(source,~,obj)
    propertiesGUI(event);
 end
 
-function moveEvent(source,~,obj,h)
+function moveEvent(source,~,obj,h)   
    p = findobj(h,'UserData',source.UserData,'-and','Type','patch');
+   if isempty(p)
+      p = findobj(h,'UserData',source.UserData,'-and','Type','line');
+   end
    setptr(gcf,'hand');
    fig.movepatch(p,'x',@mouseupEvent);
-   
+
    function mouseupEvent(~,~)
-      v = get(p,'Vertices');
+      if isa(p,'matlab.graphics.primitive.Line')
+         tStart = p.XData(1);
+         tEnd = tStart;
+      else
+         v = get(p,'Vertices');
+         tStart = v(1,1);
+         tEnd = v(3,1);
+      end
    
       q = linq(obj.values{1});
       ind = find(q.select(@(x) strcmp(x.name,source.UserData)).toArray());
       event = obj.values{1}(ind);
 
-      event.tStart = v(1,1);
-      event.tEnd = v(3,1);
+      event.tStart = tStart;
+      event.tEnd = tEnd;
       obj.values{1}(ind) = event;
-      obj.times{1}(ind,:) = [v(1,1) v(3,1)];
+      obj.times{1}(ind,:) = [tStart tEnd];
       g = findobj(h,'UserData',source.UserData,'-and','Type','Text');
-      g.Position(1) = v(1,1);
+      g.Position(1) = tStart;
       set(gcf,'WindowKeyPressFcn','');
+      % HACK - despite nextplot setting, this gets cleared?
+      p.UserData = source.UserData;
    end
 end
 
