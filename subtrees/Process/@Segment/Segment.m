@@ -1,5 +1,8 @@
-% Class for collecting Sampled, Point and EventProcesses with common start
-% and end time.
+% Class for collecting Processes with common:
+%    tStart
+%    tEnd
+%    window
+%    offset
 
 classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & matlab.mixin.Copyable
    properties
@@ -21,10 +24,15 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    properties(SetAccess = private)
       validSync
    end
+   % validSegment? all processes have same parent segment?
    properties(Dependent = true)
       sampledProcess
       pointProcess
       eventProcess
+      %spectralProcess
+   end
+   properties
+      blocks%@Block    %
    end
    properties(SetAccess = protected)
       version = '0.1.0'
@@ -109,6 +117,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          end
 
          self.labels = p.Results.labels;
+         
+         % Add Segment reference to all child processes
+         cellfun(@(x) x.addSegment(self),self.processes,'uni',0);
       end
       
       function list = get.type(self)
@@ -176,8 +187,8 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          if isempty(labels)
             self.labels = arrayfun(@(x) ['sid' num2str(x)],1:n,'uni',0);
          elseif iscell(labels)
-            assert(all(cellfun(@ischar,labels)),'Segment:labels:InputType',...
-               'Labels must be strings');
+%             assert(all(cellfun(@ischar,labels)),'Segment:labels:InputType',...
+%                'Labels must be strings');
             assert(numel(labels)==numel(unique(labels)),'Segment:labels:InputType',...
                'Labels must be unique');
             assert(numel(labels)==n,'Segment:labels:InputFormat',...
@@ -198,6 +209,11 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       % add process
       
       %plot
+      
+      function delete(self)
+         disp('Segment delete');
+         cellfun(@(x) x.removeSegment(self),self.processes,'uni',0);
+      end
    end
    methods(Static)
       %obj = loadobj(S)

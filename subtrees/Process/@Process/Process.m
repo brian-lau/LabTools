@@ -3,7 +3,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties
       info@containers.Map % Information about process
    end
-   properties(SetAccess = immutable)
+   properties(SetAccess = immutable, Hidden)
       timeUnit            % Time representation (TODO)
       clock               % Clock info (drift-correction, TODO)
    end
@@ -15,16 +15,20 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       times_              % Original event/sample times
       values_             % Original attribute/values
    end
-   properties(AbortSet)
-      window              % [min max] time window of interest
+   properties(AbortSet, SetObservable)
+      window              % [min max] time window of interest (time re. 0)
    end
    properties(Dependent)
-      relWindow
+      relWindow           % [min max] time window of interest (time re. cumulative offsets)
+   end
+   properties(SetObservable)
+      offset              % Time offset relative to window
+   end
+   properties(SetAccess = protected)
+      cumulOffset = 0     % Cumulative offset % FIXME PRIVATE?
    end
    properties
-      offset              % Time offset relative to window
-      cumulOffset = 0     % Cumulative offset % FIXME PRIVATE?
-      labels              % Label for each non-leading dimension
+      labels              % Label for each element of non-leading dimension
       quality             % Scalar information for each non-leading dimension
    end
    properties(SetAccess = protected, Transient, GetObservable)
@@ -43,6 +47,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       isRunnable = false  % Boolean indicating if queue contains runnable items
       isValidWindow       % Boolean indicating if window(s) within tStart and tEnd
    end
+   properties
+      segments%@Segment    %
+   end
    properties(SetAccess = protected, Hidden)
       window_             % Original window
       offset_             % Original offset
@@ -55,7 +62,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       evalListener_@event.listener     % deferredEval listener
    end
    properties(SetAccess = immutable)
-      version = '0.4.0'   % Version string
+      version = '0.5.0'   % Version string
    end
    events
       runImmediately
@@ -147,9 +154,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
             end
          end
       end
+      
       function relWindow = get.relWindow(self)
          relWindow = self.window + self.cumulOffset;
       end
+      
       function set.offset(self,offset)
          % Set the offset property
          % For setting offset of object arrays, use setOffset.
@@ -210,6 +219,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function set.lazyLoad(self,bool)
          assert(isscalar(bool)&&islogical(bool),'err');
          if isempty(self.loadListener_)
+            %self.loadListener_ = addlistener(self,'values','PreGet',@(src,data) src.loadOnDemand);
             self.loadListener_ = addlistener(self,'values','PreGet',@self.loadOnDemand);
          else
             self.loadListener_.Enabled = bool;
@@ -225,6 +235,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function set.deferredEval(self,bool)
          assert(isscalar(bool)&&islogical(bool),'err');
          if isempty(self.evalListener_)
+            %self.evalListener_ = addlistener(self,'runImmediately',@(src,data) src.evalOnDemand);
             self.evalListener_ = addlistener(self,'runImmediately',@self.evalOnDemand);
          else
             self.evalListener_.Enabled = bool;
@@ -249,6 +260,23 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
 
          if ~isempty(self.queue) && any(~[self.queue{:,3}])
             isRunnable = true;
+         end
+      end
+      
+      function self = addSegment(self,h)
+         self.segments = cat(2,self.segments,h);
+      end
+      
+      function self = removeSegment(self,h)
+         disp('remove');
+         for i = 1:numel(self)
+            if isvalid(self(i))
+               if nargin < 2
+                  self(i).segments = [];
+               else
+                  self(i).segments(self(i).segments==h) = [];
+               end
+            end
          end
       end
       
