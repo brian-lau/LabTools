@@ -5,6 +5,7 @@ function movepatch(h,d,f)
 %   inspire some people to do better stuff.
 %
 %   d - optional, 'x', 'y' or 'xy' (default) to constrain movement
+%   f - optional function handle, evaluated on movement termination
 %
 %   % Example:
 %   t = 0:2*pi/20:2*pi;
@@ -12,6 +13,11 @@ function movepatch(h,d,f)
 %   h = patch(X,Y,Z,'g')
 %   axis([-10 10 -10 10]);
 %   fig.movepatch(h);
+%
+%   % Example:
+%   h = plot([0 0],[0 1]);
+%   axis([-10 10 0 1]);
+%   fig.movepatch(h,'x',@(x) disp('hello'));
 %
 % Author: Anders Brun, anders@cb.uu.se
 %
@@ -46,7 +52,6 @@ end
 if nargin < 2
    d = 'xy';
 end
-
 
 % Unpack gui object
 gui = get(gcf,'UserData');
