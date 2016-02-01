@@ -37,7 +37,7 @@ if isempty(par.window) % FIXME: not working?
    temp = vertcat(self.window);
    temp = bsxfun(@minus,temp,offset);
    window = [min(temp(:,1)) max(temp(:,2))];
-   window = self.checkWindow(window,size(window,1));
+   window = checkWindow(window,size(window,1));
    clear temp;
 else
    window = par.window;
