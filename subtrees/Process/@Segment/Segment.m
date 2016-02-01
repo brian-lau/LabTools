@@ -33,6 +33,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    end
    properties
       blocks%@Block    %
+      listeners_
    end
    properties(SetAccess = protected)
       version = '0.1.0'
@@ -120,6 +121,18 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          
          % Add Segment reference to all child processes
          cellfun(@(x) x.addSegment(self),self.processes,'uni',0);
+         temp = cellfun(@(x) addlistener(x,'offset','PostSet',@self.test),self.processes,'uni',0);
+         self.listeners_ = [temp{:}];
+      end
+      
+      function test(self,varargin)
+%          keyboard
+         [self.listeners_.Enabled] = deal(false);
+         ind = cellfun(@(x) x==varargin{2}.AffectedObject,self.processes);
+         offset = varargin{2}.AffectedObject.offset;
+         disp('segment offset');
+         cellfun(@(x) x.setOffset(offset),self.processes(~ind),'uni',0);
+         [self.listeners_.Enabled] = deal(true);
       end
       
       function list = get.type(self)

@@ -219,7 +219,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function set.lazyLoad(self,bool)
          assert(isscalar(bool)&&islogical(bool),'err');
          if isempty(self.loadListener_)
-            %self.loadListener_ = addlistener(self,'values','PreGet',@(src,data) src.loadOnDemand);
             self.loadListener_ = addlistener(self,'values','PreGet',@self.loadOnDemand);
          else
             self.loadListener_.Enabled = bool;
@@ -235,7 +234,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       function set.deferredEval(self,bool)
          assert(isscalar(bool)&&islogical(bool),'err');
          if isempty(self.evalListener_)
-            %self.evalListener_ = addlistener(self,'runImmediately',@(src,data) src.evalOnDemand);
             self.evalListener_ = addlistener(self,'runImmediately',@self.evalOnDemand);
          else
             self.evalListener_.Enabled = bool;
