@@ -49,7 +49,7 @@ function plotEvent(event,obj,h,color,top,bottom)
 
    if event.duration == 0
       eGraphic = line([left left],[bottom top],'Color',color,'Linewidth',2,'Parent',h);
-      set(eGraphic,'UserData',event.name,'Tag','Event');
+      set(eGraphic,'UserData',event.name,'Tag','Event'); % Store event name 
       set(eGraphic,'uicontextmenu',eventMenu);
    else
       eGraphic = fill([left left right right],[bottom top top bottom],...
@@ -65,18 +65,24 @@ end
 
 function addEvent(~,~,obj,h,eventType)
    d = dragRect('xx');
-   set(gcf,'WindowKeyPressFcn',{@keypressEvent});
+   g = ancestor(h,'Figure');
+   set(g,'WindowKeyPressFcn',{@keypressEvent});
    
    function keypressEvent(~,~)
       event = metadata.event.(eventType);
       name = inputdlg('Event name:','Event name');
       event.name = name{1};
-      event.tStart = d.xPoints(1);
-      event.tEnd = d.xPoints(2);
+      if d.xPoints(1) <= d.xPoints(2)
+         event.tStart = d.xPoints(1);
+         event.tEnd = d.xPoints(2);
+      else
+         event.tStart = d.xPoints(2);
+         event.tEnd = d.xPoints(1);
+      end
       obj.insert(event);
       plotEvent(event,obj,h,[0 0 0],d.yPoints(2),d.yPoints(1));
       delete(d);
-      set(gcf,'WindowKeyPressFcn','');
+      set(g,'WindowKeyPressFcn','');
    end
 end
 
@@ -113,7 +119,6 @@ function moveEvent(source,~,obj,h)
       obj.times{1}(ind,:) = [tStart tEnd];
       g = findobj(h,'UserData',source.UserData,'-and','Type','Text');
       g.Position(1) = tStart;
-      set(gcf,'WindowKeyPressFcn','');
       % HACK - despite nextplot setting, this gets cleared?
       p.UserData = source.UserData;
    end
