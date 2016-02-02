@@ -1,7 +1,7 @@
 % Point process
 
 classdef(CaseInsensitiveProperties) PointProcess < Process         
-   properties(AbortSet)
+   properties(AbortSet, SetObservable)
       tStart              % Start time of process
       tEnd                % End time of process
    end

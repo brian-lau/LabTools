@@ -4,16 +4,25 @@
 function self = sync(self,event,varargin)
 
 p = inputParser;
-p.KeepUnmatched= true;
+p.KeepUnmatched = true;
 p.FunctionName = 'SampledProcess sync';
 p.addRequired('event',@(x) isnumeric(x) || isa(x,'metadata.Event'));
-p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
-p.addOptional('eventStart',true,@(x) isscalar(x) && islogical(x)); 
-p.addOptional('commonTime',true,@(x) islogical(x));
-p.addOptional('interpMethod',[],@(x) ischar(x));
+p.addParameter('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
+p.addParameter('eventStart',true,@(x) isscalar(x) && islogical(x)); 
+p.addParameter('commonTime',true,@(x) islogical(x));
+p.addParameter('interpMethod','',@(x) ischar(x));
 p.parse(event,varargin{:});
-
 par = p.Results;
+
+if ~self.short_
+   disp('notification sent');
+   self.short_ = true;
+   notify(self,'isSyncing',SyncEventData(par));
+   return;
+else
+   self.short_ = false;
+end
+disp('running sync');
 
 nObj = numel(self);
 if (numel(event)==1) && (nObj>1)

@@ -1,7 +1,7 @@
 % Regularly sampled process
 
 classdef(CaseInsensitiveProperties) SampledProcess < Process   
-   properties(AbortSet)
+   properties(AbortSet, SetObservable)
       tStart              % Start time of process
       tEnd                % End time of process
    end

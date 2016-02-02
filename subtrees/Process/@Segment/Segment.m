@@ -20,6 +20,8 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       tEnd
       window
       offset
+      
+      coordinateProcesses
    end
    properties(SetAccess = private)
       validSync
@@ -29,14 +31,15 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       sampledProcess
       pointProcess
       eventProcess
-      %spectralProcess
+      spectralProcess
    end
    properties
+      
       blocks%@Block    %
       listeners_
    end
    properties(SetAccess = protected)
-      version = '0.1.0'
+      version = '0.2.0'
    end
    
    methods
@@ -62,15 +65,17 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
          p.addParameter('process',[],@(x) iscell(x) || all(isa(x,'Process')) );
          p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
-         p.addParameter('window',[],@isnumeric);
-         p.addParameter('offset',0,@isnumeric);
          p.addParameter('tStart',[],@isnumeric);
          p.addParameter('tEnd',[],@isnumeric);
+         p.addParameter('window',[],@isnumeric);
+         p.addParameter('offset',0,@isnumeric);
+         p.addParameter('coordinateProcesses',false,@islogical);
          p.parse(varargin{:});
          par = p.Results;
 
          self.info = par.info;
-         
+
+
          self.processes = {};
          if ~isempty(par.process)
             if iscell(par.process)
@@ -78,6 +83,10 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
             else
                self.processes = cat(2,self.processes,{par.process});
             end
+            
+            % Remove existing Segment reference to all child processes
+            cellfun(@(x) set(x,'segment',[]),self.processes,'uni',0);
+            
             if isempty(par.tStart)
                tStart = unique(cellfun(@(x) x.tStart,self.processes));
                if numel(tStart) > 1
@@ -120,20 +129,22 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          self.labels = p.Results.labels;
          
          % Add Segment reference to all child processes
-         cellfun(@(x) x.addSegment(self),self.processes,'uni',0);
-         temp = cellfun(@(x) addlistener(x,'offset','PostSet',@self.test),self.processes,'uni',0);
-         self.listeners_ = [temp{:}];
+         cellfun(@(x) set(x,'segment',self),self.processes,'uni',0);
+         
+         % Register listeners
+         if par.coordinateProcesses
+            temp = cellfun(@(x) addlistener(x,'window','PostSet',@self.windowChange),self.processes,'uni',0);
+            self.listeners_.window = [temp{:}];
+
+            temp = cellfun(@(x) addlistener(x,'offset','PostSet',@self.offsetChange),self.processes,'uni',0);
+            self.listeners_.offset = [temp{:}];
+            
+            temp = cellfun(@(x) addlistener(x,'isSyncing',@self.syncChange),self.processes,'uni',0);
+            self.listeners_.sync = [temp{:}];
+         end
+         self.coordinateProcesses = par.coordinateProcesses;
       end
       
-      function test(self,varargin)
-%          keyboard
-         [self.listeners_.Enabled] = deal(false);
-         ind = cellfun(@(x) x==varargin{2}.AffectedObject,self.processes);
-         offset = varargin{2}.AffectedObject.offset;
-         disp('segment offset');
-         cellfun(@(x) x.setOffset(offset),self.processes(~ind),'uni',0);
-         [self.listeners_.Enabled] = deal(true);
-      end
       
       function list = get.type(self)
          list = cellfun(@(x) class(x),self.processes,'uni',0);
@@ -200,8 +211,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          if isempty(labels)
             self.labels = arrayfun(@(x) ['sid' num2str(x)],1:n,'uni',0);
          elseif iscell(labels)
-%             assert(all(cellfun(@ischar,labels)),'Segment:labels:InputType',...
-%                'Labels must be strings');
             assert(numel(labels)==numel(unique(labels)),'Segment:labels:InputType',...
                'Labels must be unique');
             assert(numel(labels)==n,'Segment:labels:InputFormat',...
@@ -224,10 +233,45 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       %plot
       
       function delete(self)
-         disp('Segment delete');
-         cellfun(@(x) x.removeSegment(self),self.processes,'uni',0);
+         %disp('Segment delete');
+         if ~isempty(self.processes)
+            cellfun(@(x) set(x,'segment',[]),self.processes,'uni',0);
+         end
       end
    end
+   
+   methods(Access = protected)
+      % need to check whether coordinating
+      function offsetChange(self,varargin)
+         disp('coordinating segment offset');
+         [self.listeners_.offset.Enabled] = deal(false);
+         ind = cellfun(@(x) x==varargin{2}.AffectedObject,self.processes);
+         offset = varargin{2}.AffectedObject.offset;
+         cellfun(@(x) x.setOffset(offset),self.processes(~ind),'uni',0);
+         [self.listeners_.offset.Enabled] = deal(true);
+      end
+      function windowChange(self,varargin)
+         disp('coordinating segment window');
+         [self.listeners_.window.Enabled] = deal(false);
+         ind = cellfun(@(x) x==varargin{2}.AffectedObject,self.processes);
+         window = varargin{2}.AffectedObject.window;
+         cellfun(@(x) x.setWindow(window),self.processes(~ind),'uni',0);
+         [self.listeners_.window.Enabled] = deal(true);
+      end
+      function syncChange(self,varargin)
+         disp('coordinating segment sync');
+         [self.listeners_.offset.Enabled] = deal(false);
+         [self.listeners_.window.Enabled] = deal(false);
+         [self.listeners_.sync.Enabled] = deal(false);
+         disp('listeners are off');
+         par = varargin{2}.par;
+         cellfun(@(x) x.sync(par.event,par),self.processes,'uni',0);
+         [self.listeners_.offset.Enabled] = deal(true);
+         [self.listeners_.window.Enabled] = deal(true);
+         [self.listeners_.sync.Enabled] = deal(true);
+      end
+   end
+   
    methods(Static)
       %obj = loadobj(S)
    end

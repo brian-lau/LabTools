@@ -25,7 +25,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       offset              % Time offset relative to window
    end
    properties(SetAccess = protected)
-      cumulOffset = 0     % Cumulative offset % FIXME PRIVATE?
+      cumulOffset = 0     % Cumulative offset
    end
    properties
       labels              % Label for each element of non-leading dimension
@@ -48,14 +48,15 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       isValidWindow       % Boolean indicating if window(s) within tStart and tEnd
    end
    properties
-      segments%@Segment    %
+      segment%@Segment    % Reference to parent Segment
+      short_ = false
    end
    properties(SetAccess = protected, Hidden)
       window_             % Original window
       offset_             % Original offset
       reset_ = false      % Reset bit
       running_ = true     % Boolean indicating eager evaluation
-      queueing_ = true    % Boolean indicating add queueable methods
+      queueing_ = true    % Boolean indicating add queueable methods (TODO)
    end
    properties(SetAccess = protected, Hidden, Transient)
       loadListener_@event.proplistener % lazyLoad listener
@@ -66,6 +67,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    events
       runImmediately
+      isSyncing
    end
    
    %%
@@ -261,21 +263,12 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
       end
       
-      function self = addSegment(self,h)
-         self.segments = cat(2,self.segments,h);
-      end
-      
-      function self = removeSegment(self,h)
-         disp('remove');
-         for i = 1:numel(self)
-            if isvalid(self(i))
-               if nargin < 2
-                  self(i).segments = [];
-               else
-                  self(i).segments(self(i).segments==h) = [];
-               end
-            end
-         end
+      function set.segment(self,segment)
+         %if ~isempty(self.segment)
+         %   disp('replacing parent');
+         %end
+         assert(isempty(segment) || isa(segment,'Segment'));
+         self.segment = segment;
       end
       
       function bool = hasLabel(self,label)

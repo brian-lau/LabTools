@@ -4,8 +4,8 @@ p = inputParser;
 p.KeepUnmatched= true;
 p.FunctionName = 'PointProcess sync';
 p.addRequired('event',@(x) isnumeric(x) || isa(x,'metadata.Event'));
-p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
-p.addOptional('eventStart',true,@(x) isscalar(x) && islogical(x)); 
+p.addParameter('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
+p.addParameter('eventStart',true,@(x) isscalar(x) && islogical(x)); 
 p.parse(event,varargin{:});
 
 par = p.Results;
