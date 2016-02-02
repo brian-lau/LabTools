@@ -17,6 +17,7 @@ p.FunctionName = 'SpectralProcess plot method';
 p.addParameter('handle',[],@(x) isnumeric(x) || ishandle(x));
 p.addParameter('colorbar',true,@(x) isnumeric(x) || islogical(x));
 p.addParameter('colormap','parula',@(x) ischar(x) || isnumeric(x));
+p.addParameter('caxis',[],@isnumeric);
 p.addParameter('shading','interp',@ischar);
 p.addParameter('log',true,@(x) islogical(x) || isscalar(x));
 p.parse(varargin{:});
@@ -63,10 +64,11 @@ for i = 1:n
 %       % maybe try imagescnan FEX
 %       imagesc('Xdata',t,'Ydata',f,'CData',v,'Parent',g);
 
-      %if ~isempty(par.shading)
-         shading(g,par.shading);
-      %end
+      if ~isempty(par.caxis)
+         caxis(par.caxis);
+      end
 
+      shading(g,par.shading);      
       colormap(par.colormap);
       if par.colorbar
          colorbar;

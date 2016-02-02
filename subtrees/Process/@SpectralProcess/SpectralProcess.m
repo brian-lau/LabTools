@@ -1,7 +1,7 @@
 % Time-frequency process
 
 classdef(CaseInsensitiveProperties) SpectralProcess < Process   
-   properties(AbortSet)
+   properties(AbortSet, SetObservable)
       tStart              % Start time of process
       tEnd                % End time of process
    end
@@ -38,7 +38,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
 
          p = inputParser;
          p.KeepUnmatched= false;
-         p.FunctionName = 'SampledProcess constructor';
+         p.FunctionName = 'SpectralProcess constructor';
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
          p.addParameter('values',[],@(x) isnumeric(x) || isa(x,'DataSource'));
          p.addParameter('labels',{},@(x) iscell(x) || ischar(x));

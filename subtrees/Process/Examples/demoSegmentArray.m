@@ -43,7 +43,7 @@ for i = 1:ntrials
    sp = {sp sp+.01 sp+.02 sp+.03 sp+.04 sp+.05};
    
    lfp = SampledProcess('values',y,'Fs',1/dt,'tStart',0,'tEnd',10);
-   tf_lfp = tfr(lfp,'f',0:500,'tBlock',.5,'tStep',.2);
+   tf_lfp = tfr(lfp,'f',0:500,'tBlock',.5,'tStep',.2,'tapers',[10 19],'pad',1);
    emg = SampledProcess('values',-y,'Fs',1/dt,'tStart',0,'tEnd',10);
    tf_emg = tfr(emg,'f',0:500,'tBlock',.5,'tStep',.2);
    spikes = PointProcess('times',sp,'tStart',0,'tEnd',10);

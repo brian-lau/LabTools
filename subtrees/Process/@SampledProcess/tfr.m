@@ -24,13 +24,15 @@ if (nargin > 1) && isa(varargin{1},'inputParser')
 else
    p = inputParser;
    p.KeepUnmatched= true;
-   p.FunctionName = 'SpectralProcess toSpectrogram method';
+   p.FunctionName = 'SampledProcess tfr method';
    p.addParameter('method','chronux',@ischar);
    p.addParameter('tBlock',1,@(x) isnumeric(x) && isscalar(x));
    p.addParameter('tStep',[],@(x) isnumeric(x) && isscalar(x));
    p.addParameter('f',0:100,@(x) isnumeric(x) && isvector(x));
+   p.addParameter('tapers',[5 9],@(x) isnumeric(x) && isvector(x));
+   p.addParameter('pad',0,@(x) isnumeric(x) && isscalar(x));
    p.parse(varargin{:});
-   params = p.Unmatched;
+   %params = p.Unmatched;
 end
 par = p.Results;
 
@@ -61,8 +63,8 @@ switch lower(par.method)
          S(:,:,i) = abs(temp');
       end
    case {'chronux' 'multitaper'}
-      tfParams.tapers = [5 9];
-      tfParams.pad = 0;
+      tfParams.tapers = par.tapers;
+      tfParams.pad = par.pad;
       tfParams.Fs = self.Fs;
       tfParams.fpass = par.f;
       [S,~,f] = mtspecgramc(self.values{1}, [tBlock tStep], tfParams);
@@ -81,7 +83,7 @@ switch lower(par.method)
       % Orient frequencies as ascending sequence (power as well above)
       f = flipud(wt.frequencies(:));
    otherwise
-      error('bad method');
+      error('Bad method for tfr!');
 end
 
 obj = SpectralProcess(S,...
