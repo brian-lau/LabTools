@@ -51,18 +51,18 @@ s.reset();
 s.sync(offset,'window',window);
 plot(s);
 
-%% Interpolation when synchronizing
-clear
-x = [0 0 .5];
-s(1) = SampledProcess('values',x);
-x = [0 1 0];
-s(2) = SampledProcess('values',x);
-plot(s)
-
-window = [-2 2];
-offset = [1.9 0.5];
-sync(s,offset,'window',window);
-plot(s);
+% %% Interpolation when synchronizing
+% clear
+% x = [0 0 .5];
+% s(1) = SampledProcess('values',x);
+% x = [0 1 0];
+% s(2) = SampledProcess('values',x);
+% plot(s)
+% 
+% window = [-2 2];
+% offset = [1.9 0.5];
+% sync(s,offset,'window',window);
+% plot(s);
 
 %% 
 % signals sampled at same Fs, tStart, numel

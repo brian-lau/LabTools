@@ -13,6 +13,10 @@ if checkVersion(S.version,'0.4.0')
       'tEnd',S.tEnd,...
       'lazyLoad',S.lazyLoad...
       );
+   % Set parent
+   if checkVersion(S.version,'0.5.0')
+      set(obj,'segment',S.segment);
+   end
    % Now set current window/offset
    set(obj,'window',S.window);
    set(obj,'offset',S.offset);

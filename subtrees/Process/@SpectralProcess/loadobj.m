@@ -16,6 +16,10 @@ if checkVersion(S.version,'0.4.0')
       'tStart',S.tStart,...
       'tEnd',S.tEnd...
       );
+   % Set parent
+   if checkVersion(S.version,'0.5.0')
+      set(obj,'segment',S.segment);
+   end
    % Now set current window/offset
    set(obj,'window',S.window);
    set(obj,'offset',S.offset);
