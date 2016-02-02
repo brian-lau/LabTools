@@ -230,7 +230,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       end
       
       % Visualization
-      plot(self,varargin)
+      h = plot(self,varargin)
    end
    
    methods(Access = protected)

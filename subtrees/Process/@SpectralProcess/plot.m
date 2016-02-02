@@ -1,7 +1,8 @@
 % TODO
 % o common timescale
 % o gui elements allowing scrolling
-function varargout = plot(self,varargin)
+%function varargout = plot(self,varargin)
+function hh = plot(self,varargin)
 
 nObj = numel(self);
 if nObj > 1
@@ -21,7 +22,7 @@ p.addParameter('caxis',[],@isnumeric);
 p.addParameter('shading','interp',@ischar);
 p.addParameter('log',true,@(x) islogical(x) || isscalar(x));
 p.parse(varargin{:});
-params = p.Unmatched;
+%params = p.Unmatched;
 
 par = p.Results;
 
@@ -78,6 +79,6 @@ for i = 1:n
    axis tight;
 end
 
-if nargout >= 1
-   varargout{1} = h;
+if nargout
+   hh = h;
 end

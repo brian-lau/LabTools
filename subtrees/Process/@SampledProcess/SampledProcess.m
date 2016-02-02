@@ -244,7 +244,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       obj = pac(self,varargin)
       
       % Visualization
-      plot(self,varargin)
+      h = plot(self,varargin)
    end
    
    methods(Access = protected)

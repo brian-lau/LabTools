@@ -1,10 +1,10 @@
-function varargout = plot(self,varargin)
+function [hh,yOffset] = plot(self,varargin)
 
-[h,yOffset] = raster(self,varargin{:});
+[h,yOff] = raster(self,varargin{:});
 
 if nargout == 1
-   varargout{1} = h;
+   hh = h;
 elseif nargout == 2
-   varargout{1} = h;
-   varargout{2} = yOffset;
+   hh = h;
+   yOffset = yOff;
 end

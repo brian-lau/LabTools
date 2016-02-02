@@ -1,7 +1,7 @@
 % TODO
 % o common timescale
 % o gui elements allowing scrolling
-function varargout = plot(self,varargin)
+function hh = plot(self,varargin)
 
 p = inputParser;
 p.KeepUnmatched= true;
@@ -41,6 +41,6 @@ else
    plot(t,values,'Parent',h);
 end
 
-if nargout >= 1
-   varargout{1} = h;
+if nargout
+   hh = h;
 end

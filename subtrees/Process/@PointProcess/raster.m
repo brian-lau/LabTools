@@ -5,7 +5,7 @@
 % SEE ALSO
 % plotRaster
 
-function [h,yOffset] = raster(self,varargin)
+function [hh,yOffset] = raster(self,varargin)
 
 import spk.*
 
@@ -13,9 +13,9 @@ p = inputParser;
 p.KeepUnmatched= true;
 p.FunctionName = 'PointProcess raster method';
 % Intercept some parameters to override defaults
-p.addParamValue('grpBorder',false,@islogical);
-p.addParamValue('labelXAxis',false,@islogical);
-p.addParamValue('labelYAxis',false,@islogical);
+p.addParameter('grpBorder',false,@islogical);
+p.addParameter('labelXAxis',false,@islogical);
+p.addParameter('labelYAxis',false,@islogical);
 p.parse(varargin{:});
 % Passed through to plotRaster
 params = p.Unmatched;
@@ -34,10 +34,17 @@ if isempty(times)
       h = params.h;
    end
    if isfield(params,'yOffset')
-      yOffset = params.yOffset;
+      yOff = params.yOffset;
    end
 else
-   [h,yOffset] = plotRaster(times,p.Results,params);
+   [h,yOff] = plotRaster(times,p.Results,params);
    xlabel('Time');
    %xlabel(['Time (' self.unit ')']);
+end
+
+if nargout == 1
+   hh = h;
+elseif nargout == 2
+   hh = h;
+   yOffset = yOff;
 end
