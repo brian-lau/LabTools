@@ -11,7 +11,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    properties(SetAccess = private)
       processes
    end
-   properties(Dependent = true)
+   properties(Dependent = true, Transient)
       type
    end
    properties
@@ -27,7 +27,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       validSync
    end
    % validSegment? all processes have same parent segment?
-   properties(Dependent = true)
+   properties(Dependent = true, Transient)
       sampledProcess
       pointProcess
       eventProcess
@@ -35,7 +35,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    end
    properties
       
-      blocks%@Block    %
+      block%@Block    %
       listeners_
    end
    properties(SetAccess = protected)
@@ -74,7 +74,6 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          par = p.Results;
 
          self.info = par.info;
-
 
          self.processes = {};
          if ~isempty(par.process)
@@ -233,8 +232,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       %plot
       
       function delete(self)
-         %disp('Segment delete');
-         if ~isempty(self.processes)
+         disp('Segment delete');
+         if ~isempty(self.processes) && isvalid(self)
+            %keyboard
             cellfun(@(x) set(x,'segment',[]),self.processes,'uni',0);
          end
       end
