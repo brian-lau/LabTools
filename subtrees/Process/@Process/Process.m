@@ -11,15 +11,12 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       tStart              % Start time of process
       tEnd                % End time of process
    end
-   properties(Abstract, SetAccess = protected, Hidden)
-      times_              % Original event/sample times
-      values_             % Original attribute/values
-   end
    properties(AbortSet, SetObservable)
       window              % [min max] time window of interest (time re. 0)
    end
    properties(Dependent)
       relWindow           % [min max] time window of interest (time re. cumulative offsets)
+      isValidWindow       % Boolean indicating if window(s) within tStart and tEnd
    end
    properties(SetObservable)
       offset              % Time offset relative to window
@@ -31,32 +28,38 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       labels              % Label for each element of non-leading dimension
       quality             % Scalar information for each non-leading dimension
    end
+   properties(Abstract, SetAccess = protected, Hidden)
+      times_              % Original event/sample times
+      values_             % Original attribute/values
+   end
    properties(SetAccess = protected, Transient, GetObservable)
       times = {}          % Current event/sample times
       values = {}         % Current attribute/value associated with each time
    end
-   properties(SetAccess = protected) %FIXME public?
+   properties
       lazyLoad = false    % Boolean to defer constructing values from values_
+   end
+   properties(SetAccess = protected)
+      isLoaded = true     % Boolean indicates whether values constructed
+   end
+   properties
       deferredEval = false% Boolean to defer method evaluations (see addToQueue)
    end
    properties(SetAccess = protected)
       queue = {}          % Method evaluation queue/history
-      isLoaded = true     % Boolean indicates whether values constructed
    end
-   properties(SetAccess = protected, Dependent, Transient)
+   properties(Dependent)
       isRunnable = false  % Boolean indicating if queue contains runnable items
-      isValidWindow       % Boolean indicating if window(s) within tStart and tEnd
    end
    properties
-      segment%@Segment    % Reference to parent Segment
-      short_ = false
+      history = false     % Boolean indicating add queueable methods (TODO)
+      segment             % Reference to parent Segment
    end
    properties(SetAccess = protected, Hidden)
       window_             % Original window
       offset_             % Original offset
       reset_ = false      % Reset bit
       running_ = true     % Boolean indicating eager evaluation
-      queueing_ = true    % Boolean indicating add queueable methods (TODO)
    end
    properties(SetAccess = protected, Hidden, Transient)
       loadListener_@event.proplistener % lazyLoad listener
@@ -66,19 +69,20 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       version = '0.5.0'   % Version string
    end
    events
-      runImmediately
-      isSyncing
+      runImmediately      % trigger queue evaluation
+      isSyncing           % sync method executing
    end
    
    %%
    methods(Abstract)
       chop(self,shiftToWindow)
-      s = sync(self,event,varargin)
       [s,labels] = extract(self,reqLabels)
       apply(self,fun) % apply applyFunc func?
       %copy?
       plot(self)
       
+      roundToProcessResolution(self,x,res)
+      % add
       % remove % delete by label
       
       % append
@@ -107,6 +111,30 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       loadOnDemand(self,varargin)
       evalOnDemand(self,varargin)
       revalOnDemand(self)
+      
+      function disableSegmentListeners(self)
+         for i = 1:numel(self)
+            if ~isempty(self(i).segment)
+               if self(i).segment.coordinateProcesses
+                  [self(i).segment.listeners_.offset.Enabled] = deal(false);
+                  [self(i).segment.listeners_.window.Enabled] = deal(false);
+                  [self(i).segment.listeners_.sync.Enabled] = deal(false);
+               end
+            end
+         end
+      end
+      
+      function enableSegmentListeners(self)
+         for i = 1:numel(self)
+            if ~isempty(self(i).segment)
+               if self(i).segment.coordinateProcesses
+                  [self(i).segment.listeners_.offset.Enabled] = deal(true);
+                  [self(i).segment.listeners_.window.Enabled] = deal(true);
+                  [self(i).segment.listeners_.sync.Enabled] = deal(true);
+               end
+            end
+         end
+      end
    end
 
    methods
@@ -127,7 +155,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % setWindow, applyWindow
 
          %------- Add to function queue ----------
-         if ~self.running_ || ~self.deferredEval
+         if isQueueable(self)
             addToQueue(self,window);
             if self.deferredEval
                return;
@@ -169,7 +197,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          % setOffset, applyOffset
          
          %------- Add to function queue ----------
-         if ~self.running_ || ~self.deferredEval
+         if isQueueable(self)
             addToQueue(self,offset);
             if self.deferredEval
                return;
@@ -185,7 +213,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       
       function set.labels(self,labels)
          %------- Add to function queue ----------
-         if ~self.running_ || ~self.deferredEval
+         if isQueueable(self)
             addToQueue(self,labels);
             if self.deferredEval
                return;
@@ -200,7 +228,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       
       function set.quality(self,quality)
          %------- Add to function queue ----------
-         if ~self.running_ || ~self.deferredEval
+         if isQueueable(self)
             addToQueue(self,quality);
             if self.deferredEval
                return;
@@ -233,6 +261,15 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          self.lazyLoad = bool;
       end
       
+      function set.history(self,bool)
+         assert(isscalar(bool)&&islogical(bool),'err');
+         if ~bool && self.deferredEval
+            warning('history not disabled since deferredEval = true');
+         else
+            self.history = bool;
+         end
+      end
+      
       function set.deferredEval(self,bool)
          assert(isscalar(bool)&&islogical(bool),'err');
          if isempty(self.evalListener_)
@@ -241,10 +278,13 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
             self.evalListener_.Enabled = bool;
          end
          
-         if ~bool
+         self.deferredEval = bool;
+         if bool
+            self.running_ = false;
+            self.history = true;
+         else
             run(self);
          end
-         self.deferredEval = bool;
       end
       
       function set.queue(self,queue)
@@ -261,6 +301,19 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          if ~isempty(self.queue) && any(~[self.queue{:,3}])
             isRunnable = true;
          end
+      end
+      
+      function bool = isQueueable(self)
+         % Determine whether we can queue
+         % Running w/out history:
+         %     running_ = 1, deferredEval = 0, history = 0
+         % Running w/ history:
+         %     running_ = 1, deferredEval = 0, history = 1
+         % Running w/ deferral (run called explicitly):
+         %     running_ = 1, deferredEval = 1, history = 1
+         % Running w/ deferral (before run called explicitly):
+         %     running_ = 0, deferredEval = 1, history = 1
+         bool = self.history && (~self.running_ || ~self.deferredEval);
       end
       
       function set.segment(self,segment)
@@ -301,6 +354,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       bool = infoHasValue(self,value,varargin)
       info = copyInfo(self)      
       
+      s = sync(self,event,varargin)
+      s = sync__(self,event,varargin)
+
       function bool = checkVersion(self,req)
          ver = self.version;
          bool = checkVersion(ver,req);

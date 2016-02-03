@@ -10,7 +10,7 @@
 
 function applyWindow(self)
 
-if isempty(self.times) % FIXME, is this only for constructor?
+if isempty(self.times)
    return;
 end
 

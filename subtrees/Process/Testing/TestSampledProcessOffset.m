@@ -34,7 +34,7 @@ classdef TestSampledProcessOffset < matlab.unittest.TestCase
          offset = 1.5;
          s.offset = offset;
                   
-         times = offset + SampledProcess.tvec(0,s.dt,size(testCase.values,1));
+         times = offset + tvec(0,s.dt,size(testCase.values,1));
          
          testCase.assertEqual(s.offset,offset);
          testCase.assertEqual(s.times,{times},testCase.tolType,testCase.tol);
@@ -45,7 +45,7 @@ classdef TestSampledProcessOffset < matlab.unittest.TestCase
          offset = 1.5;
          set(s,'offset',offset);
                   
-         times = offset + SampledProcess.tvec(0,s.dt,size(testCase.values,1));
+         times = offset + tvec(0,s.dt,size(testCase.values,1));
          
          testCase.assertEqual(s.offset,offset);
          testCase.assertEqual(s.times,{times},testCase.tolType,testCase.tol);
@@ -101,7 +101,7 @@ classdef TestSampledProcessOffset < matlab.unittest.TestCase
          testCase.assertEqual(s.cumulOffset,offset1);
          
          s.offset = offset2;
-         times = offset1 + offset2 + SampledProcess.tvec(0,s.dt,size(testCase.values,1));
+         times = offset1 + offset2 + tvec(0,s.dt,size(testCase.values,1));
 
          testCase.assertEqual(s.cumulOffset,offset1 + offset2);
          testCase.assertEqual(s.times,{times},testCase.tolType,testCase.tol);
@@ -117,7 +117,7 @@ classdef TestSampledProcessOffset < matlab.unittest.TestCase
          s.offset = offset2;
          s.window = win;
          
-         times = SampledProcess.tvec(0,s.dt,size(testCase.values,1));
+         times = tvec(0,s.dt,size(testCase.values,1));
          % Window applies to original times
          ind = (times>=win(1)) & (times<=win(2));
          times = offset1 + offset2 + times(ind);

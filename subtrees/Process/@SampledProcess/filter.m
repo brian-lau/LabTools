@@ -27,7 +27,7 @@ end
 
 for i = 1:numel(self)
    %------- Add to function queue ----------
-   if ~self(i).running_ || ~self(i).deferredEval
+   if isQueueable(self(i))
       addToQueue(self(i),par);
       if self(i).deferredEval
          continue;

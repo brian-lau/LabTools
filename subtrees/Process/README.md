@@ -3,6 +3,7 @@
 ## Requirements
 ### Base Matlab
 * Signal Processing Toolbox
+* R2014b - possible dependence on new handle graphics system
 * R2014a - abstract class properties
 * R2011a - matlab.mixin.Copyable for copying handle objects
 * R2010a - containers.Maps constructor to specify key and value type

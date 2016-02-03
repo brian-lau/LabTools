@@ -1,79 +1,41 @@
 % should be able to handle passing in raw values to normalize by
-
+% need to implement normalize by average across elements
 function self = normalize(self,event,varargin)
-
-nObj = numel(self);
-if nObj > 1
-   for i = 1:nObj
-      normalize(self(i),varargin{:});
-   end
-   return
-end
 
 p = inputParser;
 p.KeepUnmatched= true;
 p.FunctionName = 'SpectralProcess normalize';
 p.addRequired('event',@(x) isnumeric(x) || isa(x,'metadata.Event'));
-p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2)); 
-p.addOptional('eventStart',true,@(x) isscalar(x) && islogical(x)); 
-p.addOptional('method','divide',@ischar); 
+p.addParameter('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2));
+p.addParameter('eventStart',true,@(x) isscalar(x) && islogical(x));
+p.addParameter('method','divide',@ischar);
 p.parse(event,varargin{:});
-
 par = p.Results;
 
-nObj = numel(self);
-if (numel(event)==1) && (nObj>1)
-   event = repmat(event,size(self));
-end
-assert(numel(event)==numel(self),'SampledProcess:sync:InputValue',...
-   'numel(event) should match numel(SampledProcess)');
+% validate that window contains at least one sample
 
-if all(isa(event,'metadata.Event'))
-   if par.eventStart
-      offset = [event.tStart]';
-   else
-      offset = [event.tEnd]';
-   end
-else
-   offset = event(:);
-end
+history = num2cell([self.history]);
+[self.history] = deal(true);
 
-if isempty(par.window) % FIXME: not working?
-   % find window that includes all data
-   temp = vertcat(self.window);
-   temp = bsxfun(@minus,temp,offset);
-   window = [min(temp(:,1)) max(temp(:,2))];
-   window = self.checkWindow(window,size(window,1));
-   clear temp;
-else
-   window = par.window;
-end
+par.processTime = false;
+self.sync__(par.event,par);
 
-origWindow = window;
-% Window at original sample times
-if (size(window,1)>1) || (numel(offset)>1)
-   window = bsxfun(@plus,window,offset);
-   window = bsxfun(@plus,window,-vec([self.cumulOffset]));
-   window = num2cell(window,2);
-else
-   window = window + offset - self.cumulOffset;
-end
-self.setWindow(window);
-
-% Extract window values, and reset process 
+% Extract window values, and reset process
 % error if window produces nothing (all nans? or window smaller than tBlock)
-normVals = self.values{1};
-undo(self);
+normVals = arrayfun(@(x) x.values{1},self,'uni',0);
+self.undo(2);
+[self.history] = deal(history{:});
 
-switch lower(par.method)
-   case {'subtract'}
-      self.values{1} = bsxfun(@minus,self.values{1},nanmean(normVals));
-   case {'z', 'z-score'}
-      self.values{1} = bsxfun(@minus,self.values{1},nanmean(normVals));
-      self.values{1} = bsxfun(@rdivide,self.values{1},nanstd(normVals));
-   case {'divide'}
-      self.values{1} = bsxfun(@rdivide,self.values{1},nanmean(normVals));
-   otherwise
-      error('Bad method');
+for i = 1:numel(self)
+   switch lower(par.method)
+      case {'subtract'}
+         self(i).values{1} = bsxfun(@minus,self(i).values{1},nanmean(normVals{i}));
+      case {'z', 'z-score'}
+         self(i).values{1} = bsxfun(@minus,self(i).values{1},nanmean(normVals{i}));
+         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},nanstd(normVals{i}));
+      case {'divide'}
+         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},nanmean(normVals{i}));
+      otherwise
+         error('Bad method');
+   end
 end
-

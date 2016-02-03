@@ -8,7 +8,7 @@ assert(isnumeric(newFs)&&isscalar(newFs)&&(newFs>0),...
 
 for i = 1:numel(self)
    %-- Add link to function queue ----------
-   if ~self(i).running_ || ~self(i).deferredEval
+   if isQueueable(self(i))
       addToQueue(self(i),newFs);
       if self(i).deferredEval
          continue;
@@ -31,7 +31,7 @@ for i = 1:numel(self)
          self(i).values(2:nWindow,1),'uni',0);
    end
    
-   times = cellfun(@(x,y) self(i).tvec(x(1),1/newFs,size(y,1)),...
+   times = cellfun(@(x,y) tvec(x(1),1/newFs,size(y,1)),...
       self(i).times,values,'uni',0);
    
    self(i).times = times;

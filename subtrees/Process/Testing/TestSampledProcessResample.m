@@ -141,7 +141,7 @@ classdef TestSampledProcessResample < matlab.unittest.TestCase
          % Directly call resample from Signal Processing
          [p,q] = rat(newFs/Fs);
          z = resample(y,p,q);
-         t = SampledProcess.tvec(t(1),1/newFs,size(z,1));
+         t = tvec(t(1),1/newFs,size(z,1));
       end
    end
    

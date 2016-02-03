@@ -1,4 +1,14 @@
 
+% in the case of vector Segment, metadata.Event
+% filter for Event, take start or end time as event
+% handle case of missing event?
+% 
+% Segment is scalar
+% same event for each process
+% different event for each process (where each process is scalar)
+% different event for each process (where each process could be vector)
+%   sync all to same event
+
 function self = sync(self,event,varargin)
 
 p = inputParser;
@@ -9,7 +19,7 @@ p.addOptional('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2))
 p.addOptional('eventProcessName',[],@ischar);
 p.parse(event,varargin{:});
 
-validSyncParams = {'commonTime' 'interpMethod' 'resample' 'eventStart'};
+validSyncParams = {'processTime' 'eventStart'};
 eventPars = p.Unmatched;
 
 if ~isempty(p.Results.window)
@@ -27,16 +37,7 @@ if ~isempty(fieldnames(eventPars))
    end
 end
 
-% in the case of vector Segment, metadata.Event
-% filter for Event, take start or end time as event
-% handle case of missing event?
-% 
-% Segment is scalar
-% same event for each process
-% different event for each process (where each process is scalar)
-% different event for each process (where each process could be vector)
-%   sync all to same event
-
+disableSegmentListeners(self);
 for i = 1:numel(self)
    if isempty(p.Results.event)
       % Pull event out of EventProcess
@@ -53,16 +54,19 @@ for i = 1:numel(self)
       event = temp.find(eventPars);
    elseif isa(p.Results.event,'metadata.Event')
       % FIXME, check dimensions for scalar event
+      % FIXME, need an assert above to ensure dimensions match
       event = p.Results.event(i);
    end
 
    if numel(event) == 1
       if ~strcmp(event.name,'NULL')
+         %disableSegmentListeners(self(i));
          if isempty(syncPars)
-            cellfun(@(x) x.sync(event),self(i).processes,'uni',0);
+            cellfun(@(x) x.sync__(event),self(i).processes,'uni',0);
          else
-            cellfun(@(x) x.sync(event,syncPars),self(i).processes,'uni',0);
+            cellfun(@(x) x.sync__(event,syncPars),self(i).processes,'uni',0);
          end
+         %enableSegmentListeners(self(i));
       end
       self(i).validSync = event;
    elseif numel(event) > 1
@@ -73,3 +77,4 @@ for i = 1:numel(self)
       error('incorrect number of events');
    end
 end
+enableSegmentListeners(self);

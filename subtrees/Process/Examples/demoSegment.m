@@ -140,7 +140,7 @@ S.sync('name','cue','window',[-1 5])
 
 %%
 clear all;
-ntrials = 30;
+ntrials = 130;
 
 dt = 0.001;
 t = (0:dt:(10-dt))';

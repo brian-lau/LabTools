@@ -1,8 +1,4 @@
-% Class for collecting Processes with common:
-%    tStart
-%    tEnd
-%    window
-%    offset
+% Class for collecting Processes 
 
 classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & matlab.mixin.Copyable
    properties
@@ -11,7 +7,13 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    properties(SetAccess = private)
       processes
    end
-   properties(Dependent = true, Transient)
+   properties(Dependent)
+      sampledProcess
+      pointProcess
+      eventProcess
+      spectralProcess
+   end
+   properties(Dependent)
       type
    end
    properties
@@ -26,15 +28,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    properties(SetAccess = private)
       validSync
    end
-   % validSegment? all processes have same parent segment?
-   properties(Dependent = true, Transient)
-      sampledProcess
-      pointProcess
-      eventProcess
-      spectralProcess
-   end
-   properties
-      
+   % isValidWindow
+   % isValidSegment? all processes have same parent segment?
+   properties(SetAccess = protected, Transient)
       block%@Block    %
       listeners_
    end
@@ -131,19 +127,8 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          cellfun(@(x) set(x,'segment',self),self.processes,'uni',0);
          
          % Register listeners
-         if par.coordinateProcesses
-            temp = cellfun(@(x) addlistener(x,'window','PostSet',@self.windowChange),self.processes,'uni',0);
-            self.listeners_.window = [temp{:}];
-
-            temp = cellfun(@(x) addlistener(x,'offset','PostSet',@self.offsetChange),self.processes,'uni',0);
-            self.listeners_.offset = [temp{:}];
-            
-            temp = cellfun(@(x) addlistener(x,'isSyncing',@self.syncChange),self.processes,'uni',0);
-            self.listeners_.sync = [temp{:}];
-         end
          self.coordinateProcesses = par.coordinateProcesses;
       end
-      
       
       function list = get.type(self)
          list = cellfun(@(x) class(x),self.processes,'uni',0);
@@ -159,6 +144,10 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       
       function proc = get.eventProcess(self)
          proc = extract(self,'EventProcess','type');
+      end
+      
+      function proc = get.spectralProcess(self)
+         proc = extract(self,'SpectralProcess','type');
       end
       
       function tStart = get.tStart(self)
@@ -221,7 +210,24 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
             error('Segment:labels:InputType','Incompatible label type');
          end
       end
+      
+      function set.coordinateProcesses(self,bool)
+         if bool
+            temp = cellfun(@(x) addlistener(x,'window','PostSet',@self.windowChange),self.processes,'uni',0);
+            self.listeners_.window = [temp{:}];
             
+            temp = cellfun(@(x) addlistener(x,'offset','PostSet',@self.offsetChange),self.processes,'uni',0);
+            self.listeners_.offset = [temp{:}];
+            
+            temp = cellfun(@(x) addlistener(x,'isSyncing',@self.syncChange),self.processes,'uni',0);
+            self.listeners_.sync = [temp{:}];
+            
+            self.coordinateProcesses = bool;
+         else
+            self.listeners_ = [];
+            self.coordinateProcesses = bool;
+         end
+      end
       self = sync(self,event,varargin)
       proc = extract(self,request,flag)
       obj = restrictByInfo(self,key,prop,value,varargin)
@@ -232,15 +238,16 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       %plot
       
       function delete(self)
-         disp('Segment delete');
+         % Delete is run separately for each Segment element
+         %disp('Segment delete');
+         % Disconnect Segment from child processes
          if ~isempty(self.processes) && isvalid(self)
-            %keyboard
             cellfun(@(x) set(x,'segment',[]),self.processes,'uni',0);
          end
       end
    end
    
-   methods(Access = protected)
+   methods(Access = protected)      
       % need to check whether coordinating
       function offsetChange(self,varargin)
          disp('coordinating segment offset');
@@ -260,19 +267,35 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
       end
       function syncChange(self,varargin)
          disp('coordinating segment sync');
-         [self.listeners_.offset.Enabled] = deal(false);
-         [self.listeners_.window.Enabled] = deal(false);
-         [self.listeners_.sync.Enabled] = deal(false);
-         disp('listeners are off');
+         self.disableSegmentListeners();
+         ind = cellfun(@(x) x==varargin{2}.Source,self.processes);
          par = varargin{2}.par;
-         cellfun(@(x) x.sync(par.event,par),self.processes,'uni',0);
-         [self.listeners_.offset.Enabled] = deal(true);
-         [self.listeners_.window.Enabled] = deal(true);
-         [self.listeners_.sync.Enabled] = deal(true);
+         cellfun(@(x) x.sync__(par.event,par),self.processes(~ind),'uni',0);
+      end
+      
+      function disableSegmentListeners(self)
+         for i = 1:numel(self)
+            if self(i).coordinateProcesses
+               [self(i).listeners_.offset.Enabled] = deal(false);
+               [self(i).listeners_.window.Enabled] = deal(false);
+               [self(i).listeners_.sync.Enabled] = deal(false);
+            end
+         end
+      end
+      
+      function enableSegmentListeners(self)
+         for i = 1:numel(self)
+            if self(i).coordinateProcesses
+               [self(i).listeners_.offset.Enabled] = deal(true);
+               [self(i).listeners_.window.Enabled] = deal(true);
+               [self(i).listeners_.sync.Enabled] = deal(true);
+            end
+         end
       end
    end
    
    methods(Static)
-      %obj = loadobj(S)
+      %saveobj(S) should remove listeners
+      obj = loadobj(S)
    end
 end

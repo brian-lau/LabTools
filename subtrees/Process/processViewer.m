@@ -404,7 +404,7 @@ updateSelectTab();
                   'sep',stackSlider.Value*data.sd);
             case 'PointProcess'
                cla(ax); set(ax,'Visible','on');
-               raster(extract(data.segment(ind),labels{i},'labels'),'handle',ax,'style','tick');
+               plot(extract(data.segment(ind),labels{i},'labels'),'handle',ax,'style','tick');
                set(ax,'ylim',[0.5 max(get(ax,'ylim'))]);
             case 'SpectralProcess'
                set(ax,'Visible','on');

@@ -16,9 +16,9 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       tStep               % Duration of step taken for each spectral estimate
       f                   % Frequencies 
    end
-   properties(SetAccess = protected, Dependent, Transient)
+   properties(SetAccess = protected, Dependent)
       dim                 % Dimensionality of each window
-   end   
+   end
    
    %%
    methods
@@ -53,14 +53,17 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          p.addParameter('f',[],@isnumeric);
          p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
          p.addParameter('deferredEval',false,@(x) islogical(x) || isscalar(x));
+         p.addParameter('history',false,@(x) islogical(x) || isscalar(x));
          p.parse(varargin{:});
          par = p.Results;
          
+         % Do not store constructor commands
+         self.history = false;
+
          % Hashmap with process information
          self.info = par.info;
          
-         % Lazy loading/evaluation
-         self.deferredEval = par.deferredEval;         
+         % Lazy loading
          self.lazyLoad = par.lazyLoad;
                   
          % Set sampling frequency and values_/values, times_/times
@@ -74,7 +77,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          self.params = par.params;
          self.tBlock = par.tBlock;
          self.tStep = par.tStep;
-         self.times_ = {self.tvec(par.tStart,self.tStep,dim(1))};
+         self.times_ = {tvec(par.tStart,self.tStep,dim(1))};
          self.times = self.times_;
          
          % Define the start and end times of the process
@@ -115,13 +118,8 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          self.window_ = self.window;
          self.offset_ = self.offset;
          
-         % Set running_ bool, which was true (constructor calls not queued)
-         if self.deferredEval
-            self.running_ = false;
-         end
-         
-         % Don't expose constructor history
-         clearQueue(self);
+         self.history = par.history;
+         self.deferredEval = par.deferredEval;         
       end % constructor
       
       function set.tStart(self,tStart)
@@ -137,15 +135,11 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             self.tStart = tStart;
          else
             dim = size(self.values_{1});
-            [pre,preV] = self.extendPre(self.tStart,tStart,self.tStep,dim(2:end));
+            [pre,preV] = extendPre(self.tStart,tStart,self.tStep,dim(2:end));
             self.times_ = {[pre ; self.times_{1}]};
             self.values_ = {[preV ; self.values_{1}]};
             self.tStart = tStart;
-            self.discardBeforeStart();
-            
-            if ~isempty(self.tEnd)
-               self.setInclusiveWindow();
-            end
+            self.discardBeforeStart();            
          end
       end
       
@@ -162,28 +156,24 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             self.tEnd = tEnd;
          else
             dim = size(self.values_{1});
-            [post,postV] = self.extendPost(self.tEnd,tEnd,self.tStep,dim(2:end));
+            [post,postV] = extendPost(self.tEnd,tEnd,self.tStep,dim(2:end));
             self.times_ = {[self.times_{1} ; post]};
             self.values_ = {[self.values_{1} ; postV]};
             self.tEnd = tEnd;
             self.discardAfterEnd();
-            
-            if ~isempty(self.tStart)
-               self.setInclusiveWindow();
-            end
          end         
       end
       
       function set.tBlock(self,tBlock)
          assert(isscalar(tBlock) && isnumeric(tBlock) && (tBlock>0),...
-            'SampledProcess:tBlock:InputFormat',...
+            'SpectralProcess:tBlock:InputFormat',...
             'tBlock must be a numeric scalar > 0.');
          self.tBlock = tBlock;
       end
       
       function set.tStep(self,tStep)
          assert(isscalar(tStep) && isnumeric(tStep) && (tStep>=0),...
-            'SampledProcess:tStep:InputFormat',...
+            'SpectralProcess:tStep:InputFormat',...
             'tStep must be a numeric scalar >= 0.');
          self.tStep = tStep;
       end
@@ -192,9 +182,18 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          dim = cellfun(@(x) size(x),self.values,'uni',false);
       end
             
+      function y = roundToProcessResolution(self,x,res)
+         assert(numel(x)==numel(self),'oops!');
+         if nargin < 3
+            % Round to the nearest sample in the process
+            y = x;%round(vec(x)./vec([self.dt])).*vec([self.dt]);
+         else
+            y = round(vec(x)./res).*res;
+         end
+      end
+      
       %
       obj = chop(self,shiftToWindow)
-      s = sync(self,event,varargin)
 
       % In-place transformations
       self = normalize(self,varargin)
@@ -202,32 +201,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       % Output
       [s,labels] = extract(self,reqLabels)
       output = apply(self,fun,nOpt,varargin)
-      
-      function [obj,n] = mean(self)
-         uLabels = unique(cat(2,self.labels));
-         [s,l] = extract(self);
-         s = cat(3,s.values);
-         l = cat(2,l{:});
-         values = zeros(size(s,1),size(s,2),numel(uLabels));
-         for i = 1:numel(uLabels)
-            ind = strcmp(l,uLabels{i});
-            values(:,:,i) = nanmean(s(:,:,ind),3);
-            n(i) = sum(ind);
-         end
-         
-         obj = SpectralProcess(values,...
-            'f',self(1).f,...
-            'params',self(1).params,...
-            'tBlock',self(1).tBlock,...
-            'tStep',self(1).tStep,...
-            'labels',uLabels,...
-            'tStart',self(1).tStart,...
-            'tEnd',self(1).tEnd,...
-            'offset',self(1).offset,...
-            'window',self(1).window...
-            );
-         obj.cumulOffset = self(1).cumulOffset;
-      end
+      [obj,n] = mean(self)
       
       % Visualization
       h = plot(self,varargin)
@@ -287,8 +261,5 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
    
    methods(Static)
       obj = loadobj(S)
-      t = tvec(t0,dt,n)
-      [pre,preV] = extendPre(tStartOld,tStartNew,dt,dim)
-      [post,postV] = extendPost(tEndOld,tEndNew,dt,dim)
    end
 end

@@ -1,6 +1,6 @@
 % Regularly sampled process
 
-classdef(CaseInsensitiveProperties) SampledProcess < Process   
+classdef(CaseInsensitiveProperties, ConstructOnLoad = true) SampledProcess < Process   
    properties(AbortSet, SetObservable)
       tStart              % Start time of process
       tEnd                % End time of process
@@ -12,7 +12,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    properties
       Fs                  % Sampling frequency
    end
-   properties(SetAccess = protected, Dependent, Transient)
+   properties(SetAccess = protected, Dependent)
       dt                  % 1/Fs
       dim                 % Dimensionality of each window
    end   
@@ -50,14 +50,17 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.addParameter('tEnd',[],@isnumeric);
          p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
          p.addParameter('deferredEval',false,@(x) islogical(x) || isscalar(x));
+         p.addParameter('history',false,@(x) islogical(x) || isscalar(x));
          p.parse(varargin{:});
          par = p.Results;
+         
+         % Do not store constructor commands
+         self.history = false;
          
          % Hashmap with process information
          self.info = par.info;
          
-         % Lazy loading/evaluation
-         self.deferredEval = par.deferredEval;         
+         % Lazy loading
          self.lazyLoad = par.lazyLoad;
                   
          % Set sampling frequency and values_/values, times_/times
@@ -86,7 +89,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.values = self.values_;
             dim = size(self.values_{1});
          end
-         self.times_ = {self.tvec(par.tStart,self.dt,dim(1))};
+         self.times_ = {tvec(par.tStart,self.dt,dim(1))};
          self.times = self.times_;
          
          % Define the start and end times of the process
@@ -125,13 +128,8 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.window_ = self.window;
          self.offset_ = self.offset;
          
-         % Set running_ bool, which was true (constructor calls not queued)
-         if self.deferredEval
-            self.running_ = false;
-         end
-         
-         % Don't expose constructor history
-         clearQueue(self);
+         self.history = par.history;
+         self.deferredEval = par.deferredEval;         
       end % constructor
       
       function set.tStart(self,tStart)
@@ -147,15 +145,11 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.tStart = tStart;
          else
             dim = size(self.values_{1});
-            [pre,preV] = self.extendPre(self.tStart,tStart,1/self.Fs_,dim(2:end));
+            [pre,preV] = extendPre(self.tStart,tStart,1/self.Fs_,dim(2:end));
             self.times_ = {[pre ; self.times_{1}]};
             self.values_ = {[preV ; self.values_{1}]};
             self.tStart = tStart;
             self.discardBeforeStart();
-            
-            if ~isempty(self.tEnd)
-               self.setInclusiveWindow();
-            end
          end
       end
       
@@ -172,15 +166,11 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.tEnd = tEnd;
          else
             dim = size(self.values_{1});
-            [post,postV] = self.extendPost(self.tEnd,tEnd,1/self.Fs_,dim(2:end));
+            [post,postV] = extendPost(self.tEnd,tEnd,1/self.Fs_,dim(2:end));
             self.times_ = {[self.times_{1} ; post]};
             self.values_ = {[self.values_{1} ; postV]};
             self.tEnd = tEnd;
             self.discardAfterEnd();
-            
-            if ~isempty(self.tStart)
-               self.setInclusiveWindow();
-            end
          end         
       end
       
@@ -189,7 +179,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             'Fs must be scalar, numeric and > 0');
 
          %------- Add to function queue ----------
-         if ~self.running_ || ~self.deferredEval
+         if isQueueable(self)
             addToQueue(self,Fs);
             if self.deferredEval
                return;
@@ -220,17 +210,28 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       function dim = get.dim(self)
          dim = cellfun(@(x) size(x),self.values,'uni',false);
       end
+      
+      function y = roundToProcessResolution(self,x,res)
+         assert(numel(x)==numel(self),'oops!');
+         if nargin < 3
+            % Round to the nearest sample in the process
+            y = round(vec(x)./vec([self.dt])).*vec([self.dt]);
+         else
+            y = round(vec(x)./res).*res;
+         end
+      end
             
       %
       obj = chop(self,shiftToWindow)
-      s = sync(self,event,varargin)
-
+      
       % In-place transformations
       self = filter(self,b,varargin)
       [self,h,d] = lowpass(self,varargin)
       [self,h,d] = highpass(self,varargin)
       [self,h,d] = bandpass(self,varargin)
       self = detrend(self)
+      
+      % Transformations potentially altering sampling
       self = resample(self,newFs,varargin)
       %decimate
       %interp
@@ -245,6 +246,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       
       % Visualization
       h = plot(self,varargin)
+      % plotTrajectory
    end
    
    methods(Access = protected)
@@ -297,8 +299,5 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    
    methods(Static)
       obj = loadobj(S)
-      t = tvec(t0,dt,n)
-      [pre,preV] = extendPre(tStartOld,tStartNew,dt,dim)
-      [post,postV] = extendPost(tEndOld,tEndNew,dt,dim)
    end
 end

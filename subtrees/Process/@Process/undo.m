@@ -1,15 +1,15 @@
-function self = undo(self,n)
+function self = undo(self,m)
 
 if nargin < 2
-   n = 1;
+   m = 1;
 end
 
 for i = 1:numel(self)
    N = size(self(i).queue,1);
-   if n > N
+   if m > N
       n = 0;
    else
-      n = N - n;
+      n = N - m;
    end
    reset(self(i),n);
 end

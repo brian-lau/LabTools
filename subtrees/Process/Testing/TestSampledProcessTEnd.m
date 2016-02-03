@@ -43,7 +43,7 @@ classdef TestSampledProcessTEnd < matlab.unittest.TestCase
          tEnd = 1;
          s.tEnd = tEnd;
 
-         times = SampledProcess.tvec(0,s.dt,size(testCase.values,1));
+         times = tvec(0,s.dt,size(testCase.values,1));
          ind = times<=tEnd;
          
          testCase.assertEqual(s.times_,{times(ind)},testCase.tolType,testCase.tol);

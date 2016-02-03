@@ -2,7 +2,7 @@ t = 0:0.001:2;                    % 2 secs @ 1kHz sample rate
 y = chirp(t,100,1,200,'q');       % Start @ 100Hz, cross 200Hz at t=1sec
 [s,f,t] = spectrogram(y,300,150,[],1E3,'yaxis');
 
-tf = SpectralProcess('values',s','f',f,'tStep',.15,'tBlock',.3,'tEnd',2)
+tf = SpectralProcess('values',s','f',f,'tStep',.15,'tBlock',.3,'tEnd',2);
 
 temp = cat(3,s',s');
 temp = cat(4,temp,temp);
@@ -67,6 +67,7 @@ s(1) = SampledProcess([y1;y1+y2],'Fs',1000);
 s(2) = SampledProcess([y1*.25;y1+y2],'Fs',1000);
 s.setOffset(-2)
 tf = tfr(s,'method','stft','f',1:100,'tBlock',.5,'tStep',.02);
+tf(3) = tfr(s(1),'method','cwt','f',[1 100]);
 plot(tf,'log',false);
-tf.normalize('event',0,'window',[-1.75 -1.],'method','subtract');
+tf.normalize(0,'window',[-1.75 -1.],'method','subtract');
 plot(tf,'log',false);

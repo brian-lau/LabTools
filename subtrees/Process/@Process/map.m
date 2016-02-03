@@ -27,7 +27,7 @@ parse(p,func,varargin{:});
 
 for i = 1:numel(self)
    %-- Add link to function queue ----------
-   if ~self(i).running_ || ~self(i).deferredEval
+   if isQueueable(self(i))
       addToQueue(self(i),func);
       if self(i).deferredEval
          continue;

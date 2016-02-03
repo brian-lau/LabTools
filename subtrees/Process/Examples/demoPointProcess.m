@@ -1,7 +1,7 @@
 % To get some help
 doc PointProcess
 % Each object method has some documention
-help PointProcess.raster
+help PointProcess.plot
 
 clear all; 
 %% Basic pointProcess object
@@ -58,14 +58,14 @@ clear all
 %% Let's put these properties together to see how things might be used
 p = PointProcess('times',10*rand(1,100))
 % First off, there's a method for plotting data that's handy
-p.raster();
+p.plot();
 
 % Now let's look at the spike times through a series of windows
 % First we window
 winStart = 0:1:10;
 window = [winStart' , winStart'+1];
 p.window = window;
-p.raster();
+p.plot();
 
 % Note that the different windows are shifted in time. This makes sense
 % since all the windows share a common origin.
@@ -75,7 +75,7 @@ p.raster();
 % in which case we assign a vector, whose length must match the number of
 % windows
 p.offset = -p.window(:,1);
-p.raster('window',[0 10]);
+p.plot('window',[0 10]);
 
 % Offsets always follow windowing, so that whenever a window is changed,
 % the offsets are reapplied to times windowed without offsets
@@ -139,20 +139,20 @@ p.window = window;
 % A plot without changing the offset would plot things in absolute time,
 % might be interesting to see. Note that the structure is due to how we
 % sorted the stimulus, which is how we sorted the windows.
-raster(p)
+plot(p)
 % But it's probably more interesting to apply an offset so that the zero
 % time for each window is the start of each stimulus.
 p.offset = -p.window(:,1);
-raster(p);
+plot(p);
 % We can do some grouping to help visualization (see plotRaster options)
-raster(p,'rowIndex',[sortedStim==-2,sortedStim==-1,sortedStim==0,sortedStim==1,sortedStim==2]);
+plot(p,'rowIndex',[sortedStim==-2,sortedStim==-1,sortedStim==0,sortedStim==1,sortedStim==2]);
 
 % What about shifted windows? 
 %p.setInclusiveWindow();
 window = [stimOnsets(I)'-0.1, stimOnsets(I)'+0.2];
 p.window = window;
 p.offset = -p.window(:,1) - 0.1;
-raster(p)
+plot(p)
 
 % %% Example where there are events that define trials
 % % Extended example where these events reside inside the info container
@@ -182,17 +182,17 @@ close all;
 p = PointProcess('times',3*randn(40,1));
 
 % Raster shows the event times in a format familiar to neuroscientists
-p.raster();
+p.plot();
 % Raster accepts many options (see help for p.plotRaster). These are name/value 
 % pairs that are case insensitive and can be passed in any order. This is
 % particularly useful when using collections of pointProcess objects (see
 % the class pointProcessCollection)
-p.raster('style','line','grpColor','r');
+p.plot('style','line','grpColor','r');
 
 % You can also pass figure handles in
 clf;
 h = subplot(311);
-p.raster('style','line','grpColor','r','handle',h);
+p.plot('style','line','grpColor','r','handle',h);
 axis([-6 6 get(gca,'ylim')]);
 
 % Note that in the previous raster plot, we only see part of the data.
@@ -201,10 +201,10 @@ axis([-6 6 get(gca,'ylim')]);
 % 1) If you want to apply a different window for the raster plot, you can
 %    pass it in as a parameter, in which case it will not be copied into
 %    the object. Note that this window will override the object property
-p.raster('style','line','grpColor','g','handle',subplot(312),'window',[-6 6]);
+p.plot('style','line','grpColor','g','handle',subplot(312),'window',[-6 6]);
 % 2) Or you can modify the object first, then call the display method
 p.window = [-6 6];
-p.raster('style','line','grpColor','b','handle',subplot(313));
+p.plot('style','line','grpColor','b','handle',subplot(313));
 axis([-6 6 get(gca,'ylim')]);
 
 close all
@@ -213,7 +213,7 @@ close all
 % We can always return the PointProcess object to its original state
 p.reset()
 clf;
-p.raster('style','line','grpColor','r','handle',subplot(311));
+p.plot('style','line','grpColor','r','handle',subplot(311));
 axis([-15 15 get(gca,'ylim')]);
 %
 % Frequently we want to shift event times relative to some other time.
@@ -221,13 +221,13 @@ axis([-15 15 get(gca,'ylim')]);
 % Note that this will move the windows as well.
 % Addition
 p + 5;
-p.raster('style','line','grpColor','g','handle',subplot(312));
+p.plot('style','line','grpColor','g','handle',subplot(312));
 axis([-15 15 get(gca,'ylim')]);
 %
 % Subtraction
 p - 5;
 % Note that this will move the windows as well
-p.raster('style','line','grpColor','b','handle',subplot(313));
+p.plot('style','line','grpColor','b','handle',subplot(313));
 axis([-15 15 get(gca,'ylim')]);
 
 % Repeat this with a different window setting
@@ -238,13 +238,13 @@ p.reset();
 p.window = [0 5];
 %
 figure;
-p.raster('style','line','grpColor','r','handle',subplot(311));
+p.plot('style','line','grpColor','r','handle',subplot(311));
 axis([-15 15 get(gca,'ylim')]);
 p + 5;
-p.raster('style','line','grpColor','g','handle',subplot(312));
+p.plot('style','line','grpColor','g','handle',subplot(312));
 axis([-15 15 get(gca,'ylim')]);
 p - 5;
-p.raster('style','line','grpColor','b','handle',subplot(313));
+p.plot('style','line','grpColor','b','handle',subplot(313));
 axis([-15 15 get(gca,'ylim')]);
 
 % % There is a method for estimate the point process intensity (PSTH). This
@@ -298,29 +298,29 @@ end
 
 p
 % Not much different, although now we have an object array. 
-p.raster('handle',subplot(411));
+p.plot('handle',subplot(411));
 axis([-5 5 0 n]);
 
 % Addition to the object array adds to each element
 p + 1;
-p.raster('handle',subplot(412),'grpColor','m');
+p.plot('handle',subplot(412),'grpColor','m');
 axis([-5 5 0 n]);
 
 % And subtraction subtracts from each element
 p - 1;
-p.raster('handle',subplot(413),'grpColor','c');
+p.plot('handle',subplot(413),'grpColor','c');
 axis([-5 5 0 n]);
 
 % Vector addition and subtraction work element-wise, so that you can add or
 % subtract a different scalar for each object element
 p = p.reset();
 p + linspace(-1,1,n);
-p.raster('handle',subplot(414),'grpColor','r');
+p.plot('handle',subplot(414),'grpColor','r');
 axis([-5 5 0 n]);
 
 p = p.reset();
 p - linspace(-1,1,n);
-p.raster('handle',subplot(414),'grpColor','b');
+p.plot('handle',subplot(414),'grpColor','b');
 axis([-5 5 0 n]);
 
 close all;

@@ -9,7 +9,7 @@
 
 function applyWindow(self)
 
-if isempty(self.times_)
+if isempty(self.times)
    return;
 end
 
@@ -41,8 +41,8 @@ for i = 1:nWindowReq
    
    % NaN-pad when window extends beyond process. This extension is
    % done to the nearest sample that fits in the window.
-   [preT,preV] = self.extendPre(tStart,minWin,1/self.Fs,dim);
-   [postT,postV] = self.extendPost(tEnd,maxWin,1/self.Fs,dim);
+   [preT,preV] = extendPre(tStart,minWin,1/self.Fs,dim);
+   [postT,postV] = extendPost(tEnd,maxWin,1/self.Fs,dim);
    
    ind = (times>=window(i,1)) & (times<=window(i,2));
    windowedTimes{i,1} = [preT ; times(ind) ; postT];

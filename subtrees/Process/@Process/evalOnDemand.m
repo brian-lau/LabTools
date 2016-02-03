@@ -1,7 +1,7 @@
 function evalOnDemand(self,varargin)
 
 if self.isRunnable
-   disp('running');
+   disp('Running queue');
    self.running_ = true;
    
    for i = 1:size(self.queue,1)

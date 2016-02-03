@@ -42,7 +42,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          s = SampledProcess('values',values,'Fs',Fs);
          s.window = win;
          
-         times = SampledProcess.tvec(0,dt,size(values,1));
+         times = tvec(0,dt,size(values,1));
          ind = (times>=win(1)) & (times<=win(2));
          
          testCase.assertEqual(s.times,{times(ind)},testCase.tolType,testCase.tol);
@@ -57,7 +57,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          s = SampledProcess('values',values,'Fs',Fs);
          set(s,'window',win);
          
-         times = SampledProcess.tvec(0,dt,size(values,1));
+         times = tvec(0,dt,size(values,1));
          ind = (times>=win(1)) & (times<=win(2));
          
          testCase.assertEqual(s.times,{times(ind)},testCase.tolType,testCase.tol);
@@ -72,12 +72,12 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          s = SampledProcess('values',values,'Fs',Fs);
          s.window = win;
          
-         times = SampledProcess.tvec(0,dt,size(values,1));
+         times = tvec(0,dt,size(values,1));
          ind = (times>=win(1)) & (times<=win(2));
          
          % Expected NaN-padding
-         [pre,preV] = SampledProcess.extendPre(s.tStart,win(1),dt,1);
-         [post,postV] = SampledProcess.extendPost(s.tEnd,win(2),dt,1);
+         [pre,preV] = extendPre(s.tStart,win(1),dt,1);
+         [post,postV] = extendPost(s.tEnd,win(2),dt,1);
          times = [pre ; times(ind) ; post];
          values = [preV ; values(ind) ; postV];
          
@@ -93,12 +93,12 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          s = SampledProcess('values',values,'Fs',Fs);
          set(s,'window',win);
          
-         times = SampledProcess.tvec(0,dt,size(values,1));
+         times = tvec(0,dt,size(values,1));
          ind = (times>=win(1)) & (times<=win(2));
          
          % Expected NaN-padding
-         [pre,preV] = SampledProcess.extendPre(s.tStart,win(1),dt,1);
-         [post,postV] = SampledProcess.extendPost(s.tEnd,win(2),dt,1);
+         [pre,preV] = extendPre(s.tStart,win(1),dt,1);
+         [post,postV] = extendPost(s.tEnd,win(2),dt,1);
          times = [pre ; times(ind) ; post];
          values = [preV ; values(ind) ; postV];
          
@@ -115,7 +115,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          s = SampledProcess('values',values,'Fs',Fs);
          s.window = win;
          
-         times = SampledProcess.tvec(0,dt,size(values,1));
+         times = tvec(0,dt,size(values,1));
          for i = 1:nWin
             ind = (times>=win(i,1)) & (times<=win(i,2));
             T{i,1} = times(ind);
@@ -135,13 +135,13 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          s = SampledProcess('values',values,'Fs',Fs);
          s.window = win;
          
-         times = SampledProcess.tvec(0,dt,size(values,1));
+         times = tvec(0,dt,size(values,1));
          for i = 1:nWin
             ind = (times>=win(i,1)) & (times<=win(i,2));
             
             % Expected NaN-padding
-            [pre,preV] = SampledProcess.extendPre(s.tStart,win(i,1),dt,1);
-            [post,postV] = SampledProcess.extendPost(s.tEnd,win(i,2),dt,1);
+            [pre,preV] = extendPre(s.tStart,win(i,1),dt,1);
+            [post,postV] = extendPost(s.tEnd,win(i,2),dt,1);
             
             T{i,1} = [pre ; times(ind) ; post];
             V{i,1} = [preV ; values(ind) ; postV];
@@ -161,7 +161,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          win2 = [0 2];
          s.window = win2;
          
-         times = SampledProcess.tvec(0,dt,size(values,1));
+         times = tvec(0,dt,size(values,1));
          ind = (times>=win2(1)) & (times<=win2(2));
          
          % Times outside the previous window are expected to map to NaN
@@ -187,7 +187,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          win2 = [1 2 ; 0 1 ; 0 2];
          s.window = win2;
          
-         times = SampledProcess.tvec(0,dt,size(values,1));
+         times = tvec(0,dt,size(values,1));
          for i = 1:nWin
             ind = (times>=win2(i,1)) & (times<=win2(i,2));
             
@@ -217,7 +217,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          nWin = size(win2,1);
          s.window = win2;
          
-         times = SampledProcess.tvec(0,dt,size(values,1));
+         times = tvec(0,dt,size(values,1));
          for i = 1:nWin
             ind = (times>=win2(i,1)) & (times<=win2(i,2));
             

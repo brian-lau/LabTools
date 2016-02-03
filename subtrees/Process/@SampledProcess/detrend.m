@@ -4,7 +4,7 @@ function self = detrend(self)
 
 for i = 1:numel(self)
    %-- Add link to function queue ----------
-   if ~self(i).running_ || ~self(i).deferredEval
+   if isQueueable(self(i))
       addToQueue(self(i));
       if self(i).deferredEval
          continue;

@@ -9,7 +9,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       times_              % Original event/sample times
       values_             % Original attribute/values
    end
-   properties(SetAccess = protected, Dependent, Transient)
+   properties(SetAccess = protected, Dependent)
       count               % # of events in each window
    end
    
@@ -44,14 +44,17 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          p.addParameter('tEnd',[],@isnumeric);
          p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
          p.addParameter('deferredEval',false,@(x) islogical(x) || isscalar(x));
+         p.addParameter('history',false,@(x) islogical(x) || isscalar(x));
          p.parse(varargin{:});
          par = p.Results;
          
+         % Do not store constructor commands
+         self.history = false;
+
          % Hashmap with process information
          self.info = par.info;
          
-         % Lazy loading/evaluation
-         self.deferredEval = par.deferredEval;         
+         % Lazy loading
          self.lazyLoad = par.lazyLoad;
 
          if isempty(par.times)
@@ -148,13 +151,8 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          self.window_ = self.window;
          self.offset_ = self.offset;
          
-         % Set running_ bool, which was true (constructor calls not queued)
-         if self.deferredEval
-            self.running_ = false;
-         end
-         
-         % Don't expose constructor history
-         clearQueue(self);
+         self.history = par.history;
+         self.deferredEval = par.deferredEval;         
       end % constructor
       
       function set.tStart(self,tStart)
@@ -162,9 +160,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
             if tStart >= self.tEnd
                error('PointProcess:tStart:InputValue',...
                   'tStart must be less than tEnd.');
-%             elseif tStart == self.tEnd
-%                self.tEnd = self.tEnd + eps(self.tEnd);
-            end
+           end
          end
          if isscalar(tStart) && isnumeric(tStart)
             self.tStart = tStart;
@@ -173,9 +169,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                'tStart must be a numeric scalar.');
          end
          self.discardBeforeStart();
-%          if ~isempty(self.tEnd)
-%             self.setInclusiveWindow();
-%          end
       end
       
       function set.tEnd(self,tEnd)
@@ -183,8 +176,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
             if self.tStart >= tEnd
                error('PointProcess:tEnd:InputValue',...
                   'tEnd must be greater than tStart.');
-%             elseif self.tStart == tEnd
-%                tEnd = tEnd + eps(tEnd);
             end
          end
          if isscalar(tEnd) && isnumeric(tEnd)
@@ -194,9 +185,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                'tEnd must be a numeric scalar.');
          end
          self.discardAfterEnd();
-%          if ~isempty(self.tStart)
-%             self.setInclusiveWindow();
-%          end
       end
       
       function count = get.count(self)
@@ -207,9 +195,17 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
             count = cellfun(@(x) size(x,1),self.times);
          end
       end
-      
+
+      function y = roundToProcessResolution(self,x,res)
+         if nargin < 3
+            % 
+            y = x;
+         else
+            y = round(vec(x)./res).*res;
+         end
+      end
+
       obj = chop(self,shiftToWindow)
-      self = sync(self,event,varargin)
       [s,labels] = extract(self,reqLabels)
       %%
       output = apply(self,fun,nOpt,varargin)
@@ -222,7 +218,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       
       %% Display
       [h,yOffset] = plot(self,varargin)
-      [h,yOffset] = raster(self,varargin)     
    end
      
    methods(Access = protected)
