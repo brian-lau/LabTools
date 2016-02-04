@@ -1,6 +1,6 @@
 % Regularly sampled process
 
-classdef(CaseInsensitiveProperties, ConstructOnLoad = true) SampledProcess < Process   
+classdef(CaseInsensitiveProperties) SampledProcess < Process   
    properties(AbortSet, SetObservable)
       tStart              % Start time of process
       tEnd                % End time of process
@@ -12,12 +12,12 @@ classdef(CaseInsensitiveProperties, ConstructOnLoad = true) SampledProcess < Pro
    properties
       Fs                  % Sampling frequency
    end
+   properties(SetAccess = protected, Hidden)
+      Fs_                 % Original sampling frequency
+   end
    properties(SetAccess = protected, Dependent)
       dt                  % 1/Fs
       dim                 % Dimensionality of each window
-   end   
-   properties(SetAccess = protected, Hidden)
-      Fs_                 % Original sampling frequency
    end
    
    %%
@@ -212,10 +212,11 @@ classdef(CaseInsensitiveProperties, ConstructOnLoad = true) SampledProcess < Pro
       end
       
       function y = roundToProcessResolution(self,x,res)
-         assert(numel(x)==numel(self),'oops!');
+         %assert(numel(x)==numel(self),'oops!');
          if nargin < 3
             % Round to the nearest sample in the process
-            y = round(vec(x)./vec([self.dt])).*vec([self.dt]);
+            %y = round(vec(x)./vec([self.dt])).*vec([self.dt]);
+            y = round(x./self.dt).*self.dt;
          else
             y = round(vec(x)./res).*res;
          end

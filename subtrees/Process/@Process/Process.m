@@ -28,13 +28,20 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       labels              % Label for each element of non-leading dimension
       quality             % Scalar information for each non-leading dimension
    end
-   properties(Abstract, SetAccess = protected, Hidden)
-      times_              % Original event/sample times
-      values_             % Original attribute/values
+   properties(Abstract)
+      Fs                  % Sampling frequency
+   end
+   properties(Abstract, SetAccess = protected, Dependent)
+      dt                  % 1/Fs
    end
    properties(SetAccess = protected, Transient, GetObservable)
       times = {}          % Current event/sample times
       values = {}         % Current attribute/value associated with each time
+   end
+   properties(Abstract, SetAccess = protected, Hidden)
+      times_              % Original event/sample times
+      values_             % Original attribute/values
+      Fs_
    end
    properties
       lazyLoad = false    % Boolean to defer constructing values from values_
@@ -51,6 +58,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties(Dependent)
       isRunnable = false  % Boolean indicating if queue contains runnable items
    end
+%    properties(Abstract,Dependent, Hidden)
+%       trailingDims
+%    end
    properties
       history = false     % Boolean indicating add queueable methods (TODO)
       segment             % Reference to parent Segment
@@ -66,7 +76,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       evalListener_@event.listener     % deferredEval listener
    end
    properties(SetAccess = immutable)
-      version = '0.5.0'   % Version string
+      version = '0.6.0'   % Version string
    end
    events
       runImmediately      % trigger queue evaluation

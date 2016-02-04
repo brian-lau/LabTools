@@ -44,6 +44,8 @@ for i = 1:numel(self)
       self(i).offset = self(i).offset_;
    end
    
+   self(i).Fs = self(i).Fs_;
+
    % Turn deferred execution back on
    if self(i).deferredEval
       self(i).running_ = false;

@@ -10,6 +10,15 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       times_              % Original event/sample times
       values_             % Original attribute/values
    end
+   properties
+      Fs                  % Sampling frequency
+   end
+   properties(SetAccess = protected, Hidden)
+      Fs_                 % Original sampling frequency
+   end
+   properties(SetAccess = protected, Dependent)
+      dt                  % 1/Fs
+   end
    properties(SetAccess = protected)
       params              
       tBlock              % Duration of each spectral estimate

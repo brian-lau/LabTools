@@ -36,7 +36,10 @@ end
 
 if par.processTime
    % Round to the nearest sample in the process
-   actualOffset = roundToProcessResolution(self,desiredOffset);
+   actualOffset = desiredOffset;
+   for i = 1:nObj
+      self(i).roundToProcessResolution(desiredOffset(i));
+   end
 else
    % Otherwise sync to exact event time
    actualOffset = desiredOffset;

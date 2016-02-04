@@ -9,6 +9,15 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       times_              % Original event/sample times
       values_             % Original attribute/values
    end
+   properties
+      Fs                  % Sampling frequency
+   end
+   properties(SetAccess = protected, Hidden)
+      Fs_                 % Original sampling frequency
+   end
+   properties(SetAccess = protected, Dependent)
+      dt                  % 1/Fs
+   end
    properties(SetAccess = protected, Dependent)
       count               % # of events in each window
    end
@@ -34,6 +43,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          p.KeepUnmatched= false;
          p.FunctionName = 'PointProcess constructor';
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
+         p.addParameter('Fs',1000,@(x) isnumeric(x) && isscalar(x));
          p.addParameter('times',{},@(x) isnumeric(x) || iscell(x));
          p.addParameter('values',{},@(x) ismatrix(x) || iscell(x) );
          p.addParameter('labels',{},@(x) iscell(x) || ischar(x) || isa(x,'metadata.Label'));
@@ -110,6 +120,10 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
             end
          end
          
+         self.Fs_ = par.Fs;
+         self.Fs = self.Fs_;
+         eventTimes = cellfun(@(x) roundToProcessResolution(self,x),eventTimes,'uni',0);
+
          % Set times/values
          self.times_ = eventTimes;
          self.values_ = values;
@@ -128,7 +142,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          else
             self.tEnd = par.tEnd;
          end
-         
+
          % Set the window
          if isempty(par.window)
             self.setInclusiveWindow();
@@ -187,6 +201,37 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          self.discardAfterEnd();
       end
       
+      function set.Fs(self,Fs)
+         assert(isscalar(Fs)&&isnumeric(Fs)&&(Fs>0),'PointProcess:Fs:InputValue',...
+            'Fs must be scalar, numeric and > 0');
+         %------- Add to function queue ----------
+         if isQueueable(self)
+            addToQueue(self,Fs);
+            if self.deferredEval
+               return;
+            end
+         end
+         %----------------------------------------
+
+         if self.Fs == Fs
+            return;
+         end
+         stack = dbstack('-completenames');
+         if isempty(self.Fs)
+            self.Fs = Fs;
+         elseif any(strcmp({stack.name},'reset'))
+            self.Fs = Fs;
+         elseif any(strcmp({stack.name},'resample'))
+            self.Fs = Fs;
+         elseif strcmp(stack(1).name,'PointProcess.set.Fs')
+            resample(self,Fs);
+         end
+      end
+      
+      function dt = get.dt(self)
+         dt = 1/self.Fs;
+      end
+      
       function count = get.count(self)
          % # of event times within windows
          if isempty(self.times)
@@ -198,13 +243,12 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
 
       function y = roundToProcessResolution(self,x,res)
          if nargin < 3
-            % 
-            y = x;
+            y = round(x./self.dt).*self.dt;
          else
-            y = round(vec(x)./res).*res;
+            y = round(x./res).*res;
          end
       end
-
+      
       obj = chop(self,shiftToWindow)
       [s,labels] = extract(self,reqLabels)
       %%
