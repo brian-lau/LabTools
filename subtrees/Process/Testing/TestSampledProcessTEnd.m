@@ -50,6 +50,19 @@ classdef TestSampledProcessTEnd < matlab.unittest.TestCase
          testCase.assertEqual(s.values_,{testCase.values(ind)},testCase.tolType,testCase.tol);
          testCase.assertEqual(s.tEnd,tEnd);
       end
+      
+      function setTStartMultivariate(testCase)
+         s = SampledProcess('values',[testCase.values 2*testCase.values],'Fs',testCase.Fs);         
+         tEnd = 1;
+         s.tEnd = tEnd;
+
+         times = tvec(0,s.dt,size(testCase.values,1));
+         ind = times<=tEnd;
+         
+         testCase.assertEqual(s.times_,{times(ind)},testCase.tolType,testCase.tol);
+         testCase.assertEqual(s.values_,{[testCase.values(ind) 2*testCase.values(ind)]},testCase.tolType,testCase.tol);
+         testCase.assertEqual(s.tEnd,tEnd);
+      end
    end
    
 end

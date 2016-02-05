@@ -19,6 +19,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       dt                  % 1/Fs
       dim                 % Dimensionality of each window
    end
+   properties(Dependent, Hidden)
+      trailingInd_        % Convenience for expanding non-leading dims
+   end
    
    %%
    methods
@@ -211,11 +214,15 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          dim = cellfun(@(x) size(x),self.values,'uni',false);
       end
       
+      function trailingInd = get.trailingInd_(self)
+         dim = size(self.values_{1});
+         dim = dim(2:end); % leading dim is always time
+         trailingInd = repmat({':'},1,numel(dim));
+      end
+      
       function y = roundToProcessResolution(self,x,res)
-         %assert(numel(x)==numel(self),'oops!');
          if nargin < 3
             % Round to the nearest sample in the process
-            %y = round(vec(x)./vec([self.dt])).*vec([self.dt]);
             y = round(x./self.dt).*self.dt;
          else
             y = round(vec(x)./res).*res;

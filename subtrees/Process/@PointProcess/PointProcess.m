@@ -21,6 +21,9 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
    properties(SetAccess = protected, Dependent)
       count               % # of events in each window
    end
+   properties(Dependent, Hidden)
+      trailingInd_        % Convenience for expanding non-leading dims
+   end
    
    %%
    methods
@@ -91,11 +94,11 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                end
                [eventTimes,tInd] = cellfun(@(x) sortrows(x),times,'uni',0);
             end
-
+            eventTimes = row(eventTimes);
             if isempty(par.values)
                values = cellfun(@(x) ones(size(x,1),1),eventTimes,'uni',0);
             else
-               values = par.values;
+               values = row(par.values);
                if ismatrix(values) && ~iscell(values) % one PointProcess
                   if isrow(values) && ...
                         ~(isa(self,'EventProcess')&&(numel(values)==2)) && ...
@@ -110,8 +113,8 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                   assert(numel(values) == numel(eventTimes),...
                      'PointProcess:constuctor:InputSize',...
                      'Incorrect # of cell arrays, # of ''times'' must equal # of ''values''');
-                  assert(all(cellfun(@(x,y) numel(x)==size(y,1),...
-                     values,eventTimes)),'PointProcess:constuctor:InputSize',...
+                  assert(all(cellfun(@(x,y) numel(x)==size(y,1),values,eventTimes)),...
+                     'PointProcess:constuctor:InputSize',...
                      'Cell arrays not matched in dims, # of ''times'' must equal # of ''values''');
                   for i = 1:numel(values)
                      values{i} = reshape(values{i}(tInd{i}),size(eventTimes{i},1),1);
@@ -240,7 +243,11 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
             count = cellfun(@(x) size(x,1),self.times);
          end
       end
-
+      
+      function trailingInd = get.trailingInd_(self)
+         trailingInd = {':'};
+      end
+      
       function y = roundToProcessResolution(self,x,res)
          if nargin < 3
             y = round(x./self.dt).*self.dt;

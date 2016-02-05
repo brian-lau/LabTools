@@ -58,13 +58,13 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties(Dependent)
       isRunnable = false  % Boolean indicating if queue contains runnable items
    end
-%    properties(Abstract,Dependent, Hidden)
-%       trailingDims
-%    end
    properties
       history = false     % Boolean indicating add queueable methods (TODO)
       segment             % Reference to parent Segment
    end
+%    properties(Abstract)
+%       trailingInd_
+%    end
    properties(SetAccess = protected, Hidden)
       window_             % Original window
       offset_             % Original offset

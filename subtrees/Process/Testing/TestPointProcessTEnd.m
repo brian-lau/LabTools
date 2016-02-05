@@ -52,6 +52,22 @@ classdef TestPointProcessTEnd < matlab.unittest.TestCase
          testCase.assertEqual(obj.values_,{testCase.values(ind)},testCase.tolType,testCase.tol);
          testCase.assertEqual(obj.tEnd,tEnd);
       end
+      
+      function setTStartMultivariate(testCase)
+         obj = PointProcess('times',repmat({testCase.times},1,3),...
+            'values',{testCase.values 2*testCase.values 3*testCase.values});
+         
+         tEnd = 1;
+         obj.tEnd = tEnd;
+
+         times = testCase.times;
+         ind = times<=tEnd;
+         
+         testCase.assertEqual(obj.times_,repmat({times(ind)},1,3),testCase.tolType,testCase.tol);
+         testCase.assertEqual(obj.values_,{testCase.values(ind) 2*testCase.values(ind) 3*testCase.values(ind)},...
+            testCase.tolType,testCase.tol);
+         testCase.assertEqual(obj.tEnd,tEnd);
+      end
    end
    
 end
