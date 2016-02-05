@@ -16,28 +16,21 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
          p = inputParser;
          p.KeepUnmatched= true;
          p.FunctionName = 'EventProcess constructor';
+         p.addParameter('Fs',1000,@(x) isnumeric(x) && isscalar(x));
          p.addParameter('events',[],@(x) isa(x,'metadata.Event') );
          p.parse(varargin{:});
-
          args = p.Unmatched;
+         args.Fs = p.Results.Fs;
+         
          if ~isempty(p.Results.events)
-            if all(isa(p.Results.events,'metadata.Event'))
-               times = vertcat(p.Results.events.time);
-               args.times = times;
-               args.values = p.Results.events(:);               
-            else
-               times = vertcat(p.Results.events.time);
-               times = [times , times+vertcat(p.Results.events.duration)];
-               args.times = times;
-               args.values = p.Results.events;
-            end
+            times = vertcat(p.Results.events.time);
+            args.times = roundToSample(times,1/args.Fs);
+            args.values = p.Results.events(:);
+            [args.values.tStart] = deal(args.times(:,1));
+            [args.values.tEnd] = deal(args.times(:,2));
+            args.values = args.values.fix();
          end
-         self = self@PointProcess(args);
-         
-         % Should be able to handle case where metadata is directly passed
-         % in
-         
-         % check that each event has start and end time
+         self = self@PointProcess(args);         
       end
       
       function duration = get.duration(self)

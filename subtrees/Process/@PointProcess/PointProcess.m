@@ -125,7 +125,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          
          self.Fs_ = par.Fs;
          self.Fs = self.Fs_;
-         eventTimes = cellfun(@(x) roundToProcessResolution(self,x),eventTimes,'uni',0);
+         eventTimes = cellfun(@(x) roundToSample(x,self.dt),eventTimes,'uni',0);
 
          % Set times/values
          self.times_ = eventTimes;
@@ -247,15 +247,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       function trailingInd = get.trailingInd_(self)
          trailingInd = {':'};
       end
-      
-      function y = roundToProcessResolution(self,x,res)
-         if nargin < 3
-            y = round(x./self.dt).*self.dt;
-         else
-            y = round(x./res).*res;
-         end
-      end
-      
+            
       obj = chop(self,shiftToWindow)
       [s,labels] = extract(self,reqLabels)
       %%

@@ -220,15 +220,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          trailingInd = repmat({':'},1,numel(dim));
       end
       
-      function y = roundToProcessResolution(self,x,res)
-         if nargin < 3
-            % Round to the nearest sample in the process
-            y = round(x./self.dt).*self.dt;
-         else
-            y = round(vec(x)./res).*res;
-         end
-      end
-            
       %
       obj = chop(self,shiftToWindow)
       

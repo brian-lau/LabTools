@@ -35,7 +35,7 @@ for i = 1:numel(self)
    indL = find(ismember(self(i).labels,labels));
    if any(indL)
       for j = 1:numel(indL)
-         times2Insert = self(i).roundToProcessResolution(times);
+         times2Insert = roundToSample(times,self(i).dt);
          values2Insert = values;
          
          if ~isempty(times2Insert)

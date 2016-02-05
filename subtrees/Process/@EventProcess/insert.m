@@ -28,9 +28,10 @@ for i = 1:numel(self)
    indL = find(ismember(self(i).labels,labels));
    if any(indL)
       for j = 1:numel(indL)
-         times2Insert = self(i).roundToProcessResolution(vertcat(events.time));
+         times2Insert = roundToSample(vertcat(events.time),self(i).dt);
          [events.tStart] = deal(times2Insert(:,1));
          [events.tEnd] = deal(times2Insert(:,2));
+         events = events.fix();
          values2Insert = events;
 
          if ~isempty(times2Insert)

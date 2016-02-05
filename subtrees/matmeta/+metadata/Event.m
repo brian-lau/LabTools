@@ -30,13 +30,13 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
          p = inputParser;
          p.KeepUnmatched= true;
          p.FunctionName = 'Event constructor';
-         p.addParamValue('name','',@ischar);
-         p.addParamValue('description','',@ischar);
-         p.addParamValue('timeUnit','seconds',@ischar);
-         p.addParamValue('timeReference',[],@(x) isa(x,'metadata.Event'));
-         p.addParamValue('tStart',[],@isnumeric);
-         p.addParamValue('tEnd',[],@isnumeric);
-         p.addParamValue('experiment',[],@(x) isa(x,'metadata.Experiment'));
+         p.addParameter('name','',@ischar);
+         p.addParameter('description','',@ischar);
+         p.addParameter('timeUnit','seconds',@ischar);
+         p.addParameter('timeReference',[],@(x) isa(x,'metadata.Event'));
+         p.addParameter('tStart',[],@isnumeric);
+         p.addParameter('tEnd',[],@isnumeric);
+         p.addParameter('experiment',[],@(x) isa(x,'metadata.Experiment'));
          p.parse(varargin{:});
          par = p.Results;
          
@@ -66,7 +66,7 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
             duration = NaN;
          end
       end
-      
+
 %       function set.tStart(self,tStart)
 %          if isscalar(tStart)
 %             self.tStart = tStart;
@@ -113,6 +113,13 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
     end
    
    methods(Sealed = true)
+      function self = fix(self)
+         for i = 1:numel(self)
+            self(i).tStart_ = self(i).tStart;
+            self(i).tEnd_ = self(i).tEnd;
+         end
+      end
+      
       function self = reset(self)
          for i = 1:numel(self)
             if self(i).tStart > self(i).tEnd_

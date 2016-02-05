@@ -200,16 +200,6 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          trailingInd = repmat({':'},1,numel(dim));
       end
       
-      function y = roundToProcessResolution(self,x,res)
-         assert(numel(x)==numel(self),'oops!');
-         if nargin < 3
-            % Round to the nearest sample in the process
-            y = x;%round(vec(x)./vec([self.dt])).*vec([self.dt]);
-         else
-            y = round(vec(x)./res).*res;
-         end
-      end
-      
       %
       obj = chop(self,shiftToWindow)
 
