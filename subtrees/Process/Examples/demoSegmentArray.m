@@ -1,6 +1,6 @@
 %%
 clear all;
-ntrials = 10;
+ntrials = 5;
 
 dt = 0.001;
 t = (0:dt:(10-dt))';
@@ -58,3 +58,5 @@ for i = 1:ntrials
    data(i).info('trial') = trial;
    clear e;
 end
+
+s = linq(extract(data,'emg')).toArray();

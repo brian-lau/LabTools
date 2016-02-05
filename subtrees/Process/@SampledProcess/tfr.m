@@ -70,6 +70,8 @@ switch lower(par.method)
       [S,~,f] = mtspecgramc(self.values{1}, [tBlock tStep], tfParams);
    case {'stockwell', 'strans'}
    case {'wavelet', 'cwt'}
+      % Currently required Wavelet toolbox
+      % consider https://github.com/grinsted/wavelet-coherence
       f0 = 5/(2*pi);
       scales = getScales(max(.1,min(par.f)),max(par.f),f0,self.dt,32);
       

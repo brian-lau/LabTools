@@ -33,6 +33,11 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          if nargin == 0
             return;
          end
+         if numel(varargin) <= 1
+            if isempty(varargin{:})
+               return;
+            end
+         end
 
          if mod(nargin,2)==1 && ~isstruct(varargin{1})
             assert(isnumeric(varargin{1}) || iscell(varargin{1}),...

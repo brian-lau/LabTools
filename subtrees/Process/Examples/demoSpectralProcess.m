@@ -65,7 +65,7 @@ y1 = chirp(t,10,2,10,'q');
 y2 = chirp(t,60,2,60,'q');
 s(1) = SampledProcess([y1;y1+y2],'Fs',1000);
 s(2) = SampledProcess([y1*.25;y1+y2],'Fs',1000);
-s.setOffset(-2)
+s.setOffset(-2);
 tf = tfr(s,'method','stft','f',1:100,'tBlock',.5,'tStep',.02);
 tf(3) = tfr(s(1),'method','cwt','f',[1 100]);
 plot(tf,'log',false);

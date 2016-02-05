@@ -25,3 +25,23 @@ s.resample(500);
 s(1) = SampledProcess(randn(1000,3),'Fs',1000,'deferredEval',true);
 s(2) = SampledProcess(randn(1000,3),'Fs',1000,'deferredEval',true);
 s.highpass('Fstop',1,'Fpass',10);
+
+
+
+s = SampledProcess(randn(5000,3),'Fs',1000,'deferredEval',true);
+detrend(s);
+s.lowpass('Fstop',50,'Fpass',10);
+s.resample(500);
+s.map(@(x) abs(x) + 1);
+setWindow(s,[1 2]);
+setOffset(s,-1);
+run(s);
+
+s.resample(200);
+
+p = PointProcess(1:100,'deferredEval',true);
+p.map(@(x) abs(x) + 1);
+setWindow(p,[1 2]);
+setOffset(p,-1);
+run(p);
+setOffset(p,.25);

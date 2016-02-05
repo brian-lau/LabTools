@@ -5,7 +5,6 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       tStart              % Start time of process
       tEnd                % End time of process
    end
-   % intervals? 
    properties(SetAccess = protected, Hidden)
       times_              % Original event/sample times
       values_             % Original attribute/values

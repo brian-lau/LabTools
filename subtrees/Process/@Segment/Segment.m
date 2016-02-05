@@ -30,8 +30,10 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    end
    % isValidWindow
    % isValidSegment? all processes have same parent segment?
-   properties(SetAccess = protected, Transient)
+   properties(SetAccess = protected)
       block%@Block    %
+   end
+   properties(SetAccess = protected, Hidden, Transient)
       listeners_
    end
    properties(SetAccess = protected)
@@ -257,6 +259,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          cellfun(@(x) x.setOffset(offset),self.processes(~ind),'uni',0);
          [self.listeners_.offset.Enabled] = deal(true);
       end
+      
       function windowChange(self,varargin)
          disp('coordinating segment window');
          [self.listeners_.window.Enabled] = deal(false);
@@ -265,6 +268,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          cellfun(@(x) x.setWindow(window),self.processes(~ind),'uni',0);
          [self.listeners_.window.Enabled] = deal(true);
       end
+      
       function syncChange(self,varargin)
          disp('coordinating segment sync');
          self.disableSegmentListeners();
@@ -295,7 +299,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    end
    
    methods(Static)
-      %saveobj(S) should remove listeners
+      %FIXME saveobj(S) should remove listeners
       obj = loadobj(S)
    end
 end

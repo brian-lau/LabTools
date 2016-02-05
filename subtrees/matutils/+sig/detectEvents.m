@@ -73,10 +73,13 @@ if (length(posind)==0) || (length(negind)==0)
    fprintf('No events found');
    return;
 end
-   
+
 if negind(1) < posind(1)
-   % events started hi, assume time 1 is onsetwhos
-   posind = [0 ; posind];
+   %% events started hi, assume time 1 is onset
+   %posind = [0 ; posind];
+   temp = posind;
+   posind = negind;
+   negind = temp;
 end
 if (length(posind)>length(negind)) && (posind(end)>negind(end))
    % events end hi, assume last point is offset

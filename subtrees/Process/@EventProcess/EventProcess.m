@@ -13,6 +13,13 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
    methods
       %% Constructor
       function self = EventProcess(varargin)
+         if mod(nargin,2)==1 && ~isstruct(varargin{1})
+            assert(isa(varargin{1},'metadata.Event'),...
+               'EventProcess:Constructor:InputFormat',...
+                  'Single inputs must be passed in as array of metadata.Events');
+            varargin = [{'events'} varargin];
+         end
+         
          p = inputParser;
          p.KeepUnmatched= true;
          p.FunctionName = 'EventProcess constructor';
@@ -29,7 +36,10 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
             [args.values.tStart] = deal(args.times(:,1));
             [args.values.tEnd] = deal(args.times(:,2));
             args.values = args.values.fix();
+         else
+            args = {};
          end
+         
          self = self@PointProcess(args);         
       end
       

@@ -41,7 +41,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties(Abstract, SetAccess = protected, Hidden)
       times_              % Original event/sample times
       values_             % Original attribute/values
-      Fs_
+      Fs_                 % Original sampling frequency
    end
    properties
       lazyLoad = false    % Boolean to defer constructing values from values_
@@ -62,9 +62,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       history = false     % Boolean indicating add queueable methods (TODO)
       segment             % Reference to parent Segment
    end
-%    properties(Abstract)
-%       trailingInd_
-%    end
+   properties(Abstract)
+      trailingInd_
+   end
    properties(SetAccess = protected, Hidden)
       window_             % Original window
       offset_             % Original offset
@@ -91,7 +91,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       %copy?
       plot(self)
       
-      roundToProcessResolution(self,x,res)
       % add
       % remove % delete by label
       
@@ -313,19 +312,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
       end
       
-      function bool = isQueueable(self)
-         % Determine whether we can queue
-         % Running w/out history:
-         %     running_ = 1, deferredEval = 0, history = 0
-         % Running w/ history:
-         %     running_ = 1, deferredEval = 0, history = 1
-         % Running w/ deferral (run called explicitly):
-         %     running_ = 1, deferredEval = 1, history = 1
-         % Running w/ deferral (before run called explicitly):
-         %     running_ = 0, deferredEval = 1, history = 1
-         bool = self.history && (~self.running_ || ~self.deferredEval);
-      end
-      
       function set.segment(self,segment)
          %if ~isempty(self.segment)
          %   disp('replacing parent');
@@ -334,18 +320,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          self.segment = segment;
       end
       
-      function bool = hasLabel(self,label)
-         n = numel(self);
-         bool = false(n,1);
-         for i = 1:n
-            bool(i) = any(cellfun(@isequal,self(i).labels,repmat({label},1,numel(self(i).count))));
-         end
-      end
-      
       % Assignment for object arrays
       self = setWindow(self,window)
       self = setOffset(self,offset)
       
+      bool = isQueueable(self)
       self = clearQueue(self)
       self = disableQueue(self)
       self = enableQueue(self)
@@ -359,6 +338,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       % Keep current data/transformations as original
       self = fix(self)
 
+      bool = hasLabel(self,label)
       keys = infoKeys(self,flatBool)
       bool = infoHasKey(self,key)
       bool = infoHasValue(self,value,varargin)

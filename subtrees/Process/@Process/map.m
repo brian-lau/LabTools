@@ -39,7 +39,7 @@ for i = 1:numel(self)
    % Check dimensions
    match = cellfun(@(x,y) size(x) == size(y),self(i).values,values,'uni',false);
    if any(~cat(1,match{:}))
-      error('SampledProcess:map:InputFormat','func must output same size');
+      error('Process:map:InputFormat','func must output same size');
    else
       self(i).values = values;
    end

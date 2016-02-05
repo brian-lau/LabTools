@@ -1,3 +1,10 @@
+% labels
+% min
+% excludeNaNs
+
+% checktimes?
+% quality check
+
 function [obj,n] = mean(self)
 
 uLabels = unique(cat(2,self.labels));
