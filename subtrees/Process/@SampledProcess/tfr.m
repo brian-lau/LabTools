@@ -101,6 +101,7 @@ obj = SpectralProcess(S,...
    );
 obj.cumulOffset = self.cumulOffset;
 
+% Utility for wavelet
 function scales = getScales(minfreq,maxfreq,f0,dt,NumVoices)
 %   scales = helperCWTTimeFreqVector(minfreq,maxfreq,f0,dt,NumVoices)
 %   minfreq = minimum frequency in cycles/unit time. minfreq must be

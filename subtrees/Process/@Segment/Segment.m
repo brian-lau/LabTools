@@ -18,6 +18,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
    end
    properties
       labels
+      % processLabels?
       tStart
       tEnd
       window

@@ -25,6 +25,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       dim                 % Dimensionality of each window
    end
    properties(Dependent, Hidden)
+      trailingDim_
       trailingInd_        % Convenience for expanding non-leading dims
    end
    
@@ -78,6 +79,9 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          if isa(par.values,'DataSource')
             %%%
          else % in-memory matrix
+            %% "Flatten" matrix, collapsing non-leading dimensions
+            dim = size(par.values);
+            par.values = reshape(par.values,dim(1),dim(2),prod(dim(3:end)));
             self.values_ = {par.values};
             self.values = self.values_;
             dim = size(self.values_{1});
@@ -190,7 +194,9 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          if isempty(self.values)
             n = 0;
          else
-            n = size(self.values{1},3);
+            %n = size(self.values{1},3);
+            dim = size(self.values{1});
+            n = prod(dim(3:end));
          end
       end
 

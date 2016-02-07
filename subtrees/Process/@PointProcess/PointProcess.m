@@ -19,6 +19,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       count               % # of events in each window
    end
    properties(Dependent, Hidden)
+      trailingDim_
       trailingInd_        % Convenience for expanding non-leading dims
    end
    
@@ -250,8 +251,12 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          end
       end
       
+      function trailingDim = get.trailingDim_(self)
+         trailingDim = self.n;
+      end
+      
       function trailingInd = get.trailingInd_(self)
-         trailingInd = {':'};
+         trailingInd = {};
       end
             
       obj = chop(self,shiftToWindow)

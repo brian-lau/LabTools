@@ -5,9 +5,8 @@ assert(isnumeric(quality),'Process:quality:InputFormat',...
 
 n = self.n;
 if isempty(quality)
-   quality = ones(1,n);
-   q = quality;
-elseif all(numel(quality)==n)
+   q = ones(1,n);   
+elseif numel(quality)==n
    q = quality(:)';
 elseif numel(quality)==1
    q = repmat(quality,1,n);

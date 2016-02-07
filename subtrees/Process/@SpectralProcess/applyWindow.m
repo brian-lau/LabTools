@@ -22,7 +22,7 @@ end
 window = self.window;
 windowedTimes = cell(nWindowReq,1);
 windowedValues = cell(nWindowReq,1);
-trailingInd = self.trailingInd_;
+%trailingInd = self.trailingInd_;
 for i = 1:nWindowReq
    minWin = min(window(i,1));
    maxWin = max(window(i,2));
@@ -46,7 +46,8 @@ for i = 1:nWindowReq
    
    ind = (times>=window(i,1)) & (times<=window(i,2));
    windowedTimes{i,1} = [preT ; times(ind) ; postT];
-   windowedValues{i,1} = [preV ; values(ind,trailingInd{:}) ; postV];
+   windowedValues{i,1} = [preV ; values(ind,:,:) ; postV];
+   %windowedValues{i,1} = [preV ; values(ind,trailingInd{:}) ; postV];
 end
 
 self.times = windowedTimes;

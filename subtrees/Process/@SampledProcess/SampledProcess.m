@@ -17,6 +17,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       dim                 % Dimensionality of each window
    end
    properties(Dependent, Hidden)
+      trailingDim_
       trailingInd_        % Convenience for expanding non-leading dims
    end
    
@@ -62,7 +63,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          
          % Lazy loading
          self.lazyLoad = par.lazyLoad;
-                  
+
          % Set sampling frequency and values_/values, times_/times
          if isa(par.values,'DataSource')
             assert(isempty(par.Fs),'SampledProcess:Fs:InputValue',...
@@ -85,6 +86,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
                self.Fs_ = par.Fs;
             end
             self.Fs = self.Fs_;
+            %% "Flatten" matrix, collapsing non-leading dimensions
+            dim = size(par.values);
+            par.values = reshape(par.values,dim(1),prod(dim(2:end)));
             self.values_ = {par.values};
             self.values = self.values_;
             dim = size(self.values_{1});
@@ -211,12 +215,19 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          if isempty(self.values)
             n = 0;
          else
-            n = size(self.values{1},2);
+            %n = size(self.values{1},2);
+            dim = size(self.values{1});
+            n = prod(dim(2:end));
          end
       end
       
       function dim = get.dim(self)
          dim = cellfun(@(x) size(x),self.values,'uni',false);
+      end
+      
+      function trailingDim = get.trailingDim_(self)
+         dim = size(self.values_{1});
+         trailingDim = dim(2:end); % leading dim is always time
       end
       
       function trailingInd = get.trailingInd_(self)
