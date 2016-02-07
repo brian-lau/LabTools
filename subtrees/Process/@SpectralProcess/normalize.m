@@ -9,7 +9,8 @@ p.FunctionName = 'SpectralProcess normalize';
 p.addRequired('event',@(x) isnumeric(x) || isa(x,'metadata.Event'));
 p.addParameter('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2));
 p.addParameter('eventStart',true,@(x) isscalar(x) && islogical(x));
-validMethods = {};
+validMethods = {'s' 'subtract' 'z', 'z-score' 'd' 'divide' 's-avg' 'subtract-avg'...
+   'z-avg', 'z-score-avg' 'z-avg', 'z-score-avg' 'd-avg' 'divide-avg'};
 p.addParameter('method','divide',@ischar);
 p.parse(event,varargin{:});
 par = p.Results;

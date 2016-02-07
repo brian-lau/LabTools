@@ -7,7 +7,7 @@
 
 function [obj,n] = mean(self)
 
-uLabels = unique(cat(2,self.labels));
+uLabels = unique(cat(2,self.labels),'stable');
 [s,l] = extract(self);
 s = cat(3,s.values);
 l = cat(2,l{:});

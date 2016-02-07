@@ -24,15 +24,15 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties(SetAccess = protected)
       cumulOffset = 0     % Cumulative offset
    end
-   properties
-      labels              % Label for each element of non-leading dimension
-      quality             % Scalar information for each non-leading dimension
-   end
    properties(Abstract)
       Fs                  % Sampling frequency
    end
    properties(Abstract, SetAccess = protected, Dependent)
       dt                  % 1/Fs
+   end
+   properties
+      labels              % Label for each element of non-leading dimension
+      quality             % Scalar information for each non-leading dimension
    end
    properties(SetAccess = protected, Transient, GetObservable)
       times = {}          % Current event/sample times
