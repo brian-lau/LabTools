@@ -7,7 +7,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       timeUnit            % Time representation (TODO)
       clock               % Clock info (drift-correction, TODO)
    end
-   properties(Abstract)
+   properties(Abstract)   % Abstract so subclasses can define set/get
       tStart              % Start time of process
       tEnd                % End time of process
    end
@@ -24,11 +24,12 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    properties(SetAccess = protected)
       cumulOffset = 0     % Cumulative offset
    end
-   properties(Abstract)
+   properties(Abstract)   % Abstract so subclasses can define set/get
       Fs                  % Sampling frequency
    end
-   properties(Abstract, SetAccess = protected, Dependent)
+   properties(Abstract, SetAccess = protected, Dependent) % Abstract so subclasses can define set/get
       dt                  % 1/Fs
+      n                   % # of signals/channels 
    end
    properties
       labels              % Label for each element of non-leading dimension
@@ -38,10 +39,19 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       times = {}          % Current event/sample times
       values = {}         % Current attribute/value associated with each time
    end
-   properties(Abstract, SetAccess = protected, Hidden)
+   properties(Abstract, SetAccess = protected, Hidden)      
+      Fs_                 % Original sampling frequency
+   end
+   properties(SetAccess = protected, Hidden)
       times_              % Original event/sample times
       values_             % Original attribute/values
-      Fs_                 % Original sampling frequency
+      labels_             % Original labels
+      quality_            % Original quality
+      selection_          % Selection index
+      window_             % Original window
+      offset_             % Original offset
+      reset_ = false      % Reset bit
+      running_ = true     % Boolean indicating eager evaluation
    end
    properties
       lazyLoad = false    % Boolean to defer constructing values from values_
@@ -64,12 +74,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties(Abstract)
       trailingInd_
-   end
-   properties(SetAccess = protected, Hidden)
-      window_             % Original window
-      offset_             % Original offset
-      reset_ = false      % Reset bit
-      running_ = true     % Boolean indicating eager evaluation
    end
    properties(SetAccess = protected, Hidden, Transient)
       loadListener_@event.proplistener % lazyLoad listener
@@ -108,14 +112,15 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    methods(Abstract, Access = protected)
       applyWindow(self);
       applyOffset(self,offset);
-      checkLabels(self)
-      checkQuality(self)
    end
    
    methods(Access = protected)
       discardBeforeStart(self)
       discardAfterEnd(self)
       
+      labels = checkLabels(self,l)
+      quality = checkQuality(self,q)
+
       addToQueue(self,varargin)
       loadOnDemand(self,varargin)
       evalOnDemand(self,varargin)
@@ -230,7 +235,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
          %----------------------------------------
          
-         % Wrap abstract method
          labels = checkLabels(self,labels);
          self.labels = labels;
       end
@@ -245,7 +249,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
          %----------------------------------------
          
-         % Wrap abstract method
          quality = checkQuality(self,quality);
          self.quality = quality;
       end

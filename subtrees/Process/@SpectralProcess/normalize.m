@@ -24,7 +24,7 @@ end
 
 if strfind(method,'avg')
    try
-      n = size(cell.uniqueRows(cat(1,self.labels)),1);
+      n = size(unique(cat(1,self.labels)),1);
    catch err
       if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
          cause = MException('SpectralProcess:normalize:InputValue',...

@@ -5,10 +5,6 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       tStart              % Start time of process
       tEnd                % End time of process
    end
-   properties(SetAccess = protected, Hidden)
-      times_              % Original event/sample times
-      values_             % Original attribute/values
-   end
    properties
       Fs                  % Sampling frequency
    end
@@ -17,6 +13,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
    end
    properties(SetAccess = protected, Dependent)
       dt                  % 1/Fs
+      n
    end
    properties(SetAccess = protected)
       params              
@@ -52,7 +49,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          p.FunctionName = 'SpectralProcess constructor';
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
          p.addParameter('values',[],@(x) isnumeric(x) || isa(x,'DataSource'));
-         p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
+         p.addParameter('labels',{},@(x) iscell(x) || ischar(x) || isa(x,'metadata.Label'));
          p.addParameter('quality',[],@isnumeric);
          p.addParameter('window',[],@isnumeric);
          p.addParameter('offset',[],@isnumeric);
@@ -188,7 +185,15 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             'tStep must be a numeric scalar >= 0.');
          self.tStep = tStep;
       end
-            
+      
+      function n = get.n(self)
+         if isempty(self.values)
+            n = 0;
+         else
+            n = size(self.values{1},3);
+         end
+      end
+
       function dim = get.dim(self)
          dim = cellfun(@(x) size(x),self.values,'uni',false);
       end
@@ -217,53 +222,6 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
    methods(Access = protected)
       applyWindow(self)
       applyOffset(self,offset)
-      
-      function l = checkLabels(self,labels)
-         dim = size(self.values_{1});
-         if numel(dim) > 3
-            dim = dim(3:end);
-         elseif numel(dim) == 3
-            dim = [1 dim(3)];
-         else
-            dim = [1 1];
-         end
-         n = prod(dim);
-         if isempty(labels)
-            l = arrayfun(@(x) ['id' num2str(x)],reshape(1:n,dim),'uni',0);
-         elseif iscell(labels)
-            assert(numel(labels)==n,'Process:labels:InputFormat',...
-               '# labels does not match # of signals');
-            l = labels;
-         elseif (n==1)
-            l = {labels};
-         else
-            error('Process:labels:InputType','Incompatible label type');
-         end
-      end
-      
-      function q = checkQuality(self,quality)
-         dim = size(self.values_{1});
-         if numel(dim) > 3
-            dim = dim(3:end);
-         elseif numel(dim) == 3
-            dim = [1 dim(3)];
-         else
-            dim = [1 1];
-         end
-         assert(isnumeric(quality),'Process:quality:InputFormat',...
-            'Must be numeric');
-         
-         if isempty(quality)
-            quality = ones(dim);
-            q = quality;
-         elseif all(size(quality)==dim)
-            q = quality(:)';
-         elseif numel(quality)==1
-            q = repmat(quality,dim);
-         else
-            error('bad quality');
-         end
-      end
    end
    
    methods(Static)

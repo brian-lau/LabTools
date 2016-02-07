@@ -5,10 +5,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       tStart              % Start time of process
       tEnd                % End time of process
    end
-   properties(SetAccess = protected, Hidden)
-      times_              % Original event/sample times
-      values_             % Original attribute/values
-   end
    properties
       Fs                  % Sampling frequency
    end
@@ -17,6 +13,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
    end
    properties(SetAccess = protected, Dependent)
       dt                  % 1/Fs
+      n                   % # of signals/channels 
    end
    properties(SetAccess = protected, Dependent)
       count               % # of events in each window
@@ -240,6 +237,10 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          dt = 1/self.Fs;
       end
       
+      function n = get.n(self)
+         n = length(self.count);
+      end
+      
       function count = get.count(self)
          % # of event times within windows
          if isempty(self.times)
@@ -271,49 +272,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
    methods(Access = protected)
       applyWindow(self)
       applyOffset(self,offset)
-      
-      function l = checkLabels(self,labels)
-         dim = size(self.times_);
-         if numel(dim) > 2
-            dim = dim(2:end);
-         else
-            dim(1) = 1;
-         end
-         n = prod(dim);
-         if isempty(labels)
-            l = arrayfun(@(x) ['id' num2str(x)],reshape(1:n,dim),'uni',0);
-         elseif iscell(labels)
-            assert(numel(labels)==n,'Process:labels:InputFormat',...
-               '# labels does not match # of signals');
-            l = labels;
-         elseif (n==1)
-            l = {labels};
-         else
-            error('Process:labels:InputType','Incompatible label type');
-         end
-      end
-      
-      function q = checkQuality(self,quality)
-         dim = size(self.values_{1});
-         if numel(dim) > 2
-            dim = dim(2:end);
-         else
-            dim(1) = 1;
-         end
-         assert(isnumeric(quality),'Process:quality:InputFormat',...
-            'Must be numeric');
-         
-         if isempty(quality)
-            quality = ones(dim);
-            q = quality;
-         elseif all(size(quality)==dim)
-            q = quality(:)';
-         elseif numel(quality)==1
-            q = repmat(quality,dim);
-         else
-            error('bad quality');
-         end
-      end
    end
 
    methods(Static)
