@@ -110,7 +110,11 @@ if alsoLoc; Out(2,1:numSets-1) = {zeros(szA)}; end
 
 % LOOP ismember
 for col = 1:numSets-1
-    [Out{:,col}] = ismember(varargin{1}, varargin{col+1}, flag);
+   if isempty(flag)
+      [Out{:,col}] = ismember(varargin{1}, varargin{col+1});
+   else
+      [Out{:,col}] = ismember(varargin{1}, varargin{col+1}, flag);
+   end
 end
 
 % Assign output
