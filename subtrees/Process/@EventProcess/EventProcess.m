@@ -24,22 +24,49 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
          p.KeepUnmatched= true;
          p.FunctionName = 'EventProcess constructor';
          p.addParameter('Fs',1000,@(x) isnumeric(x) && isscalar(x));
-         p.addParameter('events',[],@(x) isa(x,'metadata.Event') );
+         p.addParameter('events',[],@(x) iscell(x) || isa(x,'metadata.Event') );
+         p.addParameter('times',[],@(x) isnumeric(x) || iscell(x));
          p.parse(varargin{:});
+         par = p.Results;
          args = p.Unmatched;
          args.Fs = p.Results.Fs;
          
-         if ~isempty(p.Results.events)
-            times = vertcat(p.Results.events.time);
-            args.times = roundToSample(times,1/args.Fs);
-            args.values = p.Results.events(:);
-            [args.values.tStart] = deal(args.times(:,1));
-            [args.values.tEnd] = deal(args.times(:,2));
-            args.values = args.values.fix();
+         if ~isempty(par.events)
+            if ~isempty(par.times)
+               if iscell(par.times) && iscell(par.events)
+                  times = par.times;
+                  events = par.events;
+               elseif ismatrix(par.times) && ismatrix(par.events)
+                  times = {par.times};
+                  events = {par.events};
+               else
+                  error('mismatched');
+               end
+               assert(all(cellfun(@(x,y) all(size(x,1)==numel(y)),times,events,'uni',1)),...
+                  'EventProcess:constructor:InputValue',...
+                  'nonmatching dimensions for times and events');
+            else
+               if iscell(par.events)
+                  assert(all(cellfun(@(x) isa(x,'metadata.Event'),par.events)));
+               end
+               events = {par.events};
+               times = cellfun(@(x) vertcat(x.time),events,'uni',0);
+            end
+
+            args.times = cellfun(@(x) roundToSample(x,1/args.Fs),times,'uni',0);
+            args.values = cell(size(args.times));
+            for i = 1:numel(args.times)
+               args.values{i} = events{i};
+               for j = 1:size(args.times{i})
+                  args.values{i}(j).tStart = args.times{i}(j,1);
+                  args.values{i}(j).tEnd = args.times{i}(j,2);
+               end
+               args.values{i} = args.values{i}.fix();
+            end
          else
             args = {};
          end
-         
+
          self = self@PointProcess(args);         
       end
       
@@ -58,7 +85,9 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
             bool = false;
          else
             bool = cellfun(@(times,win) (times(:,1)>=win(:,1))&(times(:,2)<=win(:,2)),...
-               self.times,{self.window},'uni',0);
+               self.times,mat2cell(self.window,ones(1,size(self.window,1)),2),'uni',0);
+%             bool = cellfun(@(times,win) (times(:,1)>=win(:,1))&(times(:,2)<=win(:,2)),...
+%                self.times,{self.window},'uni',0);
          end
       end
       
