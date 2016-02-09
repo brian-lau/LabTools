@@ -13,7 +13,7 @@ classdef Label < handle & matlab.mixin.Heterogeneous
          end
          
          p = inputParser;
-         p.KeepUnmatched= false;
+         p.KeepUnmatched= true;
          p.FunctionName = 'Label constructor';
          p.addParameter('name','',@ischar);
          p.addParameter('description','',@ischar);
