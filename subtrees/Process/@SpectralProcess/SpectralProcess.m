@@ -194,9 +194,9 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          if isempty(self.values)
             n = 0;
          else
-            %n = size(self.values{1},3);
-            dim = size(self.values{1});
-            n = prod(dim(3:end));
+            n = size(self.values{1},3);
+            %dim = size(self.values{1});
+            %n = prod(dim(3:end));
          end
       end
 
@@ -226,6 +226,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
    end
    
    methods(Access = protected)
+      applySubset(self)
       applyWindow(self)
       applyOffset(self,offset)
    end

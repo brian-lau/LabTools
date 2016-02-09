@@ -163,13 +163,16 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
             self.offset = par.offset;
          end         
 
-         % Assign labels/quality
-         self.labels = par.labels;
-         self.quality = par.quality;
-
-         % Store original window and offset for resetting
+         % Store original properties for resetting
          self.window_ = self.window;
          self.offset_ = self.offset;
+         self.selection_ = true(1,self.n);
+         self.labels_ = self.labels;         
+         self.quality_ = self.quality;
+
+         % Assign labels/quality
+         self.labels = par.labels;         
+         self.quality = par.quality;
          
          self.history = par.history;
          self.deferredEval = par.deferredEval;         
@@ -239,7 +242,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       end
       
       function n = get.n(self)
-         n = length(self.count);
+         n = size(self.count,2);
       end
       
       function count = get.count(self)
@@ -275,6 +278,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
    end
      
    methods(Access = protected)
+      applySubset(self)
       applyWindow(self)
       applyOffset(self,offset)
    end

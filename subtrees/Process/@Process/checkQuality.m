@@ -11,5 +11,5 @@ elseif numel(quality)==n
 elseif numel(quality)==1
    q = repmat(quality,1,n);
 else
-   error('Process:quality:InputType','Incompatible label type');
+   error('Process:quality:InputType','Incompatible quality');
 end

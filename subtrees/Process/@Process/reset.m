@@ -45,7 +45,10 @@ for i = 1:numel(self)
    end
    
    self(i).Fs = self(i).Fs_;
-
+   self(i).selection_ = true(1,self(i).n);
+   self(i).labels = self(i).labels_;
+   self(i).quality = self(i).quality_;
+   
    % Turn deferred execution back on
    if self(i).deferredEval
       self(i).running_ = false;

@@ -111,6 +111,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    
    methods(Abstract, Access = protected)
+      applySubset(self)
       applyWindow(self);
       applyOffset(self,offset);
    end
@@ -249,9 +250,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
             end
          end
          %----------------------------------------
-         
-         quality = checkQuality(self,quality);
+
+         quality = checkQuality(self,quality);         
          self.quality = quality;
+         % Fix change
+         self.quality_(self.selection_) = quality;
       end
       
       function isValidWindow = get.isValidWindow(self)
@@ -326,6 +329,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       self = setWindow(self,window)
       self = setOffset(self,offset)
       
+      self = subset(self,varargin)
+
       bool = isQueueable(self)
       self = clearQueue(self)
       self = disableQueue(self)

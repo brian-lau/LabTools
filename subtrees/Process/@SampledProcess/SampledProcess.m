@@ -124,18 +124,17 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.offset = par.offset;
          end
 
-         % Store original window and offset for resetting
+         % Store original properties for resetting
          self.window_ = self.window;
          self.offset_ = self.offset;
-         
          self.selection_ = true(1,self.n);
+         self.labels_ = self.labels;         
+         self.quality_ = self.quality;
 
          % Assign labels/quality
          self.labels = par.labels;         
          self.quality = par.quality;
-         self.labels_ = self.labels;         
-         self.quality_ = self.quality;
-         
+                  
          self.history = par.history;
          self.deferredEval = par.deferredEval;         
       end % constructor
@@ -219,9 +218,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          if isempty(self.values)
             n = 0;
          else
-            %n = size(self.values{1},2);
-            dim = size(self.values{1});
-            n = prod(dim(2:end));
+            n = size(self.values{1},2);
+            %dim = size(self.values{1});
+            %n = prod(dim(2:end));
          end
       end
       
@@ -262,15 +261,14 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       obj = tfr(self,varargin)
       obj = coh(self,varargin)
       obj = pac(self,varargin)
-      
-      self = subset(self,varargin)
-      
+            
       % Visualization
       h = plot(self,varargin)
       % plotTrajectory
    end
    
    methods(Access = protected)
+      applySubset(self)
       applyWindow(self)
       applyOffset(self,offset)
    end
