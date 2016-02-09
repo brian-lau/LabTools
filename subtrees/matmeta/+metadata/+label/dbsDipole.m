@@ -3,9 +3,10 @@ classdef dbsDipole < metadata.Label
    properties
       side
       contacts
-      %x
-      %y
-      %z
+      coordinateSystem
+      x
+      y
+      z
    end
    methods
       function self = dbsDipole(varargin)
@@ -19,6 +20,10 @@ classdef dbsDipole < metadata.Label
          p.FunctionName = 'dbsDipole constructor';
          p.addParameter('side','',@ischar);
          p.addParameter('contacts','',@ischar);
+         p.addParameter('coordinateSystem','',@ischar);
+         p.addParameter('x',[],@(x) isnumeric(x) && isscalar(x));
+         p.addParameter('y',[],@(x) isnumeric(x) && isscalar(x));
+         p.addParameter('z',{},@(x) isnumeric(x) && isscalar(x));
          p.parse(varargin{:});
          par = p.Results;
          
