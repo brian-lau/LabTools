@@ -6,6 +6,7 @@ p.FunctionName = 'Process subset method';
 p.addParameter('index',[],@(x) isnumeric(x));
 p.addParameter('labels',[],@(x) iscell(x) || isa(x,'metadata.Label'));
 p.addParameter('quality',[],@(x) isnumeric(x));
+p.addParameter('logic','or',@ischar);
 p.parse(varargin{:});
 par = p.Results;
 
@@ -25,10 +26,18 @@ end
 
 qualityInd = [];
 if ~isempty(par.quality)
-   qualityInd = find(ismember(self.quality,par.quality))
+   qualityInd = find(ismember(self.quality,par.quality));
 end
 
-selection = [indexInd(:);labelInd(:);qualityInd(:)]
+switch lower(par.logic)
+   case {'or' 'union'}
+      selection = unionm(indexInd,labelInd,qualityInd);
+   case {'and' 'intersection'}
+      selection = intersectm(indexInd,labelInd,qualityInd);
+   case {'xor' 'setxor'}
+      selection = setxorm(indexInd,labelInd,qualityInd);
+end
+
 [~,selection] = intersect(baseInd,selection);
 tf = false(size(self.selection_));
 tf(selection) = true;
