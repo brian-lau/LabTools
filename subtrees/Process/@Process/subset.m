@@ -1,3 +1,8 @@
+% Select subsets of Process signals based on three possible criteria
+% index
+% label
+% quality
+
 function self = subset(self,varargin)
 
 p = inputParser;
