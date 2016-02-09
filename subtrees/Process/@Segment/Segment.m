@@ -64,8 +64,8 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
          p.addParameter('process',[],@(x) iscell(x) || all(isa(x,'Process')) );
          p.addParameter('labels',{},@(x) iscell(x) || ischar(x));
-         p.addParameter('tStart',[],@isnumeric);
-         p.addParameter('tEnd',[],@isnumeric);
+%          p.addParameter('tStart',[],@isnumeric);
+%          p.addParameter('tEnd',[],@isnumeric);
          p.addParameter('window',[],@isnumeric);
          p.addParameter('offset',0,@isnumeric);
          p.addParameter('coordinateProcesses',false,@islogical);
@@ -85,24 +85,24 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
             % Remove existing Segment reference to all child processes
             cellfun(@(x) set(x,'segment',[]),self.processes,'uni',0);
             
-            if isempty(par.tStart)
-               tStart = unique(cellfun(@(x) x.tStart,self.processes));
-               if numel(tStart) > 1
-                  error('Segment:Constructor:InputFormat',...
-                     'Start times for all processes must be equal');
-               end
-            else
-               self.tStart = par.tStart;
-            end
-            if isempty(par.tEnd)
-               tEnd = unique(cellfun(@(x) x.tEnd,self.processes));
-               if numel(tEnd) > 1
-                  error('Segment:Constructor:InputFormat',...
-                     'End times for all processes must be equal');
-               end
-            else
-               self.tEnd = par.tEnd;
-            end
+%             if isempty(par.tStart)
+%                tStart = unique(cellfun(@(x) x.tStart,self.processes));
+%                if numel(tStart) > 1
+%                   error('Segment:Constructor:InputFormat',...
+%                      'Start times for all processes must be equal');
+%                end
+%             else
+%                self.tStart = par.tStart;
+%             end
+%             if isempty(par.tEnd)
+%                tEnd = unique(cellfun(@(x) x.tEnd,self.processes));
+%                if numel(tEnd) > 1
+%                   error('Segment:Constructor:InputFormat',...
+%                      'End times for all processes must be equal');
+%                end
+%             else
+%                self.tEnd = par.tEnd;
+%             end
                         
             if isempty(par.window)
                window = cell.uniqueRows(cellfun(@(x) x.window,self.processes','uni',0));
@@ -157,23 +157,23 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          tStart = unique(cellfun(@(x) x.tStart,self.processes));
       end
       
-      function set.tStart(self,tStart)
-         for i = 1:numel(self.processes)
-            self.processes{i}.tStart = tStart;
-         end
-         self.tStart = tStart;
-      end
+%       function set.tStart(self,tStart)
+%          for i = 1:numel(self.processes)
+%             self.processes{i}.tStart = tStart;
+%          end
+%          self.tStart = tStart;
+%       end
 
       function tEnd = get.tEnd(self)
          tEnd = unique(cellfun(@(x) x.tEnd,self.processes));
       end
       
-      function set.tEnd(self,tEnd)
-         for i = 1:numel(self.processes)
-            self.processes{i}.tEnd = tEnd;
-         end
-         self.tEnd = tEnd;
-      end
+%       function set.tEnd(self,tEnd)
+%          for i = 1:numel(self.processes)
+%             self.processes{i}.tEnd = tEnd;
+%          end
+%          self.tEnd = tEnd;
+%       end
       
       function offset = get.offset(self)
          offset = cell.uniqueRows(cellfun(@(x) x.offset,self.processes','uni',0));

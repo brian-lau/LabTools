@@ -14,11 +14,10 @@ classdef Label < handle & matlab.mixin.Heterogeneous
          
          p = inputParser;
          p.KeepUnmatched= true;
-         p.FunctionName = 'Label constructor';
-         p.addParameter('name','',@ischar);
-         p.addParameter('description','',@ischar);
-         p.addParameter('comment','',@ischar);
-         p.addParameter('grouping','',@(x) isscalar(x) || ischar(x));
+         p.addParameter('name','');
+         p.addParameter('description','');
+         p.addParameter('comment','');
+         p.addParameter('grouping','');
          p.parse(varargin{:});
          par = p.Results;
          
