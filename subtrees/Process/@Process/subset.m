@@ -31,12 +31,14 @@ if ~isempty(par.label) % requires full label match (ignores labelProp/Val)
       [~,labelInd] = intersect(self.labels,par.label);
    end
 elseif ~isempty(par.labelVal)
-   % FIXME, check existence of property, assume false for labels lacking
-   % property
-
+   % labels are heterogenous, so we filter out elements that do not possess
+   % the property of interest (treated as false)
+   matchProp = find(isprop(self.labels,par.labelProp));
+   labels = self.labels(matchProp);
+   
    % labelProp values are unconstrained, so we filter out possibilities
    % where they differ from labelVal in type
-   v = {self.labels.(par.labelProp)};
+   v = {labels.(par.labelProp)};
    types = cellfun(@(x) class(x),v,'uni',0);
    match = find(strcmp(types,class(par.labelVal)));
    
@@ -53,10 +55,10 @@ elseif ~isempty(par.labelVal)
       end
    end
    
+   % Reinsert the matching indices for the reduced subset back into full index
    labelInd = false(1,self.n);
-   labelInd(match(I)) = true;
+   labelInd(matchProp(match(I))) = true;
    labelInd = find(labelInd);
-   %[~,labelInd] = intersect({self.labels.(par.labelProp)},par.labelVal);
 end
 
 qualityInd = [];

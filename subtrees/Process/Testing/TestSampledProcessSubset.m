@@ -1,19 +1,22 @@
-classdef TestPointProcessSubset < matlab.unittest.TestCase
+classdef TestSampledProcessSubset < matlab.unittest.TestCase
    properties
       tolType = 'AbsTol'
       tol = eps;
       p
       times
+      Fs
       values
       quality
    end
    
    methods(TestMethodSetup)
       function setup(testCase)
-         testCase.times = {(1:10)' (11:20)' (21:30)'};
-         testCase.values = {(1:10)' (11:20)' (21:30)'};
+         testCase.Fs = 1000;
+         testCase.values = (0:2*ceil(testCase.Fs))'; % times range from 0 to at least 2 seconds
+         testCase.values = repmat(testCase.values,1,3);
          testCase.quality = [1 2 3];
-         testCase.p = PointProcess('times',testCase.times,'values',testCase.values,'quality',testCase.quality);
+         testCase.p = SampledProcess('values',testCase.values,'Fs',testCase.Fs,'quality',testCase.quality);
+         testCase.times = testCase.p.times;
       end
    end
    
@@ -21,6 +24,7 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
       function teardown(testCase)
          testCase.p = [];
          testCase.times = [];
+         testCase.Fs = [];
          testCase.values = [];
          testCase.quality = [];
       end
@@ -51,8 +55,7 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          ind = [2 3];
          p.subset('index',ind);
          
-         testCase.assertEqual(p.times,testCase.times(:,ind));
-         testCase.assertEqual(p.values,testCase.values(:,ind));
+         testCase.assertEqual(p.values{1},testCase.values(:,ind));
       end
       
       function subsetLabel(testCase)
@@ -62,8 +65,7 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          l = p.labels(ind);
          p.subset('label',l);
          
-         testCase.assertEqual(p.times,testCase.times(:,ind));
-         testCase.assertEqual(p.values,testCase.values(:,ind));
+         testCase.assertEqual(p.values{1},testCase.values(:,ind));
       end
       
       function subsetLabelName(testCase)
@@ -72,8 +74,7 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          l = 'id3';
          p.subset('labelVal',l);
          
-         testCase.assertEqual(p.times,testCase.times(:,3));
-         testCase.assertEqual(p.values,testCase.values(:,3));
+         testCase.assertEqual(p.values{1},testCase.values(:,3));
       end
       
       function subsetLabelGroupingString(testCase)
@@ -83,8 +84,7 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          p.labels(3).grouping = 'cat';
          p.subset('labelVal','cat','labelProp','grouping');
          
-         testCase.assertEqual(p.times,testCase.times(:,[1 3]));
-         testCase.assertEqual(p.values,testCase.values(:,[1 3]));
+         testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
       end
       
       function subsetLabelGroupingNumeric(testCase)
@@ -94,8 +94,7 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          p.labels(3).grouping = 1;
          p.subset('labelVal',1,'labelProp','grouping');
          
-         testCase.assertEqual(p.times,testCase.times(:,[1 3]));
-         testCase.assertEqual(p.values,testCase.values(:,[1 3]));
+         testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
       end
       
       function subsetLabelGroupingHandle(testCase)
@@ -105,8 +104,7 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          p.labels(3).grouping = p.labels(1).grouping;
          p.subset('labelVal',p.labels(1).grouping,'labelProp','grouping');
          
-         testCase.assertEqual(p.times,testCase.times(:,[1 3]));
-         testCase.assertEqual(p.values,testCase.values(:,[1 3]));
+         testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
       end
       
       function subsetLabelGroupingMissingProp(testCase)
@@ -116,8 +114,7 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          p.labels(3) = metadata.label.dbsDipole('name','goodbye','contacts','0-1');
          p.subset('labelVal','0-1','labelProp','contacts');
 
-         testCase.assertEqual(p.times,testCase.times(:,[1 3]));
-         testCase.assertEqual(p.values,testCase.values(:,[1 3]));
+         testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
       end
       
       function subsetLabelGroupingError(testCase)
@@ -137,8 +134,7 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          q = p.quality(ind);
          p.subset('quality',q);
          
-         testCase.assertEqual(p.times,testCase.times(:,ind));
-         testCase.assertEqual(p.values,testCase.values(:,ind));
+         testCase.assertEqual(p.values{1},testCase.values(:,ind));
       end
       
       function subsetLogicOR(testCase)
@@ -147,8 +143,7 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          l = p.labels(2);
          p.subset('index',1,'label',l,'quality',2);
          
-         testCase.assertEqual(p.times,testCase.times(:,1:2));
-         testCase.assertEqual(p.values,testCase.values(:,1:2));
+         testCase.assertEqual(p.values{1},testCase.values(:,1:2));
       end
       
       function subsetLogicAND(testCase)
@@ -157,8 +152,7 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          l = p.labels(2);
          p.subset('label',l,'quality',2,'logic','and');
          
-         testCase.assertEqual(p.times,testCase.times(:,2));
-         testCase.assertEqual(p.values,testCase.values(:,2));
+         testCase.assertEqual(p.values{1},testCase.values(:,2));
       end
       
       function subsetLogicXOR(testCase)
@@ -167,19 +161,18 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          l = p.labels(2);
          p.subset('index',2,'label',l,'quality',2,'logic','xor');
          
-         testCase.assertEqual(p.times,testCase.times(:,[1 3]));
-         testCase.assertEqual(p.values,testCase.values(:,[1 3]));
+         testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
       end
       
       function subsetEmpty(testCase)
-         import matlab.unittest.constraints.HasSize;
+         import matlab.unittest.constraints.IsEmpty;
+         
          p = testCase.p;
          
          l = p.labels(1);
          p.subset('label',l,'quality',2,'logic','and');
          
-         testCase.assertThat(p.times,HasSize([1,0]))
-         testCase.assertThat(p.values,HasSize([1,0]))
+         testCase.assertThat(p.values{1},IsEmpty);
       end
    end
    
