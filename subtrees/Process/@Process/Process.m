@@ -263,10 +263,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          assert(isscalar(bool)&&islogical(bool),'err');
          if isempty(self.loadListener_)
             self.loadListener_ = addlistener(self,'values','PreGet',@self.loadOnDemand);
-         else
             self.loadListener_.Enabled = bool;
          end
-         
+
          if ~bool
             loadOnDemand(self);
          end
@@ -287,7 +286,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          assert(isscalar(bool)&&islogical(bool),'err');
          if isempty(self.evalListener_)
             self.evalListener_ = addlistener(self,'runImmediately',@self.evalOnDemand);
-         else
             self.evalListener_.Enabled = bool;
          end
          
