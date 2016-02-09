@@ -5,6 +5,13 @@
 
 function self = subset(self,varargin)
 
+if mod(nargin-1,2)==1 && ~isstruct(varargin{1})
+   assert(isnumeric(varargin{1}),...
+      'Process:subset:InputFormat',...
+      'Single inputs must be passed in as array of numeric values');
+   varargin = [{'index'} varargin];
+end
+
 p = inputParser;
 p.KeepUnmatched= false;
 p.FunctionName = 'Process subset method';
