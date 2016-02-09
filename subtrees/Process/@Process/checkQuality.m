@@ -1,7 +1,7 @@
 function q = checkQuality(self,quality)
 
 assert(isnumeric(quality),'Process:quality:InputFormat',...
-   'Must be numeric');
+   'Qualities must be numeric');
 
 n = self.n;
 if isempty(quality)
@@ -11,5 +11,5 @@ elseif numel(quality)==n
 elseif numel(quality)==1
    q = repmat(quality,1,n);
 else
-   error('bad quality');
+   error('Process:quality:InputType','Incompatible label type');
 end

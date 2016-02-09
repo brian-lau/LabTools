@@ -124,13 +124,17 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.offset = par.offset;
          end
 
-         % Assign labels/quality
-         self.labels = par.labels;         
-         self.quality = par.quality;
-
          % Store original window and offset for resetting
          self.window_ = self.window;
          self.offset_ = self.offset;
+         
+         self.selection_ = true(1,self.n);
+
+         % Assign labels/quality
+         self.labels = par.labels;         
+         self.quality = par.quality;
+         self.labels_ = self.labels;         
+         self.quality_ = self.quality;
          
          self.history = par.history;
          self.deferredEval = par.deferredEval;         
@@ -258,6 +262,8 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       obj = tfr(self,varargin)
       obj = coh(self,varargin)
       obj = pac(self,varargin)
+      
+      self = subset(self,varargin)
       
       % Visualization
       h = plot(self,varargin)

@@ -23,7 +23,7 @@ elseif n == numel(labels)
    if isa(labels,'metadata.Label')
       l = labels;
    else
-      error('bad format');
+      error('Process:labels:InputType','Bad format');
    end
 else
    error('Process:labels:InputType','Incompatible label type');
