@@ -124,16 +124,18 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.offset = par.offset;
          end
 
+         self.selection_ = true(1,self.n);
+
+         % Assign labels/quality
+         self.labels = par.labels;         
+         self.quality = par.quality;
+
          % Store original properties for resetting
          self.window_ = self.window;
          self.offset_ = self.offset;
          self.selection_ = true(1,self.n);
          self.labels_ = self.labels;         
          self.quality_ = self.quality;
-
-         % Assign labels/quality
-         self.labels = par.labels;         
-         self.quality = par.quality;
                   
          self.history = par.history;
          self.deferredEval = par.deferredEval;         

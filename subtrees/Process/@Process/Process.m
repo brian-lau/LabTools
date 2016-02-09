@@ -254,7 +254,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          quality = checkQuality(self,quality);         
          self.quality = quality;
          % Fix change
-         self.quality_(self.selection_) = quality;
+         if ~isempty(self.quality_)
+            self.quality_(self.selection_) = quality;
+         end
       end
       
       function isValidWindow = get.isValidWindow(self)

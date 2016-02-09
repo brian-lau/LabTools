@@ -25,14 +25,13 @@ end
 
 qualityInd = [];
 if ~isempty(par.quality)
-   [~,qualityInd] = intersect(self.labels,par.labels);
+   qualityInd = find(ismember(self.quality,par.quality))
 end
 
-selection = [indexInd(:),labelInd(:),qualityInd(:)];
+selection = [indexInd(:);labelInd(:);qualityInd(:)]
 [~,selection] = intersect(baseInd,selection);
 tf = false(size(self.selection_));
 tf(selection) = true;
 self.selection_ = tf;
 
-% move into applySubset
 self.applySubset();
