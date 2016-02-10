@@ -9,5 +9,9 @@ else
 end
 
 if nargout == 2
-   postV = nan([size(postT,1) row(dim)]);
+   if isempty(postT)
+      postV = [];
+   else
+      postV = nan([size(postT,1) row(dim)]);
+   end
 end

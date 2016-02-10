@@ -45,9 +45,27 @@ for i = 1:nWindowReq
    [postT,postV] = extendPost(tEnd,maxWin,self.tStep,dim);
    
    ind = (times>=window(i,1)) & (times<=window(i,2));
-   windowedTimes{i,1} = [preT ; times(ind) ; postT];
-   windowedValues{i,1} = [preV ; values(ind,:,:) ; postV];
-   %windowedValues{i,1} = [preV ; values(ind,trailingInd{:}) ; postV];
+   if ~isempty(preT) && ~isempty(postT)
+      windowedTimes{i,1} = [preT ; times(ind) ; postT];
+      windowedValues{i,1} = [preV ; values(ind,:,:) ; postV];
+   elseif isempty(preT) && ~isempty(postT)
+      windowedTimes{i,1} = [times(ind) ; postT];
+      windowedValues{i,1} = [values(ind,:,:) ; postV];
+   elseif ~isempty(preT) && isempty(postT)
+      windowedTimes{i,1} = [preT ; times(ind)];
+      windowedValues{i,1} = [preV ; values(ind,:,:)];
+   else
+      if sum(ind) ~= numel(times);
+         windowedTimes{i,1} = times(ind);
+         windowedValues{i,1} = values(ind,:,:);
+      else
+         windowedTimes{i,1} = times;
+         windowedValues{i,1} = values;
+      end
+   end
+%    windowedTimes{i,1} = [preT ; times(ind) ; postT];
+%    windowedValues{i,1} = [preV ; values(ind,:,:) ; postV];
+%    %windowedValues{i,1} = [preV ; values(ind,trailingInd{:}) ; postV];
 end
 
 self.times = windowedTimes;

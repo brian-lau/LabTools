@@ -9,5 +9,9 @@ else
 end
 
 if nargout == 2
-   preV = nan([size(preT,1) row(dim)]);
+   if isempty(preT)
+      preV = [];
+   else
+      preV = nan([size(preT,1) row(dim)]);
+   end
 end
