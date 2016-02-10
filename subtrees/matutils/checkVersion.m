@@ -4,25 +4,22 @@
 function bool = checkVersion(ver,req)
 
 if ischar(ver)
-   c = regexp(ver,'\.','split');
-   ver = sscanf(sprintf('%s#',c{:}),'%g#');
+   ver = regexp(ver,'\.','split');
 end
 if ischar(req)
-   c = regexp(req,'\.','split');
-   req = sscanf(sprintf('%s#',c{:}),'%g#');
+   req = regexp(req,'\.','split');
 end
 
 assert((numel(ver)==3) && (numel(req)==3),...
    'Versions should be MAJOR.MINOR.PATCH');
 
-if all(ver==req)
+if isequal(ver,req)
    bool = true;
    return;
 end
 
-bool = ver > req;
-for i = 1:numel(bool)
-   if bool(i)
+for i = 1:numel(ver)
+   if ver{i}>req{i}
       bool = true;
       return;
    end
