@@ -153,13 +153,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       end
    end
 
-   methods
-      function set.info(self,info)
-         assert(strcmp(info.KeyType,'char'),...
-            'Process:info:InputFormat','info keys must be chars.');
-         self.info = info;
-      end
-            
+   methods            
       function set.window(self,window)
          % Set the window property
          % Window applies to times without offset origin.
@@ -185,11 +179,15 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
             % Rewindow if current and requested # of windows matches
             if isempty(self.window) || (nWindow == size(self.times,1))
                % Reset offset
-               applyOffset(self,-self.cumulOffset);
+               if ~all(self.cumulOffset == 0)
+                  applyOffset(self,-self.cumulOffset);
+               end
                % Expensive, only call when windows are changed (AbortSet=true)
                applyWindow(self);
-               applyOffset(self,self.cumulOffset);
-            else % Different windows are ambiguous, start for original
+               if ~all(self.cumulOffset == 0)
+                  applyOffset(self,self.cumulOffset);
+               end
+            else % Different windows are ambiguous, start from original
                % Reset the process
                self.times = self.times_;
                self.values = self.values_;
@@ -265,10 +263,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       end
       
       function set.lazyLoad(self,bool)
-         assert(isscalar(bool)&&islogical(bool),'err');
-         if isempty(self.loadListener_)
+         assert(isscalar(bool)&&islogical(bool),'Process:lazyLoad:InputFormat','Scalar boolean required.');
+         if isempty(self.loadListener_) && bool
             self.loadListener_ = addlistener(self,'values','PreGet',@self.loadOnDemand);
-            self.loadListener_.Enabled = bool;
          end
 
          if ~bool
@@ -288,10 +285,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       end
       
       function set.deferredEval(self,bool)
-         assert(isscalar(bool)&&islogical(bool),'err');
-         if isempty(self.evalListener_)
+         assert(isscalar(bool)&&islogical(bool),'Process:deferredEval:InputFormat','Scalar boolean required.');
+         if isempty(self.evalListener_) && bool
             self.evalListener_ = addlistener(self,'runImmediately',@self.evalOnDemand);
-            self.evalListener_.Enabled = bool;
          end
          
          self.deferredEval = bool;
