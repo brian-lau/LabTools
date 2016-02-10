@@ -91,12 +91,12 @@ if par.Results.threshold
    fprintf('Thresholding\n');
    %f = @(x) x.*(abs(x)<=par.Results.threshold);
    f = @(x) x.*(abs(x)<=par.Results.threshold) + par.Results.threshold.*(abs(x)>par.Results.threshold);
-   s.map(@(x) f(x),'fix',true);
+   s.map(@(x) f(x));
 end
 
 if par.Results.Fpass
    fprintf('Highpass filtering\n');
-   highpass(s,'Fpass',par.Results.Fpass,'Fstop',par.Results.Fstop,'fix',true); 
+   highpass(s,'Fpass',par.Results.Fpass,'Fstop',par.Results.Fstop); 
 end
 
 if par.Results.deline
@@ -106,7 +106,7 @@ if par.Results.deline
    P = par.Results.P;
    W = par.Results.W;
    f = @(x) removePLI_multichan(x',s.Fs,M,B,P,W,50,0);
-   s.map(@(x) f(x)','fix',true);
+   s.map(@(x) f(x)');
 end
 
 if par.Results.trim
@@ -126,6 +126,8 @@ if (par.Results.resample < s.Fs) && par.Results.resample
 else
    origFs = s.Fs;
 end
+
+fix(s);
 
 preprocessParams = par.Results;
 preprocessParams.origFs = origFs;
