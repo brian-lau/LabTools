@@ -4,10 +4,12 @@
 function bool = checkVersion(ver,req)
 
 if ischar(ver)
-   ver = cellfun(@str2num,regexp(ver,'\.','split'));
+   c = regexp(ver,'\.','split');
+   ver = sscanf(sprintf('%s#',c{:}),'%g#');
 end
 if ischar(req)
-   req = cellfun(@str2num,regexp(req,'\.','split'));
+   c = regexp(req,'\.','split');
+   req = sscanf(sprintf('%s#',c{:}),'%g#');
 end
 
 assert((numel(ver)==3) && (numel(req)==3),...
