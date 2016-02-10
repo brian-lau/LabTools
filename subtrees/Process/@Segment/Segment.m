@@ -83,7 +83,7 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
             end
             
             % Remove existing Segment reference to all child processes
-            cellfun(@(x) set(x,'segment',[]),self.processes,'uni',0);
+%            cellfun(@(x) set(x,'segment',[]),self.processes,'uni',0);
             
 %             if isempty(par.tStart)
 %                tStart = unique(cellfun(@(x) x.tStart,self.processes));
@@ -104,24 +104,24 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
 %                self.tEnd = par.tEnd;
 %             end
                         
-            if isempty(par.window)
-               window = cell.uniqueRows(cellfun(@(x) x.window,self.processes','uni',0));
-               if numel(window) > 1
-                  error('Segment:Constructor:InputFormat',...
-                     'Windows for all processes must be equal');
-               end
-            else
-               self.window = par.window;
-            end
-            if isempty(par.offset)
-               offset = cell.uniqueRows(cellfun(@(x) x.offset,self.processes','uni',0));
-               if numel(offset) > 1
-                  error('Segment:Constructor:InputFormat',...
-                     'Offsets for all processes must be equal');
-               end
-            else
-               self.offset = par.offset;
-            end
+%             if isempty(par.window)
+%                window = cell.uniqueRows(cellfun(@(x) x.window,self.processes','uni',0));
+%                if numel(window) > 1
+%                   error('Segment:Constructor:InputFormat',...
+%                      'Windows for all processes must be equal');
+%                end
+%             else
+%                self.window = par.window;
+%             end
+%             if isempty(par.offset)
+%                offset = cell.uniqueRows(cellfun(@(x) x.offset,self.processes','uni',0));
+%                if numel(offset) > 1
+%                   error('Segment:Constructor:InputFormat',...
+%                      'Offsets for all processes must be equal');
+%                end
+%             else
+%                self.offset = par.offset;
+%             end
          end
 
          self.labels = p.Results.labels;
@@ -153,9 +153,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
          proc = extract(self,'SpectralProcess','type');
       end
       
-      function tStart = get.tStart(self)
-         tStart = unique(cellfun(@(x) x.tStart,self.processes));
-      end
+%       function tStart = get.tStart(self)
+%          tStart = unique(cellfun(@(x) x.tStart,self.processes));
+%       end
       
 %       function set.tStart(self,tStart)
 %          for i = 1:numel(self.processes)
@@ -164,9 +164,9 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
 %          self.tStart = tStart;
 %       end
 
-      function tEnd = get.tEnd(self)
-         tEnd = unique(cellfun(@(x) x.tEnd,self.processes));
-      end
+%       function tEnd = get.tEnd(self)
+%          tEnd = unique(cellfun(@(x) x.tEnd,self.processes));
+%       end
       
 %       function set.tEnd(self,tEnd)
 %          for i = 1:numel(self.processes)
@@ -175,27 +175,27 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
 %          self.tEnd = tEnd;
 %       end
       
-      function offset = get.offset(self)
-         offset = cell.uniqueRows(cellfun(@(x) x.offset,self.processes','uni',0));
-         offset = offset{1};
-      end
-      
-      function set.offset(self,offset)
-         for i = 1:numel(self.processes)
-            self.processes{i}.offset = offset;
-         end
-      end
-
-      function window = get.window(self)
-         window = cell.uniqueRows(cellfun(@(x) x.window,self.processes','uni',0));
-         window = window{1};
-      end
-      
-      function set.window(self,window)
-         for i = 1:numel(self.processes)
-            self.processes{i}.window = window;
-         end
-      end
+%       function offset = get.offset(self)
+%          offset = cell.uniqueRows(cellfun(@(x) x.offset,self.processes','uni',0));
+%          offset = offset{1};
+%       end
+%       
+%       function set.offset(self,offset)
+%          for i = 1:numel(self.processes)
+%             self.processes{i}.offset = offset;
+%          end
+%       end
+% 
+%       function window = get.window(self)
+%          window = cell.uniqueRows(cellfun(@(x) x.window,self.processes','uni',0));
+%          window = window{1};
+%       end
+%       
+%       function set.window(self,window)
+%          for i = 1:numel(self.processes)
+%             self.processes{i}.window = window;
+%          end
+%       end
       
       function set.labels(self,labels)
          n = numel(self.processes);
@@ -295,6 +295,21 @@ classdef(CaseInsensitiveProperties, TruncatedProperties) Segment < hgsetget & ma
                [self(i).listeners_.window.Enabled] = deal(true);
                [self(i).listeners_.sync.Enabled] = deal(true);
             end
+         end
+      end
+      
+      function S = saveobj(self)
+         if 1
+            S = self;
+         else
+            % Remove Segment reference in all child processes to avoid recursion
+            cellfun(@(x) set(x,'segment',[]),self.processes,'uni',0);
+            % Converting to bytestream prevents removal of transient/dependent
+            % properties, so we have to do this manually
+            %disp('segment saveobj');
+            warning('off','MATLAB:structOnObject');
+            S = getByteStreamFromArray(struct(self));
+            warning('on','MATLAB:structOnObject');
          end
       end
    end

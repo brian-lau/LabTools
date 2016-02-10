@@ -35,7 +35,7 @@ classdef TestPointProcessTEnd < matlab.unittest.TestCase
       
       function errorLessThanTStart(testCase)
          obj = testCase.obj;
-         tEnd = 0;
+         tEnd = -1;
 
          testCase.assertError(@() set(obj,'tEnd',tEnd),'PointProcess:tEnd:InputValue');
       end

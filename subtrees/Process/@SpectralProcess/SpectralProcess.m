@@ -143,10 +143,10 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       
       function set.tStart(self,tStart)
          assert(isscalar(tStart) && isnumeric(tStart),...
-            'SampledProcess:tStart:InputFormat',...
+            'SpectralProcess:tStart:InputFormat',...
             'tStart must be a numeric scalar.');
          if ~isempty(self.tEnd)
-            assert(tStart <= self.tEnd,'SampledProcess:tStart:InputValue',...
+            assert(tStart <= self.tEnd,'SpectralProcess:tStart:InputValue',...
                   'tStart must be less than tEnd.');
          end
 
@@ -157,17 +157,21 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             [pre,preV] = extendPre(self.tStart,tStart,self.tStep,dim(2:end));
             self.times_ = {[pre ; self.times_{1}]};
             self.values_ = {[preV ; self.values_{1}]};
-            self.tStart = tStart;
-            self.discardBeforeStart();            
+            if tStart > self.tStart
+               self.tStart = tStart;
+               self.discardBeforeStart();
+            else
+               self.tStart = tStart;
+            end
          end
       end
       
       function set.tEnd(self,tEnd)
          assert(isscalar(tEnd) && isnumeric(tEnd),...
-            'SampledProcess:tEnd:InputFormat',...
+            'SpectralProcess:tEnd:InputFormat',...
             'tEnd must be a numeric scalar.');
          if ~isempty(self.tStart)
-            assert(self.tStart <= tEnd,'SampledProcess:tEnd:InputValue',...
+            assert(self.tStart <= tEnd,'SpectralProcess:tEnd:InputValue',...
                   'tEnd must be greater than tStart.');
          end
          
@@ -178,8 +182,12 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             [post,postV] = extendPost(self.tEnd,tEnd,self.tStep,dim(2:end));
             self.times_ = {[self.times_{1} ; post]};
             self.values_ = {[self.values_{1} ; postV]};
-            self.tEnd = tEnd;
-            self.discardAfterEnd();
+            if tEnd < self.tEnd
+               self.tEnd = tEnd;
+               self.discardAfterEnd();
+            else
+               self.tEnd = tEnd;
+            end
          end         
       end
       
@@ -234,6 +242,19 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       
       % Visualization
       h = plot(self,varargin)
+
+      function S = saveobj(self)
+         if 1
+            S = self;
+         else
+            %disp('sampled process saveobj');
+            % Converting to bytestream prevents removal of transient/dependent
+            % properties, so we have to do this manually
+            warning('off','MATLAB:structOnObject');
+            S = getByteStreamFromArray(struct(self));
+            warning('on','MATLAB:structOnObject');
+         end
+      end
    end
    
    methods(Access = protected)

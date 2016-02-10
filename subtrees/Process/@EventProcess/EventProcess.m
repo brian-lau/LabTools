@@ -107,6 +107,20 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       
       %% Display
       h = plot(self,varargin)
+      
+      function S = saveobj(self)
+         if 1
+            S = self;
+         else
+            %disp('event process saveobj');
+            delete(self.updateEventListener_);
+            % Converting to bytestream prevents removal of transient/dependent
+            % properties, so we have to do this manually
+            warning('off','MATLAB:structOnObject');
+            S = getByteStreamFromArray(struct(self));
+            warning('on','MATLAB:structOnObject');
+         end
+      end
    end
    
    methods(Static)

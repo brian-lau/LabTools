@@ -1,5 +1,9 @@
 function obj = loadobj(S)
 
+if isinteger(S)
+   S = getArrayFromByteStream(S);
+end
+
 if checkVersion(S.version,'0.4.0')
    obj = EventProcess(...
       'info',S.info,...
@@ -17,12 +21,12 @@ if checkVersion(S.version,'0.4.0')
    set(obj,'window',S.window);
    set(obj,'offset',S.offset);
    % Clear queue as fresh from constructor
-   clearQueue(obj);
-   % And set queue and eval status
-   set(obj,'deferredEval',S.deferredEval);
-   set(obj,'queue',S.queue);
-   % Rerun queue if needed
-   revalOnDemand(obj);
+%   clearQueue(obj);
+%   % And set queue and eval status
+%   set(obj,'deferredEval',S.deferredEval);
+%   set(obj,'queue',S.queue);
+%   % Rerun queue if needed
+%   revalOnDemand(obj);
 else
    %< v 0.4.0
    obj = EventProcess(...

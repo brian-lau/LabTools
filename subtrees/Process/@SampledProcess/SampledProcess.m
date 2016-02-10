@@ -150,15 +150,21 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
                   'tStart must be less than tEnd.');
          end
 
-         if isa(self.values_{1},'DataSource')
-            self.tStart = tStart;
-         else
+         if ismatrix(self.values_{1})
             dim = size(self.values_{1});
             [pre,preV] = extendPre(self.tStart,tStart,1/self.Fs_,dim(2:end));
-            self.times_ = {[pre ; self.times_{1}]};
-            self.values_ = {[preV ; self.values_{1}]};
+            if ~isempty(pre)
+               self.times_ = {[pre ; self.times_{1}]};
+               self.values_ = {[preV ; self.values_{1}]};
+            end
+            if tStart > self.tStart
+               self.tStart = tStart;
+               self.discardBeforeStart();
+            else
+               self.tStart = tStart;
+            end
+         elseif isa(self.values_{1},'DataSource')
             self.tStart = tStart;
-            self.discardBeforeStart();
          end
       end
       
@@ -171,15 +177,21 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
                   'tEnd must be greater than tStart.');
          end
          
-         if isa(self.values_{1},'DataSource')
-            self.tEnd = tEnd;
-         else
+         if ismatrix(self.values_{1})
             dim = size(self.values_{1});
             [post,postV] = extendPost(self.tEnd,tEnd,1/self.Fs_,dim(2:end));
-            self.times_ = {[self.times_{1} ; post]};
-            self.values_ = {[self.values_{1} ; postV]};
+            if ~isempty(post)
+               self.times_ = {[self.times_{1} ; post]};
+               self.values_ = {[self.values_{1} ; postV]};
+            end
+            if tEnd < self.tEnd
+               self.tEnd = tEnd;
+               self.discardAfterEnd();
+            else
+               self.tEnd = tEnd;
+            end
+         elseif isa(self.values_{1},'DataSource')
             self.tEnd = tEnd;
-            self.discardAfterEnd();
          end         
       end
       
@@ -221,8 +233,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             n = 0;
          else
             n = size(self.values{1},2);
-            %dim = size(self.values{1});
-            %n = prod(dim(2:end));
          end
       end
       
@@ -267,6 +277,22 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       % Visualization
       h = plot(self,varargin)
       % plotTrajectory
+
+      function S = saveobj(self)
+         if 1
+            S = self;
+         else
+            %disp('sampled process saveobj');
+            % Converting to bytestream prevents removal of transient/dependent
+            % properties, so we have to do this manually
+            warning('off','MATLAB:structOnObject');
+            S = struct(self);
+            S.values = [];
+            S.times = [];
+            S = getByteStreamFromArray(S);
+            warning('on','MATLAB:structOnObject');
+         end
+      end
    end
    
    methods(Access = protected)

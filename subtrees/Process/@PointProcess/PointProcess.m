@@ -181,35 +181,36 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       end % constructor
       
       function set.tStart(self,tStart)
+         assert(isscalar(tStart) && isnumeric(tStart),...
+            'PointProcess:tStart:InputFormat',...
+            'tStart must be a numeric scalar.');
          if ~isempty(self.tEnd)
-            if tStart >= self.tEnd
-               error('PointProcess:tStart:InputValue',...
+            assert(tStart <= self.tEnd,'PointProcess:tStart:InputValue',...
                   'tStart must be less than tEnd.');
-           end
          end
-         if isscalar(tStart) && isnumeric(tStart)
+         
+         if tStart > self.tStart
             self.tStart = tStart;
+            self.discardBeforeStart();
          else
-            error('PointProcess:tStart:InputFormat',...
-               'tStart must be a numeric scalar.');
+            self.tStart = tStart;
          end
-         self.discardBeforeStart();
       end
       
       function set.tEnd(self,tEnd)
+         assert(isscalar(tEnd) && isnumeric(tEnd),...
+            'PointProcess:tEnd:InputFormat',...
+            'tEnd must be a numeric scalar.');
          if ~isempty(self.tStart)
-            if self.tStart >= tEnd
-               error('PointProcess:tEnd:InputValue',...
+            assert(self.tStart <= tEnd,'PointProcess:tEnd:InputValue',...
                   'tEnd must be greater than tStart.');
-            end
          end
-         if isscalar(tEnd) && isnumeric(tEnd)
+         if tEnd < self.tEnd
             self.tEnd = tEnd;
+            self.discardAfterEnd();
          else
-            error('PointProcess:tEnd:InputFormat',...
-               'tEnd must be a numeric scalar.');
+            self.tEnd = tEnd;
          end
-         self.discardAfterEnd();
       end
       
       function set.Fs(self,Fs)
@@ -277,6 +278,19 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       
       %% Display
       [h,yOffset] = plot(self,varargin)
+
+      function S = saveobj(self)
+         if 1
+            S = self;
+         else
+            %disp('sampled process saveobj');
+            % Converting to bytestream prevents removal of transient/dependent
+            % properties, so we have to do this manually
+            warning('off','MATLAB:structOnObject');
+            S = getByteStreamFromArray(struct(self));
+            warning('on','MATLAB:structOnObject');
+         end
+      end
    end
      
    methods(Access = protected)

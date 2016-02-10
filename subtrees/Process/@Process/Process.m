@@ -70,6 +70,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties
       history = false     % Boolean indicating add queueable methods (TODO)
+   end
+   properties(Transient)
       segment             % Reference to parent Segment
    end
    properties(Abstract)
@@ -235,8 +237,10 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
          %----------------------------------------
          
-         labels = checkLabels(self,labels);
-         self.labels = labels;
+         if self.n
+            labels = checkLabels(self,labels);
+            self.labels = labels;
+         end
       end
       
       function set.quality(self,quality)
@@ -249,11 +253,13 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
          %----------------------------------------
 
-         quality = checkQuality(self,quality);         
-         self.quality = quality;
-         % Fix change
-         if ~isempty(self.quality_)
-            self.quality_(self.selection_) = quality;
+         if self.n
+            quality = checkQuality(self,quality);
+            self.quality = quality;
+            % Fix change
+            if ~isempty(self.quality_)
+               self.quality_(self.selection_) = quality;
+            end
          end
       end
       

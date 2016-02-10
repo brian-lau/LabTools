@@ -1,5 +1,9 @@
 function obj = loadobj(S)
 
+if isinteger(S)
+   S = getArrayFromByteStream(S);
+end
+
 if checkVersion(S.version,'0.4.0')
    obj = PointProcess(...
       'info',S.info,...
@@ -13,20 +17,20 @@ if checkVersion(S.version,'0.4.0')
       'tEnd',S.tEnd,...
       'lazyLoad',S.lazyLoad...
       );
-   % Set parent
-   if checkVersion(S.version,'0.5.0')
-      set(obj,'segment',S.segment);
-   end
+%    % Set parent
+%    if checkVersion(S.version,'0.5.0')
+%       set(obj,'segment',S.segment);
+%    end
    % Now set current window/offset
    set(obj,'window',S.window);
    set(obj,'offset',S.offset);
-   % Clear queue as fresh from constructor
-   clearQueue(obj);
-   % And set queue and eval status
-   set(obj,'deferredEval',S.deferredEval);
-   set(obj,'queue',S.queue);
-   % Rerun queue if needed
-   revalOnDemand(obj);
+%    % Clear queue as fresh from constructor
+%    clearQueue(obj);
+%    % And set queue and eval status
+%    set(obj,'deferredEval',S.deferredEval);
+%    set(obj,'queue',S.queue);
+%    % Rerun queue if needed
+%    revalOnDemand(obj);
 else
    %< v 0.4.0
    obj = PointProcess(...
