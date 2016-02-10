@@ -8,7 +8,9 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
    properties
       nullEvent = metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN)
    end
-   
+   properties(SetAccess = protected, Hidden, Transient)
+      updateEventListener_@event.proplistener % listener
+   end   
    %%
    methods
       %% Constructor
@@ -54,20 +56,13 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
             end
 
             args.times = cellfun(@(x) roundToSample(x,1/args.Fs),times,'uni',0);
-            args.values = cell(size(args.times));
-            for i = 1:numel(args.times)
-               args.values{i} = events{i};
-               for j = 1:size(args.times{i})
-                  args.values{i}(j).tStart = args.times{i}(j,1);
-                  args.values{i}(j).tEnd = args.times{i}(j,2);
-               end
-               args.values{i} = args.values{i}.fix();
-            end
+            args.values = events;
          else
             args = {};
          end
-
+         
          self = self@PointProcess(args);         
+         self.updateEventListener_ = addlistener(self,'values','PreGet',@self.updateEventTimes);
       end
       
       function duration = get.duration(self)
@@ -86,22 +81,32 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
          else
             bool = cellfun(@(times,win) (times(:,1)>=win(:,1))&(times(:,2)<=win(:,2)),...
                self.times,mat2cell(self.window,ones(1,size(self.window,1)),2),'uni',0);
-%             bool = cellfun(@(times,win) (times(:,1)>=win(:,1))&(times(:,2)<=win(:,2)),...
-%                self.times,{self.window},'uni',0);
+         end
+      end
+      
+      function updateEventTimes(self,varargin)
+         % Adjust times stored in Events
+         for i = 1:size(self.times,1) % channels
+            for j = 1:size(self.times,2) % windows
+               temp = self.values{i,j};
+               times = self.times{i,j};
+               for k = 1:numel(temp)
+                  temp(k).tStart = times(k,1);
+                  temp(k).tEnd = times(k,2);
+               end
+               self.values{i,j} = temp;
+            end
          end
       end
       
       ev = find(self,varargin)
       
       % add event
+      self = insert(self,ev,labels)
       % remove event
       
       %% Display
       h = plot(self,varargin)
-   end
-   
-   methods(Access = protected)
-      applyOffset(self,offset)
    end
    
    methods(Static)

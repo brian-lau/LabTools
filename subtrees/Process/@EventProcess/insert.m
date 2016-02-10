@@ -12,7 +12,7 @@
 % SEE ALSO
 % remove
 
-function self = insert(self,events,labels)
+function self = insert(self,ev,labels)
 
 if nargin < 2
    error('EventProcess:insert:InputFormat',...
@@ -28,11 +28,11 @@ for i = 1:numel(self)
    indL = find(ismember(self(i).labels,labels));
    if any(indL)
       for j = 1:numel(indL)
-         times2Insert = roundToSample(vertcat(events.time),self(i).dt);
-         [events.tStart] = deal(times2Insert(:,1));
-         [events.tEnd] = deal(times2Insert(:,2));
-         events = events.fix();
-         values2Insert = events;
+         times2Insert = roundToSample(vertcat(ev.time),self(i).dt);
+         [ev.tStart] = deal(times2Insert(:,1));
+         [ev.tEnd] = deal(times2Insert(:,2));
+         ev = ev.fix();
+         values2Insert = ev;
 
          if ~isempty(times2Insert)
             % Check that we can concatenate values
