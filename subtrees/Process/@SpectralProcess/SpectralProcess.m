@@ -91,6 +91,8 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          self.tStep = par.tStep;
          self.times_ = {tvec(par.tStart,self.tStep,dim(1))};
          self.times = self.times_;
+         self.Fs_ = 1/self.tStep;
+         self.Fs = self.Fs_;
          
          % Define the start and end times of the process
          if isa(par.values,'DataSource')
@@ -193,6 +195,10 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             'SpectralProcess:tStep:InputFormat',...
             'tStep must be a numeric scalar >= 0.');
          self.tStep = tStep;
+      end
+      
+      function dt = get.dt(self)
+         dt = 1/self.Fs;
       end
       
       function n = get.n(self)
