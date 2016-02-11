@@ -75,7 +75,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       segment             % Reference to parent Segment
    end
    properties(Abstract)
-     trailingDim_
+     %trailingDim_
      trailingInd_
    end
    properties(SetAccess = protected, Hidden, Transient)
@@ -83,7 +83,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       evalListener_@event.listener     % deferredEval listener
    end
    properties(SetAccess = immutable)
-      version = '0.7.0'   % Version string
+      serializeOnSave = false
+      version = '0.8.0'   % Version string
    end
    events
       runImmediately      % trigger queue evaluation

@@ -5,6 +5,11 @@
 
 function self = subset(self,varargin)
 
+% nObj = numel(self)
+% for i = 1:nObj
+%    
+% end
+
 if mod(nargin-1,2)==1 && ~isstruct(varargin{1})
    assert(isnumeric(varargin{1}),...
       'Process:subset:InputFormat',...

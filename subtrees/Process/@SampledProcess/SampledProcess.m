@@ -17,7 +17,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       dim                 % Dimensionality of each window
    end
    properties(Dependent, Hidden)
-      trailingDim_
+      %trailingDim_
       trailingInd_        % Convenience for expanding non-leading dims
    end
    
@@ -55,14 +55,13 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.parse(varargin{:});
          par = p.Results;
          
-         % Do not store constructor commands
-         self.history = false;
-         
          % Hashmap with process information
          self.info = par.info;
          
          % Lazy loading
-         self.lazyLoad = par.lazyLoad;
+         if par.lazyLoad
+            self.lazyLoad = par.lazyLoad;
+         end
 
          % Set sampling frequency and values_/values, times_/times
          if isa(par.values,'DataSource')
@@ -124,8 +123,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.offset = par.offset;
          end
 
-         self.selection_ = true(1,self.n);
-
          % Assign labels/quality
          self.labels = par.labels;         
          self.quality = par.quality;
@@ -136,9 +133,13 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.selection_ = true(1,self.n);
          self.labels_ = self.labels;         
          self.quality_ = self.quality;
-                  
-         self.history = par.history;
-         self.deferredEval = par.deferredEval;         
+         
+         if par.history
+            self.history = par.history;
+         end
+         if par.deferredEval
+            self.deferredEval = par.deferredEval;
+         end
       end % constructor
       
       function set.tStart(self,tStart)
@@ -240,10 +241,10 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          dim = cellfun(@(x) size(x),self.values,'uni',false);
       end
       
-      function trailingDim = get.trailingDim_(self)
-         dim = size(self.values_{1});
-         trailingDim = dim(2:end); % leading dim is always time
-      end
+%       function trailingDim = get.trailingDim_(self)
+%          dim = size(self.values_{1});
+%          trailingDim = dim(2:end); % leading dim is always time
+%       end
       
       function trailingInd = get.trailingInd_(self)
          dim = size(self.values_{1});
@@ -279,7 +280,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       % plotTrajectory
 
       function S = saveobj(self)
-         if 1
+         if ~self.serializeOnSave
             S = self;
          else
             %disp('sampled process saveobj');

@@ -109,7 +109,7 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       h = plot(self,varargin)
       
       function S = saveobj(self)
-         if 1
+         if ~self.serializeOnSave
             S = self;
          else
             %disp('event process saveobj');

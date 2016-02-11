@@ -25,7 +25,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       dim                 % Dimensionality of each window
    end
    properties(Dependent, Hidden)
-      trailingDim_
+      %trailingDim_
       trailingInd_        % Convenience for expanding non-leading dims
    end
    
@@ -66,14 +66,13 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          p.parse(varargin{:});
          par = p.Results;
          
-         % Do not store constructor commands
-         self.history = false;
-
          % Hashmap with process information
          self.info = par.info;
          
          % Lazy loading
-         self.lazyLoad = par.lazyLoad;
+         if par.lazyLoad
+            self.lazyLoad = par.lazyLoad;
+         end
                   
          % Set sampling frequency and values_/values, times_/times
          if isa(par.values,'DataSource')
@@ -124,8 +123,6 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             self.offset = par.offset;
          end
 
-         self.selection_ = true(1,self.n);
-
          % Assign labels/quality
          self.labels = par.labels;         
          self.quality = par.quality;
@@ -137,8 +134,12 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          self.labels_ = self.labels;         
          self.quality_ = self.quality;
          
-         self.history = par.history;
-         self.deferredEval = par.deferredEval;         
+         if par.history
+            self.history = par.history;
+         end
+         if par.deferredEval
+            self.deferredEval = par.deferredEval;
+         end
       end % constructor
       
       function set.tStart(self,tStart)
@@ -150,19 +151,21 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
                   'tStart must be less than tEnd.');
          end
 
-         if isa(self.values_{1},'DataSource')
-            self.tStart = tStart;
-         else
+         if isnumeric(self.values_{1})
             dim = size(self.values_{1});
             [pre,preV] = extendPre(self.tStart,tStart,self.tStep,dim(2:end));
-            self.times_ = {[pre ; self.times_{1}]};
-            self.values_ = {[preV ; self.values_{1}]};
+            if ~isempty(pre)
+               self.times_ = {[pre ; self.times_{1}]};
+               self.values_ = {[preV ; self.values_{1}]};
+            end
             if tStart > self.tStart
                self.tStart = tStart;
                self.discardBeforeStart();
             else
                self.tStart = tStart;
             end
+         elseif isa(self.values_{1},'DataSource')
+            self.tStart = tStart;
          end
       end
       
@@ -175,19 +178,21 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
                   'tEnd must be greater than tStart.');
          end
          
-         if isa(self.values_{1},'DataSource')
-            self.tEnd = tEnd;
-         else
+         if isnumeric(self.values_{1})
             dim = size(self.values_{1});
             [post,postV] = extendPost(self.tEnd,tEnd,self.tStep,dim(2:end));
-            self.times_ = {[self.times_{1} ; post]};
-            self.values_ = {[self.values_{1} ; postV]};
+            if ~isempty(post)
+               self.times_ = {[self.times_{1} ; post]};
+               self.values_ = {[self.values_{1} ; postV]};
+            end
             if tEnd < self.tEnd
                self.tEnd = tEnd;
                self.discardAfterEnd();
             else
                self.tEnd = tEnd;
             end
+         elseif isa(self.values_{1},'DataSource')
+            self.tEnd = tEnd;
          end         
       end
       
@@ -244,7 +249,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       h = plot(self,varargin)
 
       function S = saveobj(self)
-         if 1
+         if ~self.serializeOnSave
             S = self;
          else
             %disp('sampled process saveobj');

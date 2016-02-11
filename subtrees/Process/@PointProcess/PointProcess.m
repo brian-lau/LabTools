@@ -19,7 +19,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       count               % # of events in each window
    end
    properties(Dependent, Hidden)
-      trailingDim_
+      %trailingDim_
       trailingInd_        % Convenience for expanding non-leading dims
    end
    
@@ -64,14 +64,13 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          p.parse(varargin{:});
          par = p.Results;
          
-         % Do not store constructor commands
-         self.history = false;
-
          % Hashmap with process information
          self.info = par.info;
          
          % Lazy loading
-         self.lazyLoad = par.lazyLoad;
+         if par.lazyLoad
+            self.lazyLoad = par.lazyLoad;
+         end
 
          if isempty(par.times)
             if ~isempty(par.values)
@@ -163,8 +162,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
             self.offset = par.offset;
          end         
 
-         self.selection_ = true(1,self.n);
-
          % Assign labels/quality
          self.labels = par.labels;         
          self.quality = par.quality;
@@ -176,8 +173,12 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          self.labels_ = self.labels;         
          self.quality_ = self.quality;
 
-         self.history = par.history;
-         self.deferredEval = par.deferredEval;         
+         if par.history
+            self.history = par.history;
+         end
+         if par.deferredEval
+            self.deferredEval = par.deferredEval;
+         end
       end % constructor
       
       function set.tStart(self,tStart)
@@ -257,9 +258,9 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          end
       end
       
-      function trailingDim = get.trailingDim_(self)
-         trailingDim = self.n;
-      end
+%       function trailingDim = get.trailingDim_(self)
+%          trailingDim = self.n;
+%       end
       
       function trailingInd = get.trailingInd_(self)
          trailingInd = {};
@@ -280,7 +281,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       [h,yOffset] = plot(self,varargin)
 
       function S = saveobj(self)
-         if 1
+         if ~self.serializeOnSave
             S = self;
          else
             %disp('sampled process saveobj');
