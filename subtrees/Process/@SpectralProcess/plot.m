@@ -21,8 +21,8 @@ p.addParameter('colormap','parula',@(x) ischar(x) || isnumeric(x));
 p.addParameter('caxis',[],@isnumeric);
 p.addParameter('shading','interp',@ischar);
 p.addParameter('log',true,@(x) islogical(x) || isscalar(x));
+p.addParameter('title',false,@(x) islogical(x) || isscalar(x));
 p.parse(varargin{:});
-%params = p.Unmatched;
 
 par = p.Results;
 
@@ -58,8 +58,7 @@ for i = 1:n
    if numel(t) == 1
       plot(f,v);
    else
-      args = {t,f,v};
-      surf(args{:},'edgecolor','none','Parent',g);
+      surf(t,f,v,'edgecolor','none','Parent',g);
       view(g,0,90);
 %       % imagesc cannot plot irregularly spaced data (eg, wavelet)
 %       % maybe try imagescnan FEX
@@ -75,7 +74,9 @@ for i = 1:n
          colorbar;
       end
    end
-%   title(self.labels{i});
+   if par.title
+      title(self.labels(i).name);
+   end
    axis tight;
 end
 

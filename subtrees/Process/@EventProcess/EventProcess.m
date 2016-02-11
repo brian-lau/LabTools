@@ -25,7 +25,6 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
          p = inputParser;
          p.KeepUnmatched= true;
          p.FunctionName = 'EventProcess constructor';
-         p.addParameter('Fs',1000,@(x) isnumeric(x) && isscalar(x));
          p.addParameter('events',[],@(x) iscell(x) || isa(x,'metadata.Event') );
          p.addParameter('times',[],@(x) isnumeric(x) || iscell(x));
          p.parse(varargin{:});
@@ -33,7 +32,6 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
          
          % Pass through to PointProcess constructor
          args = p.Unmatched;
-         args.Fs = p.Results.Fs;
          
          if ~isempty(par.events)
             if ~isempty(par.times)
@@ -57,7 +55,7 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
                times = cellfun(@(x) vertcat(x.time),events,'uni',0);
             end
 
-            args.times = times;%cellfun(@(x) roundToSample(x,1/args.Fs),times,'uni',0);
+            args.times = times;
             args.values = events;
          else
             args = {};

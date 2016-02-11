@@ -74,7 +74,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       history = false     % Boolean indicating add queueable methods (TODO)
    end
    properties(Transient)
-      segment             % Reference to parent Segment
+      segment@Segment             % Reference to parent Segment
    end
    properties(Abstract)
      trailingInd_
@@ -325,13 +325,13 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
       end
       
-      function set.segment(self,segment)
-         %if ~isempty(self.segment)
-         %   disp('replacing parent');
-         %end
-         assert(isempty(segment) || isa(segment,'Segment'));
-         self.segment = segment;
-      end
+%       function set.segment(self,segment)
+%          %if ~isempty(self.segment)
+%          %   disp('replacing parent');
+%          %end
+%          %assert(isempty(segment) || isa(segment,'Segment'));
+%          self.segment = segment;
+%       end
       
       % Assignment for object arrays
       self = setWindow(self,window)

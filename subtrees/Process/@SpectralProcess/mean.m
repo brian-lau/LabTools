@@ -12,8 +12,9 @@ uLabels = unique(cat(2,self.labels),'stable');
 s = cat(3,s.values);
 l = cat(2,l{:});
 values = zeros(size(s,1),size(s,2),numel(uLabels));
+
 for i = 1:numel(uLabels)
-   ind = strcmp(l,uLabels{i});
+   ind = l==uLabels(i);
    values(:,:,i) = nanmean(s(:,:,ind),3);
    n(i) = sum(ind);
 end
