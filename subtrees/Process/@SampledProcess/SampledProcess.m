@@ -27,7 +27,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    methods
       %% Constructor
       function self = SampledProcess(varargin)
-         %self = self@Process;
          if nargin == 0
            return;
          end
@@ -43,7 +42,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.KeepUnmatched= false;
          p.FunctionName = 'SampledProcess constructor';
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
-         p.addParameter('Fs',[],@(x) isnumeric(x) && isscalar(x));
+         p.addParameter('Fs',[],@(x) isnumeric(x));
          p.addParameter('values',[],@(x) isnumeric(x) || isa(x,'DataSource'));
          p.addParameter('labels',{},@(x) iscell(x) || ischar(x) || isa(x,'metadata.Label'));
          p.addParameter('quality',[],@isnumeric);
@@ -51,9 +50,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          p.addParameter('offset',[],@isnumeric);
          p.addParameter('tStart',0,@isnumeric);
          p.addParameter('tEnd',[],@isnumeric);
-         p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
-         p.addParameter('deferredEval',false,@(x) islogical(x) || isscalar(x));
-         p.addParameter('history',false,@(x) islogical(x) || isscalar(x));
+         p.addParameter('lazyLoad',false,@(x) islogical(x));
+         p.addParameter('deferredEval',false,@(x) islogical(x));
+         p.addParameter('history',false,@(x) islogical(x));
          p.parse(varargin{:});
          par = p.Results;
          
@@ -97,11 +96,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          self.times_ = {tvec(par.tStart,self.dt,dim(1))};
          self.times = self.times_;
          
-         if isempty(self.values)
-            self.n = 0;
-         else
-            self.n = size(self.values{1},2);
-         end
+         self.set_n();
          
          % Define the start and end times of the process
          if isa(par.values,'DataSource')
@@ -219,12 +214,13 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
 
          if self.Fs == Fs
             return;
+         elseif isempty(self.Fs)
+            self.Fs = Fs;
+            return;
          end
          
          stack = dbstack('-completenames');
-         if isempty(self.Fs)
-            self.Fs = Fs;
-         elseif any(strcmp({stack.name},'reset'))
+         if any(strcmp({stack.name},'reset'))
             self.Fs = Fs;
          elseif any(strcmp({stack.name},'resample'))
             self.Fs = Fs;
@@ -237,23 +233,18 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          dt = 1/self.Fs;
       end
       
-%       function n = get.n(self)
-%          if isempty(self.values)
-%             n = 0;
-%          else
-%             n = size(self.values{1},2);
-%          end
-%       end
+      function set_n(self)
+         if isempty(self.values)
+            self.n = 0;
+         else
+            self.n = size(self.values{1},2);
+         end
+      end
       
       function dim = get.dim(self)
          dim = cellfun(@(x) size(x),self.values,'uni',false);
       end
-      
-%       function trailingDim = get.trailingDim_(self)
-%          dim = size(self.values_{1});
-%          trailingDim = dim(2:end); % leading dim is always time
-%       end
-      
+            
       function trailingInd = get.trailingInd_(self)
          dim = size(self.values_{1});
          dim = dim(2:end); % leading dim is always time

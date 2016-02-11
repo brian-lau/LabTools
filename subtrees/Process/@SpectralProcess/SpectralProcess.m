@@ -5,6 +5,9 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       tStart              % Start time of process
       tEnd                % End time of process
    end
+   properties(SetAccess = protected)
+      n                   % # of signals/channels 
+   end
    properties
       Fs                  % Sampling frequency
    end
@@ -13,7 +16,6 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
    end
    properties(SetAccess = protected, Dependent)
       dt                  % 1/Fs
-      n
    end
    properties(SetAccess = protected)
       params              
@@ -33,7 +35,6 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
    methods
       %% Constructor
       function self = SpectralProcess(varargin)
-         self = self@Process;
          if nargin == 0
            return;
          end
@@ -60,9 +61,9 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          p.addParameter('tBlock',[],@isnumeric);
          p.addParameter('tStep',[],@isnumeric);
          p.addParameter('f',[],@isnumeric);
-         p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
-         p.addParameter('deferredEval',false,@(x) islogical(x) || isscalar(x));
-         p.addParameter('history',false,@(x) islogical(x) || isscalar(x));
+         p.addParameter('lazyLoad',false,@(x) islogical(x));
+         p.addParameter('deferredEval',false,@(x) islogical(x));
+         p.addParameter('history',false,@(x) islogical(x));
          p.parse(varargin{:});
          par = p.Results;
          
@@ -93,6 +94,8 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          self.Fs_ = 1/self.tStep;
          self.Fs = self.Fs_;
          
+         self.set_n();
+      
          % Define the start and end times of the process
          if isa(par.values,'DataSource')
 %             % tStart is taken from DataSource
@@ -214,13 +217,11 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          dt = 1/self.Fs;
       end
       
-      function n = get.n(self)
+      function set_n(self)
          if isempty(self.values)
-            n = 0;
+            self.n = 0;
          else
-            n = size(self.values{1},3);
-            %dim = size(self.values{1});
-            %n = prod(dim(3:end));
+            self.n = size(self.values{1},3);
          end
       end
 

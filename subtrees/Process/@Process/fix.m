@@ -13,4 +13,5 @@ for i = 1:numel(self)
    self(i).cumulOffset = 0;
    self(i).offset_ = 0;
    self(i).offset = 0;
+   self(i).set_n();
 end

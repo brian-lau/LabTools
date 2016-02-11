@@ -14,7 +14,7 @@ if isempty(self.times)
    return;
 end
 
-nTimes = size(self.times,2);
+nTimes = self.n;
 nWindowReq = size(self.window,1);
 nWindowOrig = size(self.times,1);
 if nWindowOrig > 1

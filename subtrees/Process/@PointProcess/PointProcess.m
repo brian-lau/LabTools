@@ -29,7 +29,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
    methods
       %% Constructor
       function self = PointProcess(varargin)
-         %self = self@Process;
          if nargin == 0
             return;
          end
@@ -51,7 +50,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          p.KeepUnmatched= false;
          p.FunctionName = 'PointProcess constructor';
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
-         p.addParameter('Fs',1000,@(x) isnumeric(x) && isscalar(x));
+         p.addParameter('Fs',1000,@(x) isnumeric(x));
          p.addParameter('times',{},@(x) isnumeric(x) || iscell(x));
          p.addParameter('values',{},@(x) ismatrix(x) || iscell(x) );
          p.addParameter('labels',{},@(x) iscell(x) || ischar(x) || isa(x,'metadata.Label'));
@@ -60,9 +59,9 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          p.addParameter('offset',0,@isnumeric);
          p.addParameter('tStart',[],@isnumeric);
          p.addParameter('tEnd',[],@isnumeric);
-         p.addParameter('lazyLoad',false,@(x) islogical(x) || isscalar(x));
-         p.addParameter('deferredEval',false,@(x) islogical(x) || isscalar(x));
-         p.addParameter('history',false,@(x) islogical(x) || isscalar(x));
+         p.addParameter('lazyLoad',false,@(x) islogical(x));
+         p.addParameter('deferredEval',false,@(x) islogical(x));
+         p.addParameter('history',false,@(x) islogical(x));
          p.parse(varargin{:});
          par = p.Results;
          
@@ -232,11 +231,13 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
 
          if self.Fs == Fs
             return;
-         end
-         stack = dbstack('-completenames');
-         if isempty(self.Fs)
+         elseif isempty(self.Fs)
             self.Fs = Fs;
-         elseif any(strcmp({stack.name},'reset'))
+            return;
+         end
+         
+         stack = dbstack('-completenames');
+         if any(strcmp({stack.name},'reset'))
             self.Fs = Fs;
          elseif any(strcmp({stack.name},'resample'))
             self.Fs = Fs;
@@ -249,10 +250,10 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          dt = 1/self.Fs;
       end
       
-%       function n = get.n(self)
-%          n = size(self.count,2);
-%       end
-      
+      function set_n(self)
+         self.n = size(self.times,2);
+      end
+            
       function count = get.count(self)
          % # of event times within windows
          if isempty(self.times)
@@ -261,10 +262,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
             count = cellfun(@(x) size(x,1),self.times);
          end
       end
-      
-%       function trailingDim = get.trailingDim_(self)
-%          trailingDim = self.n;
-%       end
       
       function trailingInd = get.trailingInd_(self)
          trailingInd = {};
