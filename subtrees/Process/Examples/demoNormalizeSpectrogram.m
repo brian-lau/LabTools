@@ -8,7 +8,7 @@ z2 = [0.25*y1;y1+y2];
 l(1) = metadata.Label('name','01D');
 l(2) = metadata.Label('name','12D');
 l(3) = metadata.Label('name','23D');
-for i = 1:50
+for i = 1:20
    if rem(i,2)
       s(i) = SampledProcess([z1+randn(size(z1)) , z2+randn(size(z2))],'Fs',1000,'labels',l(1:2));
    else
@@ -26,3 +26,12 @@ plot(tf_avg_no_norm,'title',true);
 tf.normalize(0,'window',[-1.75 -1.],'method','subtract');
 tf_avg = mean(tf);
 plot(tf_avg,'title',true);
+
+
+tf = tfr(s,'method','stft','f',1:100,'tBlock',.5,'tStep',.02);
+tf.normalize(0,'window',[-2 -2],'method','z-score-avg');
+
+
+tf_avg = mean(tf,'labels',l);
+
+tf.normalize(0,'window',[-1.75 -1.],'method','z-score-avg');

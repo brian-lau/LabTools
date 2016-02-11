@@ -21,13 +21,13 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       params              
       tBlock              % Duration of each spectral estimate
       tStep               % Duration of step taken for each spectral estimate
-      f                   % Frequencies 
+      f                   % Frequencies
+      band                % like window, but for frequency
    end
    properties(SetAccess = protected, Dependent)
       dim                 % Dimensionality of each window
    end
    properties(Dependent, Hidden)
-      %trailingDim_
       trailingInd_        % Convenience for expanding non-leading dims
    end
    
@@ -104,7 +104,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             self.tStart = par.tStart;
          end
          
-         self.f = vec(par.f);
+         self.f = row(par.f);
          
          if isempty(par.tEnd) || isa(par.values,'DataSource')
             self.tEnd = self.times_{1}(end);
@@ -244,7 +244,8 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       % Output
       [s,labels] = extract(self,reqLabels)
       output = apply(self,fun,nOpt,varargin)
-      [obj,n] = mean(self)
+      [out,n] = mean(self,varargin)
+      [out,n] = std(self,varargin)
       
       % Visualization
       h = plot(self,varargin)

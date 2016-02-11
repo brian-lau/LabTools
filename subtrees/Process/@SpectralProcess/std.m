@@ -5,10 +5,10 @@
 % checktimes?
 % quality check
 
-function [out,n] = mean(self,varargin)
+function [out,n] = std(self,varargin)
 
 p = inputParser;
-p.FunctionName = 'SpectralProcess mean method';
+p.FunctionName = 'SpectralProcess std method';
 p.addParameter('labels',[],@(x) ischar(x) || iscell(x) || isa(x,'metadata.Label'));
 p.addParameter('outputStruct',false,@(x) isscalar(x) || islogical(x));
 p.addParameter('minN',1,@(x) isscalar(x));
@@ -52,7 +52,7 @@ n = zeros(size(uLabels));
 for i = 1:numel(uLabels)
    ind = l==uLabels(i);
    if sum(ind) >= par.minN
-      values(:,:,i) = nanmean(s(:,:,ind),3);
+      values(:,:,i) = nanstd(s(:,:,ind),0,3);
    end
    n(i) = sum(ind);
 end

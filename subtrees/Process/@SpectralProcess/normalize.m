@@ -7,7 +7,7 @@ p = inputParser;
 p.KeepUnmatched= true;
 p.FunctionName = 'SpectralProcess normalize';
 p.addRequired('event',@(x) isnumeric(x) || isa(x,'metadata.Event'));
-p.addParameter('window',[],@(x) isnumeric(x) && (size(x,1)==1) && (size(x,2)==2));
+p.addParameter('window',[],@(x) isnumeric(x) && (size(x,2)==2));
 p.addParameter('eventStart',true,@(x) isscalar(x) && islogical(x));
 p.addParameter('method','divide',@(x) any(strcmp(x,...
    {'s' 'subtract' 'z', 'z-score' 'd' 'divide' 's-avg' 'subtract-avg'...
@@ -16,6 +16,9 @@ p.parse(event,varargin{:});
 par = p.Results;
 method = lower(par.method);
 
+% Allow same event or different events
+% Allow same window or different windows
+
 if ~isempty(par.window)
    assert(all([self.tStep] <= (par.window(2)-par.window(1))),...
       'SpectralProcess:normalize:window:InputValue',...
@@ -23,26 +26,27 @@ if ~isempty(par.window)
 end
 
 if strfind(method,'avg')
-   % Methods deriving normalization from all elements of the process must
-   % have the same number of channels & same frequency resolution
-   try
-      n = size(unique(cat(1,self.labels)),1);
-   catch err
-      if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-         cause = MException('SpectralProcess:normalize:InputValue',...
-            'Not all processes have the same number of labels');
-         err = addCause(err,cause);
-      end
-      rethrow(err);
-   end
-   if n ~= 1
-      error('SpectralProcess:normalize:InputValue',...
-         'Not all processes have common labels.');
-   end
-   if length(unique(arrayfun(@(x) numel(x.f),self))) ~= 1
-      error('SpectralProcess:normalize:InputValue',...
-         'Not all processes have common frequency axis.');
-   end
+%    % Methods deriving normalization from all elements of the process must
+%    % have the same number of channels & same frequency resolution
+%    try
+%       keyboard
+%       n = size(unique(cat(1,self.labels)),1);
+%    catch err
+%       if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
+%          cause = MException('SpectralProcess:normalize:InputValue',...
+%             'Not all processes have the same number of labels');
+%          err = addCause(err,cause);
+%       end
+%       rethrow(err);
+%    end
+%    if n ~= 1
+%       error('SpectralProcess:normalize:InputValue',...
+%          'Not all processes have common labels.');
+%    end
+%    if length(unique(arrayfun(@(x) numel(x.f),self))) ~= 1
+%       error('SpectralProcess:normalize:InputValue',...
+%          'Not all processes have common frequency axis.');
+%    end
 end
 
 history = num2cell([self.history]);
@@ -51,18 +55,27 @@ history = num2cell([self.history]);
 par.processTime = false;
 self.sync__(par.event,par);
 
-% Extract window values, and reset process
-% error if window produces nothing (all nans? or window smaller than tBlock)
-normVals = arrayfun(@(x) x.values{1},self,'uni',0);
+if strfind(method,'avg')
+   [out,n] = self.mean('outputStruct',true);
+   normMean = out.values;
+   if strncmp(method,'z',1)
+      [out,n] = self.std('outputStruct',true);
+      normStd = out.values;
+   end
+else
+   normVals = arrayfun(@(x) x.values{1},self,'uni',0);
+end
+
+% reset process
 self.undo(2);
 [self.history] = deal(history{:});
 
-if strfind(method,'avg')
-   normMean = nanmean(cat(1,normVals{:}));
-   if strncmp(method,'d',1)
-      normStd = nanstd(cat(1,normVals{:}));
-   end
-end
+% if strfind(method,'avg')
+%    normMean = nanmean(cat(1,normVals{:}));
+%    if strncmp(method,'d',1)
+%       normStd = nanstd(cat(1,normVals{:}));
+%    end
+% end
 
 for i = 1:numel(self)
    switch method
@@ -76,6 +89,7 @@ for i = 1:numel(self)
       case {'s-avg' 'subtract-avg'}
          self(i).values{1} = bsxfun(@minus,self(i).values{1},normMean);
       case {'z-avg', 'z-score-avg'}
+         keyboard
          self(i).values{1} = bsxfun(@minus,self(i).values{1},normMean);
          self(i).values{1} = bsxfun(@rdivide,self(i).values{1},normStd);
       case {'d-avg' 'divide-avg'}
