@@ -19,7 +19,6 @@ addParameter(p,'attenuation1',60,@isnumeric); % Stopband attenuation in dB
 addParameter(p,'attenuation2',60,@isnumeric); % Stopband attenuation in dB
 addParameter(p,'ripple',0.1,@isnumeric); % Passband ripple in dB
 addParameter(p,'method','',@ischar);
-addParameter(p,'fix',false,@islogical);
 addParameter(p,'plot',false,@islogical);
 addParameter(p,'verbose',false,@islogical);
 addParameter(p,'designOnly',false,@islogical);
@@ -66,6 +65,6 @@ for i = 1:numel(self)
    end
    
    if ~par.designOnly
-      self(i).filter(h.Numerator,'a',1,'fix',p.Results.fix);
+      self(i).filter(h.Numerator,'a',1);
    end
 end
