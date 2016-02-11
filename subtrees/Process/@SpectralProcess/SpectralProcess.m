@@ -6,7 +6,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       tEnd                % End time of process
    end
    properties(SetAccess = protected)
-      n                   % # of signals/channels 
+      n = 0                  % # of signals/channels 
    end
    properties
       Fs                  % Sampling frequency

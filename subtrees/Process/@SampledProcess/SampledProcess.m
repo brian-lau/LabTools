@@ -6,7 +6,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       tEnd                % End time of process
    end
    properties(SetAccess = protected)
-      n                   % # of signals/channels 
+      n = 0                  % # of signals/channels 
    end
    properties
       Fs                  % Sampling frequency
@@ -93,7 +93,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             self.values = self.values_;
             dim = size(self.values_{1});
          end
-         self.times_ = {tvec(par.tStart,self.dt,dim(1))};
+         self.times_ = {tvec(par.tStart,1/self.Fs,dim(1))};
          self.times = self.times_;
          
          self.set_n();

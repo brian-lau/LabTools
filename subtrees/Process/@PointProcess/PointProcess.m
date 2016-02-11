@@ -12,7 +12,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       Fs_                 % Original sampling frequency
    end
    properties(SetAccess = protected)
-      n                   % # of signals/channels 
+      n = 0                  % # of signals/channels 
    end
    properties(SetAccess = protected, Dependent)
       dt                  % 1/Fs
@@ -128,7 +128,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          
          self.Fs_ = par.Fs;
          self.Fs = self.Fs_;
-         eventTimes = cellfun(@(x) roundToSample(x,self.dt),eventTimes,'uni',0);
+         eventTimes = cellfun(@(x) roundToSample(x,1/self.Fs),eventTimes,'uni',0);
 
          % Set times/values
          self.times_ = eventTimes;

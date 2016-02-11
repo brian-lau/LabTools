@@ -179,8 +179,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          %----------------------------------------
          
          self.window = checkWindow(window,size(window,1));
-         if ~self.reset_
+         if ~self.reset_ && ~isempty(self.values_)
             nWindow = size(self.window,1);
+            %struct(self)
             % Rewindow if current and requested # of windows matches
             if isempty(self.window) || (nWindow == size(self.times,1))
                % Reset offset
@@ -226,8 +227,10 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
 
          newOffset = checkOffset(offset,size(self.window,1));
          self.offset = newOffset;
-         applyOffset(self,newOffset);
-         self.cumulOffset = self.cumulOffset + newOffset;
+         if newOffset ~= 0
+            applyOffset(self,newOffset);
+            self.cumulOffset = self.cumulOffset + newOffset;
+         end
       end
       
       function set.labels(self,labels)
