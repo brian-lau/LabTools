@@ -23,6 +23,8 @@ if ~isempty(par.window)
 end
 
 if strfind(method,'avg')
+   % Methods deriving normalization from all elements of the process must
+   % have the same number of channels & same frequency resolution
    try
       n = size(unique(cat(1,self.labels)),1);
    catch err

@@ -4,7 +4,7 @@ x = repmat(cos(2*pi*(0:.001:1-.001))',1,3);
 s = SampledProcess('values',x,'Fs',1000,'tStart',0);
 plot(s);
 
-%% Scalar SampledProcess with multiple signals
+%% Scalar SampledProcess with multiple signals/channels
 clear
 % signals sampled at same Fs, tStart, numel
 dt = 0.00001;
@@ -42,9 +42,6 @@ s.setWindow({window+offset(1) window+offset(2)});
 % then shift relative to the peak
 s.setOffset(-offset);
 plot(s);
-
-% Export if needed
-[times,values] = arrayfun(@(x) deal(x.times{1},x.values{1}),s,'uni',false);
 
 % Synchronize through method
 s.reset();
