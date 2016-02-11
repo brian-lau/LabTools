@@ -49,7 +49,7 @@ for i = 1:nWindowReq
       windowedTimes{i,1} = [preT ; times(ind) ; postT];
       windowedValues{i,1} = [preV ; values(ind,:) ; postV];
    elseif isempty(preT) && ~isempty(postT)
-      if sum(ind) ~= numel(times)
+      if sum(ind) ~= numel(ind)
          windowedTimes{i,1} = [times(ind) ; postT];
          windowedValues{i,1} = [values(ind,:) ; postV];
       else
@@ -57,7 +57,7 @@ for i = 1:nWindowReq
          windowedValues{i,1} = [values ; postV];
       end
    elseif ~isempty(preT) && isempty(postT)
-      if sum(ind) ~= numel(times)
+      if sum(ind) ~= numel(ind)
          windowedTimes{i,1} = [preT ; times(ind)];
          windowedValues{i,1} = [preV ; values(ind,:)];
       else
@@ -65,7 +65,7 @@ for i = 1:nWindowReq
          windowedValues{i,1} = [preV ; values];
       end
    else
-      if sum(ind) ~= numel(times)
+      if sum(ind) ~= numel(ind)
          windowedTimes{i,1} = times(ind);
          windowedValues{i,1} = values(ind,:);
       else

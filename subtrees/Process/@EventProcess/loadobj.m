@@ -2,6 +2,8 @@ function obj = loadobj(S)
 
 if isinteger(S)
    S = getArrayFromByteStream(S);
+   obj = S;
+   return;
 end
 
 if checkVersion(S.version,'0.4.0')

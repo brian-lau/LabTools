@@ -93,7 +93,7 @@ classdef TestPointProcessWindow < matlab.unittest.TestCase
          nWin = size(win,1);
          
          p.window = win;
-         
+      
          for i = 1:nWin
             ind = (times>=win(i,1)) & (times<=win(i,2));
             T{i,1} = times(ind);

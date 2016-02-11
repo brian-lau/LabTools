@@ -32,9 +32,16 @@ for i = 1:nWindowReq
    end
    
    for j = 1:nTimes
-      ind = (self.times{idx,j}(:,1)>=window(i,1)) & (self.times{idx,j}(:,1)<=window(i,2));
-      windowedTimes{i,j} = self.times{idx,j}(ind,:);
-      windowedValues{i,j} = self.values{idx,j}(ind);
+      x = self.times{idx,j};
+      y = self.values{idx,j};
+      ind = (x(:,1)>=window(i,1)) & (x(:,1)<=window(i,2));
+      if sum(ind) ~= numel(ind)
+         windowedTimes{i,j} = x(ind,:);
+         windowedValues{i,j} = y(ind);
+      else
+         windowedTimes{i,j} = x;
+         windowedValues{i,j} = y;
+      end
    end
 end
 self.times = windowedTimes;

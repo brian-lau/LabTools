@@ -77,7 +77,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       segment             % Reference to parent Segment
    end
    properties(Abstract)
-     %trailingDim_
      trailingInd_
    end
    properties(SetAccess = protected, Hidden, Transient)
@@ -181,7 +180,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          self.window = checkWindow(window,size(window,1));
          if ~self.reset_ && ~isempty(self.values_)
             nWindow = size(self.window,1);
-            %struct(self)
             % Rewindow if current and requested # of windows matches
             if isempty(self.window) || (nWindow == size(self.times,1))
                % Reset offset
