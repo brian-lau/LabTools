@@ -29,6 +29,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties(Abstract, SetAccess = protected, Dependent) % Abstract so subclasses can define set/get
       dt                  % 1/Fs
+   end
+   properties(Abstract, SetAccess = protected) % Abstract so subclasses can define set/get
       n                   % # of signals/channels 
    end
    properties

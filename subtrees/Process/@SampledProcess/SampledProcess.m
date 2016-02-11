@@ -5,6 +5,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       tStart              % Start time of process
       tEnd                % End time of process
    end
+   properties(SetAccess = protected)
+      n                   % # of signals/channels 
+   end
    properties
       Fs                  % Sampling frequency
    end
@@ -13,7 +16,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    end
    properties(SetAccess = protected, Dependent)
       dt                  % 1/Fs
-      n                   % # of signals/channels 
       dim                 % Dimensionality of each window
    end
    properties(Dependent, Hidden)
@@ -25,7 +27,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    methods
       %% Constructor
       function self = SampledProcess(varargin)
-         self = self@Process;
+         %self = self@Process;
          if nargin == 0
            return;
          end
@@ -94,6 +96,12 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          end
          self.times_ = {tvec(par.tStart,self.dt,dim(1))};
          self.times = self.times_;
+         
+         if isempty(self.values)
+            self.n = 0;
+         else
+            self.n = size(self.values{1},2);
+         end
          
          % Define the start and end times of the process
          if isa(par.values,'DataSource')
@@ -229,13 +237,13 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          dt = 1/self.Fs;
       end
       
-      function n = get.n(self)
-         if isempty(self.values)
-            n = 0;
-         else
-            n = size(self.values{1},2);
-         end
-      end
+%       function n = get.n(self)
+%          if isempty(self.values)
+%             n = 0;
+%          else
+%             n = size(self.values{1},2);
+%          end
+%       end
       
       function dim = get.dim(self)
          dim = cellfun(@(x) size(x),self.values,'uni',false);

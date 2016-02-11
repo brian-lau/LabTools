@@ -11,9 +11,11 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
    properties(SetAccess = protected, Hidden)
       Fs_                 % Original sampling frequency
    end
+   properties(SetAccess = protected)
+      n                   % # of signals/channels 
+   end
    properties(SetAccess = protected, Dependent)
       dt                  % 1/Fs
-      n                   % # of signals/channels 
    end
    properties(SetAccess = protected, Dependent)
       count               % # of events in each window
@@ -27,7 +29,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
    methods
       %% Constructor
       function self = PointProcess(varargin)
-         self = self@Process;
+         %self = self@Process;
          if nargin == 0
             return;
          end
@@ -134,6 +136,8 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          self.values_ = values;
          self.times = self.times_;
          self.values = self.values_;
+
+         self.n = size(eventTimes,2);
 
          % Define the start and end times of the process
          if isempty(par.tStart)
@@ -245,9 +249,9 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          dt = 1/self.Fs;
       end
       
-      function n = get.n(self)
-         n = size(self.count,2);
-      end
+%       function n = get.n(self)
+%          n = size(self.count,2);
+%       end
       
       function count = get.count(self)
          % # of event times within windows
