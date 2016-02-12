@@ -20,6 +20,7 @@ if nWindowOrig > 1
 end
 
 window = self.window;
+b = self.tBlock;
 windowedTimes = cell(nWindowReq,1);
 windowedValues = cell(nWindowReq,1);
 %trailingInd = self.trailingInd_;
@@ -44,7 +45,7 @@ for i = 1:nWindowReq
    [preT,preV] = extendPre(tStart,minWin,self.tStep,dim);
    [postT,postV] = extendPost(tEnd,maxWin,self.tStep,dim);
    
-   ind = (times>=window(i,1)) & (times<=window(i,2));
+   ind = (times>=window(i,1)) & (times<=(window(i,2)-b));
    if ~isempty(preT) && ~isempty(postT)
       windowedTimes{i,1} = [preT ; times(ind) ; postT];
       windowedValues{i,1} = [preV ; values(ind,:,:) ; postV];

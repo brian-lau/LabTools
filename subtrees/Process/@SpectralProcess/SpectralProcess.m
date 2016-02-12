@@ -77,7 +77,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
                   
          % Set sampling frequency and values_/values, times_/times
          if isa(par.values,'DataSource')
-            %%%
+            % TODO
          else % in-memory matrix
             %% "Flatten" matrix, collapsing non-leading dimensions
             dim = size(par.values);
@@ -89,7 +89,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          self.params = par.params;
          self.tBlock = par.tBlock;
          self.tStep = par.tStep;
-         self.times_ = {tvec(par.tStart,self.tStep,dim(1))};
+         self.times_ = {tvec(par.tStart,self.tStep,dim(1))}; 
          self.times = self.times_;
          self.Fs_ = 1/self.tStep;
          self.Fs = self.Fs_;
@@ -98,8 +98,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       
          % Define the start and end times of the process
          if isa(par.values,'DataSource')
-%             % tStart is taken from DataSource
-%             self.tStart = par.values.tStart;
+            % TODO
          else
             self.tStart = par.tStart;
          end
@@ -107,7 +106,8 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          self.f = row(par.f);
          
          if isempty(par.tEnd) || isa(par.values,'DataSource')
-            self.tEnd = self.times_{1}(end);
+            % TODO datasource
+            self.tEnd = self.times{1}(end) + self.tBlock;
          else
             self.tEnd = par.tEnd;
          end
