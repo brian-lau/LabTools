@@ -4,7 +4,7 @@
 function self = normalize(self,event,varargin)
 
 p = inputParser;
-p.KeepUnmatched= true;
+p.KeepUnmatched = true;
 p.FunctionName = 'SpectralProcess normalize';
 p.addRequired('event',@(x) isnumeric(x) || isa(x,'metadata.Event'));
 p.addParameter('window',[],@(x) isnumeric(x) && (size(x,2)==2));
@@ -25,74 +25,75 @@ if ~isempty(par.window)
       'Window must be wide enough to contain at least 1 sample');
 end
 
-if strfind(method,'avg')
-%    % Methods deriving normalization from all elements of the process must
-%    % have the same number of channels & same frequency resolution
-%    try
-%       keyboard
-%       n = size(unique(cat(1,self.labels)),1);
-%    catch err
-%       if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-%          cause = MException('SpectralProcess:normalize:InputValue',...
-%             'Not all processes have the same number of labels');
-%          err = addCause(err,cause);
-%       end
-%       rethrow(err);
-%    end
-%    if n ~= 1
-%       error('SpectralProcess:normalize:InputValue',...
-%          'Not all processes have common labels.');
-%    end
-%    if length(unique(arrayfun(@(x) numel(x.f),self))) ~= 1
-%       error('SpectralProcess:normalize:InputValue',...
-%          'Not all processes have common frequency axis.');
-%    end
+uLabels = unique(cat(2,self.labels),'stable');
+nLabels = numel(uLabels);
+
+try
+   f = cat(1,self.f);
+catch err
+   if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
+      cause = MException('SpectralProcess:normalize:InputValue',...
+         'Not all processes have the same frequency axis.');
+      err = addCause(err,cause);
+   end
+   rethrow(err);
+end
+if size(unique(f,'rows'),1) ~= 1
+   error('SpectralProcess:normalize:InputValue',...
+      'Not all processes have common frequency axis.');
+else
+   f = f(1,:);
+   nf = numel(f);
 end
 
 history = num2cell([self.history]);
 [self.history] = deal(true);
 
+% Sync to event
 par.processTime = false;
 self.sync__(par.event,par);
 
 if strfind(method,'avg')
-   [out,n] = self.mean('outputStruct',true);
-   normMean = out.values;
-   if strncmp(method,'z',1)
-      [out,n] = self.std('outputStruct',true);
-      normStd = out.values;
+   [s,l] = extract(self);
+   s = cat(3,s.values);
+   l = cat(2,l{:});
+   normMean = nan(1,size(s,2),nLabels);
+   normStd = nan(1,size(s,2),nLabels);
+   for i = 1:nLabels
+      ind = l==uLabels(i);
+      if any(ind)
+         % Collapse over Processes, permuting to stack time windows
+         temp = reshape(permute(s(:,:,ind),[2 1 3]),nf,size(s,1)*sum(ind))';
+         normMean(1,:,i) = nanmean(temp);
+         normStd(1,:,i) = nanstd(temp);
+      end
    end
 else
    normVals = arrayfun(@(x) x.values{1},self,'uni',0);
 end
-
 % reset process
 self.undo(2);
 [self.history] = deal(history{:});
 
-% if strfind(method,'avg')
-%    normMean = nanmean(cat(1,normVals{:}));
-%    if strncmp(method,'d',1)
-%       normStd = nanstd(cat(1,normVals{:}));
-%    end
-% end
-
 for i = 1:numel(self)
    switch method
       case {'s' 'subtract'}
-         self(i).values{1} = bsxfun(@minus,self(i).values{1},nanmean(normVals{i}));
+         self(i).values{1} = bsxfun(@minus,self(i).values{1},nanmean(normVals{i},1));
       case {'z', 'z-score'}
-         self(i).values{1} = bsxfun(@minus,self(i).values{1},nanmean(normVals{i}));
-         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},nanstd(normVals{i}));
+         self(i).values{1} = bsxfun(@minus,self(i).values{1},nanmean(normVals{i},1));
+         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},nanstd(normVals{i},0,1));
       case {'d' 'divide'}
-         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},nanmean(normVals{i}));
+         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},nanmean(normVals{i},1));
       case {'s-avg' 'subtract-avg'}
-         self(i).values{1} = bsxfun(@minus,self(i).values{1},normMean);
+         %keyboard
+         [~,ind] = intersect(self(i).labels,uLabels,'stable');
+         self(i).values{1} = bsxfun(@minus,self(i).values{1},normMean(1,:,ind));
       case {'z-avg', 'z-score-avg'}
-         keyboard
-         self(i).values{1} = bsxfun(@minus,self(i).values{1},normMean);
-         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},normStd);
+         [~,ind] = intersect(self(i).labels,uLabels,'stable');
+         self(i).values{1} = bsxfun(@minus,self(i).values{1},normMean(1,:,ind));
+         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},normStd(1,:,ind));
       case {'d-avg' 'divide-avg'}
-         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},normMean);
+         [~,ind] = intersect(self(i).labels,uLabels,'stable');
+         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},normMean(1,:,ind));
    end
 end
