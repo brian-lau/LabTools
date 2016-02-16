@@ -267,7 +267,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          trailingInd = {};
       end
             
-      obj = chop(self,shiftToWindow)
       [s,labels] = extract(self,reqLabels)
       %%
       output = apply(self,fun,nOpt,varargin)

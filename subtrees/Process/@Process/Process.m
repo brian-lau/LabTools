@@ -85,7 +85,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties(SetAccess = immutable)
       serializeOnSave = false
-      version = '0.8.0'   % Version string
+      version = '0.8.1'   % Version string
    end
    events
       runImmediately      % trigger queue evaluation
@@ -94,7 +94,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    
    %%
    methods(Abstract)
-      chop(self,shiftToWindow)
+      %chop(self,shiftToWindow)
       [s,labels] = extract(self,reqLabels)
       apply(self,fun) % apply applyFunc func?
       %copy?
@@ -176,7 +176,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
             end
          end
          %----------------------------------------
-         
+
          self.window = checkWindow(window,size(window,1));
          if ~self.reset_ && ~isempty(self.values_)
             nWindow = size(self.window,1);
@@ -325,14 +325,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
       end
       
-%       function set.segment(self,segment)
-%          %if ~isempty(self.segment)
-%          %   disp('replacing parent');
-%          %end
-%          %assert(isempty(segment) || isa(segment,'Segment'));
-%          self.segment = segment;
-%       end
-      
+      chop(self,varargin)
+
       % Assignment for object arrays
       self = setWindow(self,window)
       self = setOffset(self,offset)

@@ -252,7 +252,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       end
       
       %
-      obj = chop(self,shiftToWindow)
+      %obj = chop(self,shiftToWindow)
       
       % In-place transformations
       self = filter(self,b,varargin)
