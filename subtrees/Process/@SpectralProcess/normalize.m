@@ -28,22 +28,24 @@ end
 uLabels = unique(cat(2,self.labels),'stable');
 nLabels = numel(uLabels);
 
-try
-   f = cat(1,self.f);
-catch err
-   if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-      cause = MException('SpectralProcess:normalize:InputValue',...
-         'Not all processes have the same frequency axis.');
-      err = addCause(err,cause);
+if strfind(method,'avg')
+   try
+      f = cat(1,self.f);
+   catch err
+      if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
+         cause = MException('SpectralProcess:normalize:InputValue',...
+            'Not all processes have the same frequency axis.');
+         err = addCause(err,cause);
+      end
+      rethrow(err);
    end
-   rethrow(err);
-end
-if size(unique(f,'rows'),1) ~= 1
-   error('SpectralProcess:normalize:InputValue',...
-      'Not all processes have common frequency axis.');
-else
-   f = f(1,:);
-   nf = numel(f);
+   if size(unique(f,'rows'),1) ~= 1
+      error('SpectralProcess:normalize:InputValue',...
+         'Not all processes have common frequency axis.');
+   else
+      f = f(1,:);
+      nf = numel(f);
+   end
 end
 
 history = num2cell([self.history]);
