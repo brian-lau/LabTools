@@ -32,6 +32,7 @@ for i = 1:numel(self)
       self(i).times = self(i).times_;
       self(i).values = self(i).values_;
       
+      self(i).set_n();
       self(i).reset_ = true;
       self(i).window = self(i).window_;
       self(i).reset_ = false;
