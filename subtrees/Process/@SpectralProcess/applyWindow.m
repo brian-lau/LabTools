@@ -43,7 +43,7 @@ for i = 1:nWindowReq
    % NaN-pad when window extends beyond process. This extension is
    % done to the nearest sample that fits in the window.
    [preT,preV] = extendPre(tStart,minWin,self.tStep,dim);
-   [postT,postV] = extendPost(tEnd,maxWin,self.tStep,dim);
+   [postT,postV] = extendPost(tEnd,maxWin-b,self.tStep,dim);
    
    ind = (times>=window(i,1)) & (times<=(window(i,2)-b));
    if ~isempty(preT) && ~isempty(postT)
