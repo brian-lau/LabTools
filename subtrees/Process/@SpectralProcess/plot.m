@@ -13,7 +13,7 @@ if nObj > 1
 end
 
 p = inputParser;
-p.KeepUnmatched= true;
+p.KeepUnmatched = true;
 p.FunctionName = 'SpectralProcess plot method';
 p.addParameter('handle',[],@(x) isnumeric(x) || ishandle(x));
 p.addParameter('colorbar',true,@(x) isnumeric(x) || islogical(x));
@@ -65,11 +65,11 @@ for i = 1:n
 %       imagesc('Xdata',t,'Ydata',f,'CData',v,'Parent',g);
 
       if ~isempty(par.caxis)
-         caxis(par.caxis);
+         caxis(g,par.caxis);
       end
 
       shading(g,par.shading);      
-      colormap(par.colormap);
+      colormap(g,par.colormap);
       if par.colorbar
          colorbar;
       end

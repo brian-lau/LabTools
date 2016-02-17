@@ -83,9 +83,8 @@ for i = 1:numel(self)
          self(i).values{1} = bsxfun(@minus,self(i).values{1},nanmean(normVals{i},1));
          self(i).values{1} = bsxfun(@rdivide,self(i).values{1},nanstd(normVals{i},0,1));
       case {'d' 'divide'}
-         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},nanmean(normVals{i},1));
+         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},nanmean(normVals{i},1)) - 1;
       case {'s-avg' 'subtract-avg'}
-         %keyboard
          [~,ind] = intersect(self(i).labels,uLabels,'stable');
          self(i).values{1} = bsxfun(@minus,self(i).values{1},normMean(1,:,ind));
       case {'z-avg', 'z-score-avg'}

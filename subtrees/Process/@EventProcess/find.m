@@ -1,3 +1,5 @@
+% object array
+% multiple windows
 function ev = find(self,varargin)
 
 p = inputParser;

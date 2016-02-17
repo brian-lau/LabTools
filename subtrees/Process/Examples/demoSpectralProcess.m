@@ -66,8 +66,20 @@ y2 = chirp(t,60,2,60,'q');
 s(1) = SampledProcess([y1;y1+y2],'Fs',1000);
 s(2) = SampledProcess([y1*.25;y1+y2],'Fs',1000);
 s.setOffset(-2);
-tf = tfr(s,'method','stft','f',1:100,'tBlock',.5,'tStep',.02);
+tf = tfr(s,'method','stft','f',1:100,'tBlock',.5,'tStep',.05);
 tf(3) = tfr(s(1),'method','cwt','f',[1 100]);
 plot(tf,'log',false);
 tf.normalize(0,'window',[-1.75 -1.],'method','subtract');
 plot(tf,'log',false);
+
+
+dt = 1/2048;
+t = 0:dt:1;                    % 2 secs @ 1kHz sample rate
+y = chirp(t,100,1,200,'q')';       % Start @ 100Hz, cross 200Hz at t=1sec
+
+s = SampledProcess('values',y,'Fs',1/dt);
+
+tf = tfr(s,'tBlock',0.5,'tStep',0.5,'f',[0:200])
+
+tf = tfr(s,'method','stft','tBlock',0.5,'tStep',0.5,'f',[0:200])
+
