@@ -94,7 +94,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    
    %%
    methods(Abstract)
-      %chop(self,shiftToWindow)
       [s,labels] = extract(self,reqLabels)
       apply(self,fun) % apply applyFunc func?
       %copy?
@@ -204,7 +203,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       end
       
       function relWindow = get.relWindow(self)
-         relWindow = self.window + self.cumulOffset;
+         relWindow = bsxfun(@plus,self.window,self.cumulOffset);
       end
       
       function set.offset(self,offset)
