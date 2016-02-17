@@ -5,7 +5,7 @@
 %     isValidWindow
 
 % TODO
-%   o Windows are inclusive on both sides, does this make sense???
+%   o Round windows to dt to avoid surprises due to numerical error?
 
 function applyWindow(self)
 
