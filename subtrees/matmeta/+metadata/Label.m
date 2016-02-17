@@ -1,4 +1,4 @@
-classdef Label < handle & matlab.mixin.Heterogeneous
+classdef Label < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyable
    properties
       name
       description
