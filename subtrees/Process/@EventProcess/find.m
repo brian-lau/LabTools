@@ -1,7 +1,7 @@
-% object array
+% x object array
 % multiple windows
-% arbitrary function_handle
-% output policy (restrict to one event?)
+% x arbitrary function_handle
+% x output policy (restrict to one event?)
 % multiple event labels
 function ev = find(self,varargin)
 
@@ -12,100 +12,108 @@ p.addParameter('eventProp','name',@(x) ischar(x) || iscell(x));
 p.addParameter('eventVal',[]);
 p.addParameter('func',[],@(x) isa(x,'function_handle'));
 p.addParameter('logic','or',@(x) any(strcmp(x,{'or' 'union' 'and' 'intersection' 'xor' 'setxor'})));
+p.addParameter('policy','first',@(x) any(strcmp(x,{'first' 'last' 'all'})));
 p.parse(varargin{:});
 par = p.Results;
 
 nObj = numel(self);
 for i = 1:nObj
-   ev(i) = findEach(self(i),par);
+   switch lower(par.policy)
+      case {'first' 'last'}
+         ev(i) = findEach(self(i),par);
+      case {'all'}
+         ev{i} = findEach(self(i),par);
+   end
 end
 
-function ev = findEach(obj,par)
+function result = findEach(obj,par)
 
 events = obj.values{1};
+nev = numel(events);
 if isempty(events)
-   ev = obj.nullEvent;
+   result = obj.nullEvent;
    return;
 end
 
-eventTypeInd = [];
 if ~isempty(par.eventType) % requires full event match (ignores eventProp/Val)
    eventTypeInd = strcmpi(arrayfun(@(x) class(x),events,'uni',0),par.eventType);
+else
+   eventTypeInd = false(nev,1);
 end
 
-eventPropInd = [];
 if ~isempty(par.eventVal)
-   % labels are heterogenous, so we filter out elements that do not possess
-   % the property of interest (treated as false)
-   matchProp = find(isprop(events,par.eventProp));
-   temp = events(matchProp);
-   
-   % labelProp values are unconstrained, so we filter out possibilities
-   % where they differ from eventVal in type
-   v = {temp.(par.eventProp)};
-   types = cellfun(@(x) class(x),v,'uni',0);
-   match = find(strcmp(types,class(par.eventVal)));
-   
    if isnumeric(par.eventVal)
-      I = find(ismember([v{match}],par.eventVal));
+      v = arrayfun(@(x) ismember(x.(par.eventProp),par.eventVal),events,'uni',0,'ErrorHandler',@valErrorHandler);
    elseif ischar(par.eventVal)
-      I = find(ismember(v(match),par.eventVal));
+      v = arrayfun(@(x) strcmp(x.(par.eventProp),par.eventVal),events,'uni',0,'ErrorHandler',@valErrorHandler);
    else
-      try
-         I = find(v(match) == par.eventVal);
-      catch
-         error('help!');
-      end
    end
-
-   % Reinsert the matching indices for the reduced subset back into full index
-   eventPropInd = false(1,obj.n);
-   eventPropInd(matchProp(match(I))) = true;
-   eventPropInd = find(eventPropInd);
+   eventPropInd = vertcat(v{:});
+else
+   eventPropInd = false(nev,1);
 end
 
-funcInd = [];
 if ~isempty(par.func)
    % TODO cell array of function handles, allow multiple arbitrary crit
-   funcInd = find(arrayfun(par.func,events,'ErrorHandler',@errorhandler));
+   funcInd = arrayfun(par.func,events,'ErrorHandler',@funcErrorHandler);
+else
+   funcInd = false(nev,1);
 end
 
-baseInd = 1:numel(events);
-selection = [];
 switch lower(par.logic)
    case {'or' 'union'}
-      selection = unique(vertcat(eventTypeInd(:),eventPropInd(:),funcInd(:)));
-      %selection = unionm(eventTypeInd,eventPropInd,funcInd);
+      selection = eventTypeInd | eventPropInd | funcInd;
    case {'and' 'intersection'}
-      if ~isempty(eventTypeInd)
-         selection = eventTypeInd;
-      else
-         selection = baseInd;
+      if isempty(par.eventType)
+         eventTypeInd = true(nev,1);
       end
-      if ~isempty(eventPropInd)
-         selection = intersect(selection,eventPropInd);
+      if isempty(par.eventVal)
+         eventPropInd = true(nev,1);
       end
-      if ~isempty(funcInd)
-         selection = intersect(selection,funcInd);
+      if isempty(funcInd)
+         funcInd = true(nev,1);
       end
+      selection = eventTypeInd & eventPropInd & funcInd;
    case {'xor' 'setxor'}
-      selection = setxor(baseInd,unionm(eventTypeInd,eventPropInd,funcInd));
+      selection = sum([eventTypeInd,eventPropInd,funcInd],2) == 1;
+   otherwise
+      selection = false(nev,1);
 end
 
-if isempty(selection)
+if all(~selection)
    ev = obj.nullEvent;
 else
    ev = events(selection);
 end
 
+switch lower(par.policy)
+   case {'first'}
+      result = ev(1);
+   case {'last'}
+      result = ev(end);
+   case {'all'}
+      result = ev;
+end
+
 %%
-function result = errorhandler(err,varargin)
+function result = funcErrorHandler(err,varargin)
 if strcmp(err.identifier,'MATLAB:noSuchMethodOrField');
    result = false;
 else
    err = MException(err.identifier,err.message);
    cause = MException('EventProcess:find:func',...
       'Problem in function handle.');
+   err = addCause(err,cause);
+   throw(err);
+end
+
+function result = valErrorHandler(err,varargin)
+if strcmp(err.identifier,'MATLAB:noSuchMethodOrField');
+   result = false;
+else
+   err = MException(err.identifier,err.message);
+   cause = MException('EventProcess:find:eventProp',...
+      'Problem in eventProp/Val pair.');
    err = addCause(err,cause);
    throw(err);
 end
