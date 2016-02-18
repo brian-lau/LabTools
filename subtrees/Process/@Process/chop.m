@@ -1,6 +1,6 @@
 % shiftToWindow boolean for shifting time so that start of each window = 0, default = true
 % copyInfo boolean for copying info (since it's a handle), default = true
-% copyLabel TODO
+% copyLabel boolean for copying info (since it's a handle), default = false
 
 function obj = chop(self,varargin)
 

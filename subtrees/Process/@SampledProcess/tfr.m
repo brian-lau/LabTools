@@ -40,13 +40,6 @@ if isempty(par.tStep)
    par.tStep = par.tBlock/2;
 end
 
-% FIXME, handle simple power spectral density (tStep = 0)
-% if tStep == 0
-% ignore tBlock, and calculate in full window
-% warn if tBlock does not equal window
-% or perhaps use sigproc toolbox methods (pcov,pmtm,pwelch)
-% maybe add chunk parameter for psd (averaging over chunks)
-
 % Round to nearest sample
 nBlock = max(1,floor(par.tBlock/self.dt));
 nStep = max(0,floor(par.tStep/self.dt));
@@ -54,7 +47,7 @@ tBlock = nBlock*self.dt;
 tStep = nStep*self.dt;
 
 switch lower(par.method)
-   case {'stft' 'spectrogram'}
+   case {'stft' 'spectrogram'}      
       window = nBlock; % use Hanning window default
       noverlap = nBlock - nStep;
       n = numel(self.labels);
@@ -69,6 +62,7 @@ switch lower(par.method)
       tfParams.fpass = par.f;
       [S,~,f] = mtspecgramc(self.values{1}, [tBlock tStep], tfParams);
    case {'stockwell', 'strans'}
+      %TODO
    case {'wavelet', 'cwt'}
       % Currently required Wavelet toolbox
       % consider https://github.com/grinsted/wavelet-coherence

@@ -45,7 +45,7 @@ end
 labelInd = [];
 if ~isempty(par.label) % requires full label match (ignores labelProp/Val)
    if isa(par.label,'metadata.Label') 
-      [~,labelInd] = intersect(self.labels,par.label);
+      [~,labelInd] = intersect(self.labels,par.label,'stable');
    end
 elseif ~isempty(par.labelVal)
    % labels are heterogenous, so we filter out elements that do not possess

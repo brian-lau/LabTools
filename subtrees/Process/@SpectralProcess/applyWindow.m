@@ -23,7 +23,6 @@ window = self.window;
 b = self.tBlock;
 windowedTimes = cell(nWindowReq,1);
 windowedValues = cell(nWindowReq,1);
-%trailingInd = self.trailingInd_;
 for i = 1:nWindowReq
    minWin = min(window(i,1));
    maxWin = max(window(i,2));
@@ -45,6 +44,8 @@ for i = 1:nWindowReq
    [preT,preV] = extendPre(tStart,minWin,self.tStep,dim);
    [postT,postV] = extendPost(tEnd,maxWin-b,self.tStep,dim);
    
+   % Times mark leading block edge (for TF methods stepping in blocks), so
+   % we only take times where the trailing block edge also falls in window
    ind = (times>=window(i,1)) & (times<=(window(i,2)-b));
    if ~isempty(preT) && ~isempty(postT)
       windowedTimes{i,1} = [preT ; times(ind) ; postT];
@@ -74,9 +75,6 @@ for i = 1:nWindowReq
          windowedValues{i,1} = values;
       end
    end
-%    windowedTimes{i,1} = [preT ; times(ind) ; postT];
-%    windowedValues{i,1} = [preV ; values(ind,:,:) ; postV];
-%    %windowedValues{i,1} = [preV ; values(ind,trailingInd{:}) ; postV];
 end
 
 self.times = windowedTimes;

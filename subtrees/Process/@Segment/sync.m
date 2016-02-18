@@ -60,13 +60,11 @@ for i = 1:numel(self)
 
    if numel(event) == 1
       if ~strcmp(event.name,'NULL')
-         %disableSegmentListeners(self(i));
          if isempty(syncPars)
             cellfun(@(x) x.sync__(event),self(i).processes,'uni',0);
          else
             cellfun(@(x) x.sync__(event,syncPars),self(i).processes,'uni',0);
          end
-         %enableSegmentListeners(self(i));
       end
       self(i).validSync = event;
    elseif numel(event) > 1
