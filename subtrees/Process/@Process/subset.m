@@ -51,31 +51,34 @@ elseif ~isempty(par.labelVal)
    % labels are heterogenous, so we filter out elements that do not possess
    % the property of interest (treated as false)
    matchProp = find(isprop(self.labels,par.labelProp));
-   labels = self.labels(matchProp);
-   
-   % labelProp values are unconstrained, so we filter out possibilities
-   % where they differ from labelVal in type
-   v = {labels.(par.labelProp)};
-   types = cellfun(@(x) class(x),v,'uni',0);
-   match = find(strcmp(types,class(par.labelVal)));
-   
-   if isnumeric(par.labelVal) % I think this will work with handles too
-      I = find(ismember([v{match}],par.labelVal));
-   elseif ischar(par.labelVal)
-      I = find(ismember(v(match),par.labelVal));
-   else
-      mc = metaclass(par.labelVal);
-      if any(ismember({mc.SuperclassList.Name},{'handle','matlab.mixin.Copyable'}))
+   if any(matchProp)
+      
+      labels = self.labels(matchProp);
+      
+      % labelProp values are unconstrained, so we filter out possibilities
+      % where they differ from labelVal in type
+      v = {labels.(par.labelProp)};
+      types = cellfun(@(x) class(x),v,'uni',0);
+      match = find(strcmp(types,class(par.labelVal)));
+      
+      if isnumeric(par.labelVal) % I think this will work with handles too
          I = find(ismember([v{match}],par.labelVal));
+      elseif ischar(par.labelVal)
+         I = find(ismember(v(match),par.labelVal));
       else
-         error('Process:subset:labelVal','Matching for class(labelVal) not implemented.');
+         mc = metaclass(par.labelVal);
+         if any(ismember({mc.SuperclassList.Name},{'handle','matlab.mixin.Copyable'}))
+            I = find(ismember([v{match}],par.labelVal));
+         else
+            error('Process:subset:labelVal','Matching for class(labelVal) not implemented.');
+         end
       end
+      
+      % Reinsert the matching indices for the reduced subset back into full index
+      labelInd = false(1,self.n);
+      labelInd(matchProp(match(I))) = true;
+      labelInd = find(labelInd);
    end
-   
-   % Reinsert the matching indices for the reduced subset back into full index
-   labelInd = false(1,self.n);
-   labelInd(matchProp(match(I))) = true;
-   labelInd = find(labelInd);
 end
 
 qualityInd = [];
@@ -85,7 +88,8 @@ end
 
 switch lower(par.logic)
    case {'or' 'union'}
-      selection = unionm(indexInd,labelInd,qualityInd);
+      %selection = unionm(indexInd,labelInd,qualityInd);
+      selection = unique(vertcat(indexInd(:),labelInd(:),qualityInd(:)));
    case {'and' 'intersection'}
       if ~isempty(par.index)
          selection = indexInd;
