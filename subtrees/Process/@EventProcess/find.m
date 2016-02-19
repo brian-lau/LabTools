@@ -1,7 +1,4 @@
-% x object array
 % multiple windows
-% x arbitrary function_handle
-% x output policy (restrict to one event?)
 % multiple event labels
 function ev = find(self,varargin)
 
@@ -26,6 +23,7 @@ for i = 1:nObj
    end
 end
 
+%%
 function result = findEach(obj,par)
 
 events = obj.values{1};
@@ -47,6 +45,8 @@ if ~isempty(par.eventVal)
    elseif ischar(par.eventVal)
       v = arrayfun(@(x) strcmp(x.(par.eventProp),par.eventVal),events,'uni',0,'ErrorHandler',@valErrorHandler);
    else
+      % works for handles
+      v = arrayfun(@(x) x.(par.eventProp)==par.eventVal,events,'uni',0,'ErrorHandler',@valErrorHandler);
    end
    eventPropInd = vertcat(v{:});
 else
