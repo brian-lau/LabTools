@@ -12,7 +12,7 @@ classdef Stimulus < metadata.Event
          p = inputParser;
          p.KeepUnmatched= true;
          p.FunctionName = 'Stimulus constructor';
-         p.addParamValue('method','',@ischar);
+         p.addParameter('method','',@ischar);
          p.parse(varargin{:});
          par = p.Results;
          

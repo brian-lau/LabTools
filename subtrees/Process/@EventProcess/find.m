@@ -70,7 +70,7 @@ switch lower(par.logic)
       if isempty(par.eventVal)
          eventPropInd = true(nev,1);
       end
-      if isempty(funcInd)
+      if isempty(par.func)
          funcInd = true(nev,1);
       end
       selection = eventTypeInd & eventPropInd & funcInd;

@@ -12,7 +12,7 @@ classdef Response < metadata.Event
          p = inputParser;
          p.KeepUnmatched= true;
          p.FunctionName = 'Response constructor';
-         p.addParamValue('modality','',@ischar);
+         p.addParameter('modality','',@ischar);
          p.parse(varargin{:});
          par = p.Results;
          

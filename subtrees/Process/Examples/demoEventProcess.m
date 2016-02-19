@@ -1,6 +1,6 @@
 e(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1,'name','fix');
 e(2) = metadata.event.Stimulus('tStart',2,'tEnd',3,'name','cue');
-e(3) = metadata.event.Response('tStart',5,'tEnd',6,'name','button');
+e(3) = metadata.event.Response('tStart',5,'tEnd',6,'name','button','experiment',metadata.Experiment);
 
 
 events = EventProcess('events',e,'tStart',0,'tEnd',10);

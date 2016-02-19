@@ -96,7 +96,6 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    methods(Abstract)
       [s,labels] = extract(self,reqLabels)
       apply(self,fun) % apply applyFunc func?
-      %copy?
       plot(self)
       
       % add

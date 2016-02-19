@@ -91,7 +91,7 @@ classdef TestSampledProcessSubset < matlab.unittest.TestCase
          p = testCase.p;
          
          p.labels(1).grouping = 1;
-         p.labels(3).grouping = 1;
+         p.labels(3).grouping = 1;keyboard
          p.subset('labelVal',1,'labelProp','grouping');
          
          testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
