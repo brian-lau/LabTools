@@ -5,11 +5,6 @@
 
 function self = subset(self,varargin)
 
-% nObj = numel(self)
-% for i = 1:nObj
-%    
-% end
-
 if mod(nargin-1,2)==1 && ~isstruct(varargin{1})
    assert(isnumeric(varargin{1}),...
       'Process:subset:InputFormat',...
@@ -29,13 +24,20 @@ p.addParameter('logic','or',@(x) any(strcmp(x,{'or' 'union' 'and' 'intersection'
 p.parse(varargin{:});
 par = p.Results;
 
-baseInd = find(self.selection_);
+nObj = numel(self);
+for i = 1:nObj
+   subsetEach(self(i),par);
+end
+
+function subsetEach(obj,par)
+
+baseInd = find(obj.selection_);
 
 indexInd = [];
 if ~isempty(par.index)
    indexInd = par.index;
    assert(all(mod(indexInd,1)==0),'Process:subset:InputFormat','Index must be integers');
-   ind = (indexInd<=0)|(indexInd>self.n);
+   ind = (indexInd<=0)|(indexInd>obj.n);
    if any(ind)
       warning('Process:subset','Out of range indices ignored.');
       indexInd(ind) = [];
@@ -45,15 +47,15 @@ end
 labelInd = [];
 if ~isempty(par.label) % requires full label match (ignores labelProp/Val)
    if isa(par.label,'metadata.Label') 
-      [~,labelInd] = intersect(self.labels,par.label,'stable');
+      [~,labelInd] = intersect(obj.labels,par.label,'stable');
    end
 elseif ~isempty(par.labelVal)
    % labels are heterogenous, so we filter out elements that do not possess
    % the property of interest (treated as false)
-   matchProp = find(isprop(self.labels,par.labelProp));
+   matchProp = find(isprop(obj.labels,par.labelProp));
    if any(matchProp)
       
-      labels = self.labels(matchProp);
+      labels = obj.labels(matchProp);
       
       % labelProp values are unconstrained, so we filter out possibilities
       % where they differ from labelVal in type
@@ -75,7 +77,7 @@ elseif ~isempty(par.labelVal)
       end
       
       % Reinsert the matching indices for the reduced subset back into full index
-      labelInd = false(1,self.n);
+      labelInd = false(1,obj.n);
       labelInd(matchProp(match(I))) = true;
       labelInd = find(labelInd);
    end
@@ -83,12 +85,11 @@ end
 
 qualityInd = [];
 if ~isempty(par.quality)
-   qualityInd = find(ismember(self.quality,par.quality));
+   qualityInd = find(ismember(obj.quality,par.quality));
 end
 
 switch lower(par.logic)
    case {'or' 'union'}
-      %selection = unionm(indexInd,labelInd,qualityInd);
       selection = unique(vertcat(indexInd(:),labelInd(:),qualityInd(:)));
    case {'and' 'intersection'}
       if ~isempty(par.index)
@@ -108,8 +109,8 @@ end
 
 % Match against current selection
 [~,selection] = intersect(baseInd,selection);
-tf = false(size(self.selection_));
+tf = false(size(obj.selection_));
 tf(selection) = true;
-self.selection_ = tf;
+obj.selection_ = tf;
 
-self.applySubset();
+obj.applySubset();

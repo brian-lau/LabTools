@@ -181,6 +181,60 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          testCase.assertThat(p.times,HasSize([1,0]))
          testCase.assertThat(p.values,HasSize([1,0]))
       end
+      
+      function subsetArray(testCase)
+         p = testCase.p;
+         p(2) = PointProcess('times',testCase.times,'values',testCase.values,'quality',testCase.quality);
+
+         ind = [2 3];
+         p.subset(ind);
+         
+         testCase.assertEqual(p(1).times,testCase.times(:,ind));
+         testCase.assertEqual(p(1).values,testCase.values(:,ind));
+         testCase.assertEqual(p(2).times,testCase.times(:,ind));
+         testCase.assertEqual(p(2).values,testCase.values(:,ind));
+      end
+      
+      function subsetArraySameLabel(testCase)
+         p = testCase.p;
+         p(2) = PointProcess('times',testCase.times,'values',testCase.values,'quality',testCase.quality,'labels',p.labels);
+
+         ind = 2;
+         l = p(1).labels(ind);
+         p.subset('label',l);
+         
+         testCase.assertEqual(p(1).times,testCase.times(:,ind));
+         testCase.assertEqual(p(1).values,testCase.values(:,ind));
+         testCase.assertEqual(p(2).times,testCase.times(:,ind));
+         testCase.assertEqual(p(2).values,testCase.values(:,ind));
+      end
+      
+      function subsetArrayDiffLabelMatchHandle(testCase)
+         p = testCase.p;
+         p(2) = PointProcess('times',testCase.times,'values',testCase.values,'quality',testCase.quality);
+
+         ind = 2;
+         l = p(1).labels(ind);
+         p.subset('label',l);
+         
+         testCase.assertEqual(p(1).times,testCase.times(:,ind));
+         testCase.assertEqual(p(1).values,testCase.values(:,ind));
+         testCase.assertTrue(isempty(p(2).times));
+         testCase.assertTrue(isempty(p(2).values));
+      end
+      
+      function subsetArrayDiffLabelMatchValue(testCase)
+         p = testCase.p;
+         p(2) = PointProcess('times',testCase.times,'values',testCase.values,'quality',testCase.quality);
+
+         ind = 2;
+         p.subset('labelProp','name','labelVal','id2');
+         
+         testCase.assertEqual(p(1).times,testCase.times(:,ind));
+         testCase.assertEqual(p(1).values,testCase.values(:,ind));
+         testCase.assertEqual(p(2).times,testCase.times(:,ind));
+         testCase.assertEqual(p(2).values,testCase.values(:,ind));
+      end
    end
    
 end

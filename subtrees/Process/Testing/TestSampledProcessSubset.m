@@ -174,6 +174,60 @@ classdef TestSampledProcessSubset < matlab.unittest.TestCase
          
          testCase.assertThat(p.values{1},IsEmpty);
       end
+      
+      function subsetArray(testCase)
+         p = testCase.p;
+         p(2) = SampledProcess('values',testCase.values,'Fs',testCase.Fs,'quality',testCase.quality);
+
+         ind = [2 3];
+         p.subset(ind);
+         
+         testCase.assertEqual(p(1).times,testCase.times);
+         testCase.assertEqual(p(1).values,{testCase.values(:,ind)});
+         testCase.assertEqual(p(2).times,testCase.times);
+         testCase.assertEqual(p(2).values,{testCase.values(:,ind)});
+      end
+      
+      function subsetArraySameLabel(testCase)
+         p = testCase.p;
+         p(2) = SampledProcess('values',testCase.values,'Fs',testCase.Fs,'quality',testCase.quality,'labels',p.labels);
+
+         ind = 2;
+         l = p(1).labels(ind);
+         p.subset('label',l);
+         
+         testCase.assertEqual(p(1).times,testCase.times);
+         testCase.assertEqual(p(1).values,{testCase.values(:,ind)});
+         testCase.assertEqual(p(2).times,testCase.times);
+         testCase.assertEqual(p(2).values,{testCase.values(:,ind)});
+      end
+      
+      function subsetArrayDiffLabelMatchHandle(testCase)
+         p = testCase.p;
+         p(2) = SampledProcess('values',testCase.values,'Fs',testCase.Fs,'quality',testCase.quality);
+
+         ind = 2;
+         l = p(1).labels(ind);
+         p.subset('label',l);
+
+         testCase.assertEqual(p(1).times,testCase.times);
+         testCase.assertEqual(p(1).values,{testCase.values(:,ind)});
+         testCase.assertTrue(isempty(p(2).times{1}));
+         testCase.assertTrue(isempty(p(2).values{1}));
+      end
+      
+      function subsetArrayDiffLabelMatchValue(testCase)
+         p = testCase.p;
+         p(2) = SampledProcess('values',testCase.values,'Fs',testCase.Fs,'quality',testCase.quality);
+
+         ind = 2;
+         p.subset('labelProp','name','labelVal','id2');
+         
+         testCase.assertEqual(p(1).times,testCase.times);
+         testCase.assertEqual(p(1).values,{testCase.values(:,ind)});
+         testCase.assertEqual(p(2).times,testCase.times);
+         testCase.assertEqual(p(2).values,{testCase.values(:,ind)});
+      end
    end
    
 end
