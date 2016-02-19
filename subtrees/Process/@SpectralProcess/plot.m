@@ -74,9 +74,11 @@ for i = 1:n
          colorbar;
       end
    end
+   
    if par.title
       title(self.labels(i).name);
    end
+   
    axis tight;
 end
 

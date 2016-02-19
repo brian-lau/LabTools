@@ -1,6 +1,6 @@
 %%
 clear all;
-ntrials = 5;
+ntrials = 10;
 
 dt = 0.001;
 t = (0:dt:(10-dt))';

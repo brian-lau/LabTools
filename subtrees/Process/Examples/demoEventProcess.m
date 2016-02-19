@@ -11,8 +11,8 @@ e(3) = metadata.event.Response('tStart',0,'tEnd',3,'name','button');
 
 events = EventProcess('times',[0 1;2 3;4 5],'events',e,'tStart',0,'tEnd',10);
 
-tic;
-for i = 1:1000
-   events.values;
-end
-toc
+% tic;
+% for i = 1:1000
+%    events.values;
+% end
+% toc

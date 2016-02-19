@@ -6,6 +6,7 @@
 %     then add parameter in filtering functions to compensate if using
 %     filtfilt (halve order, and sqrt attenuation/ripple)?
 %   o should filtering functions only design filters? or have 'filter' bool
+%   o fftfilt for speed?
 
 function self = filter(self,b,varargin)
 
@@ -21,8 +22,10 @@ if isa(b,'dfilt.dffir')
    h = b;
    b = h.Numerator;
    a = 1;
+   %groupDelay = (length(b) - 1) / 2;
 else
    a = par.a;
+   %groupDelay = mean(grpdelay(b,a));
 end
 
 for i = 1:numel(self)
@@ -37,6 +40,7 @@ for i = 1:numel(self)
 
    for j = 1:size(self(i).window,1)
       if par.compensateDelay
+         %temp = self(i).values{j};
          self(i).values{j} = filtfilt(b,a,self(i).values{j});
       else
          self(i).values{j} = filter(b,a,self(i).values{j});
