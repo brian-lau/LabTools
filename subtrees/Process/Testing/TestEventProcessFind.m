@@ -187,6 +187,34 @@ classdef TestEventProcessFind < matlab.unittest.TestCase
          testCase.assertEqual(ev{1}(1).name,'cue');
          testCase.assertEqual(ev{1}(2).name,'feedback');
       end
+      
+      function findEventValArray(testCase)
+         p = testCase.p;
+         p(2) = EventProcess('events',testCase.ev,'tStart',0,'tEnd',10);
+         
+         ev = p.find('eventVal','button');
+         
+         testCase.assertEqual(ev(1).name,'button');
+         testCase.assertEqual(ev(1).tStart,5);
+         testCase.assertEqual(ev(1).tEnd,6);
+         testCase.assertEqual(ev(2).name,'button');
+         testCase.assertEqual(ev(2).tStart,5);
+         testCase.assertEqual(ev(2).tEnd,6);
+      end
+      
+      function findEventValArrayNoMatch(testCase)
+         p = testCase.p;
+         p(2) = EventProcess('events',metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN),'tStart',0,'tEnd',10);
+         
+         ev = p.find('eventVal','button');
+         
+         testCase.assertEqual(ev(1).name,'button');
+         testCase.assertEqual(ev(1).tStart,5);
+         testCase.assertEqual(ev(1).tEnd,6);
+         testCase.assertEqual(ev(2).name,'NULL');
+         testCase.assertEqual(ev(2).tStart,NaN);
+         testCase.assertEqual(ev(2).tEnd,NaN);
+      end
    end
    
 end
