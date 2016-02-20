@@ -91,7 +91,7 @@ classdef TestSampledProcessSubset < matlab.unittest.TestCase
          p = testCase.p;
          
          p.labels(1).grouping = 1;
-         p.labels(3).grouping = 1;keyboard
+         p.labels(3).grouping = 1;
          p.subset('labelVal',1,'labelProp','grouping');
          
          testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
@@ -102,6 +102,7 @@ classdef TestSampledProcessSubset < matlab.unittest.TestCase
          
          p.labels(1).grouping = metadata.Label('name','hello');
          p.labels(3).grouping = p.labels(1).grouping;
+         
          p.subset('labelVal',p.labels(1).grouping,'labelProp','grouping');
          
          testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
@@ -116,23 +117,22 @@ classdef TestSampledProcessSubset < matlab.unittest.TestCase
 
          testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
       end
-      
-      function subsetLabelGroupingError(testCase)
-         p = testCase.p;
-         
-         p.labels(1).grouping = metadata.Label('name','hello');
-         p.labels(3).grouping = p.labels(1).grouping;
-         
-         testCase.assertError(@() p.subset('labelVal',struct('a',10),'labelProp','grouping'),...
-            'Process:subset:labelVal');
-      end
-      
+            
       function subsetQuality(testCase)
          p = testCase.p;
          
-         ind = [2 3];
+         ind = 2;
          q = p.quality(ind);
          p.subset('quality',q);
+         
+         testCase.assertEqual(p.values{1},testCase.values(:,ind));
+      end
+      
+      function subsetFunc(testCase)
+         p = testCase.p;
+         
+         ind = [2 3];
+         p.subset('func',@(x) x.quality>=2);
          
          testCase.assertEqual(p.values{1},testCase.values(:,ind));
       end
@@ -155,14 +155,14 @@ classdef TestSampledProcessSubset < matlab.unittest.TestCase
          testCase.assertEqual(p.values{1},testCase.values(:,2));
       end
       
-      function subsetLogicXOR(testCase)
-         p = testCase.p;
-         
-         l = p.labels(2);
-         p.subset('index',2,'label',l,'quality',2,'logic','xor');
-         
-         testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
-      end
+%       function subsetLogicXOR(testCase)
+%          p = testCase.p;
+%          
+%          l = p.labels(2);
+%          p.subset('index',2,'label',l,'quality',2,'logic','xor');
+%          
+%          testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
+%       end
       
       function subsetEmpty(testCase)
          import matlab.unittest.constraints.IsEmpty;
@@ -171,7 +171,7 @@ classdef TestSampledProcessSubset < matlab.unittest.TestCase
          
          l = p.labels(1);
          p.subset('label',l,'quality',2,'logic','and');
-         
+
          testCase.assertThat(p.values{1},IsEmpty);
       end
       

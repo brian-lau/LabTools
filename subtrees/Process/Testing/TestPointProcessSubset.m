@@ -120,20 +120,10 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          testCase.assertEqual(p.values,testCase.values(:,[1 3]));
       end
       
-      function subsetLabelGroupingError(testCase)
-         p = testCase.p;
-         
-         p.labels(1).grouping = metadata.Label('name','hello');
-         p.labels(3).grouping = p.labels(1).grouping;
-         
-         testCase.assertError(@() p.subset('labelVal',struct('a',10),'labelProp','grouping'),...
-            'Process:subset:labelVal');
-      end
-      
       function subsetQuality(testCase)
          p = testCase.p;
          
-         ind = [2 3];
+         ind = 2;
          q = p.quality(ind);
          p.subset('quality',q);
          
@@ -161,15 +151,15 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
          testCase.assertEqual(p.values,testCase.values(:,2));
       end
       
-      function subsetLogicXOR(testCase)
-         p = testCase.p;
-         
-         l = p.labels(2);
-         p.subset('index',2,'label',l,'quality',2,'logic','xor');
-         
-         testCase.assertEqual(p.times,testCase.times(:,[1 3]));
-         testCase.assertEqual(p.values,testCase.values(:,[1 3]));
-      end
+%       function subsetLogicXOR(testCase)
+%          p = testCase.p;
+%          
+%          l = p.labels(2);
+%          p.subset('index',2,'label',l,'quality',2,'logic','xor');
+%          
+%          testCase.assertEqual(p.times,testCase.times(:,[1 3]));
+%          testCase.assertEqual(p.values,testCase.values(:,[1 3]));
+%       end
       
       function subsetEmpty(testCase)
          import matlab.unittest.constraints.HasSize;
