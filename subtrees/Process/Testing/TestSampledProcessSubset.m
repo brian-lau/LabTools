@@ -154,15 +154,15 @@ classdef TestSampledProcessSubset < matlab.unittest.TestCase
          
          testCase.assertEqual(p.values{1},testCase.values(:,2));
       end
-      
-%       function subsetLogicXOR(testCase)
-%          p = testCase.p;
-%          
-%          l = p.labels(2);
-%          p.subset('index',2,'label',l,'quality',2,'logic','xor');
-%          
-%          testCase.assertEqual(p.values{1},testCase.values(:,[1 3]));
-%       end
+
+      function subsetLogicNOT(testCase)
+         p = testCase.p;
+         
+         l = p.labels([1 3]);
+         p.subset('label',l,'logic','not');
+         
+         testCase.assertEqual(p.values{1},testCase.values(:,2));
+      end
       
       function subsetEmpty(testCase)
          import matlab.unittest.constraints.IsEmpty;

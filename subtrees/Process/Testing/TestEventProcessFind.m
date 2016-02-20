@@ -78,6 +78,30 @@ classdef TestEventProcessFind < matlab.unittest.TestCase
          testCase.assertEqual(ev.tStart,NaN);
          testCase.assertEqual(ev.tEnd,NaN);
       end
+
+      function findEventValNaNEq(testCase)
+         p = testCase.p;
+         
+         p.insert(metadata.event.Generic('name','1','tStart',NaN,'tEnd',NaN,'value',NaN));
+         p.insert(metadata.event.Generic('name','2','tStart',NaN,'tEnd',NaN,'value',NaN));
+         ev = p.find('eventProp','value','eventVal',NaN,'policy','all');
+         
+         testCase.assertEqual(ev{1}(1).name,'1');
+         testCase.assertEqual(ev{1}(2).name,'2');
+      end
+      
+      function findEventValNaNNotEq(testCase)
+         p = testCase.p;
+         
+         p.insert(metadata.event.Generic('name','1','tStart',NaN,'tEnd',NaN,'value',NaN));
+         p.insert(metadata.event.Generic('name','2','tStart',NaN,'tEnd',NaN,'value',NaN));
+         ev = p.find('eventProp','value','eventVal',NaN,'policy','all','nansequal',false);
+         
+         testCase.assertTrue(numel(ev{1})==1);
+         testCase.assertEqual(ev{1}.name,'NULL');
+         testCase.assertEqual(ev{1}.tStart,NaN);
+         testCase.assertEqual(ev{1}.tEnd,NaN);
+      end
       
       function findEventVal(testCase)
          p = testCase.p;
@@ -169,23 +193,22 @@ classdef TestEventProcessFind < matlab.unittest.TestCase
       function findLogicAND(testCase)
          p = testCase.p;
          
-         ev = p.find('eventType','metadata.event.Stimulus','func',@(x) x.tStart<=2,'policy','all','logic','and');
+         ev = p.find('eventType','metadata.event.Stimulus','func',@(x) x.tStart~=2,'policy','all','logic','and');
          
          testCase.assertTrue(numel(ev)==1);
          testCase.assertTrue(numel(ev{1})==2);
          testCase.assertEqual(ev{1}(1).name,'fix');
-         testCase.assertEqual(ev{1}(2).name,'cue');
+         testCase.assertEqual(ev{1}(2).name,'feedback');
       end
       
-      function findLogicXOR(testCase)
+      function findLogicNOT(testCase)
          p = testCase.p;
          
-         ev = p.find('eventProp','modality','eventVal','hand','func',@(x) x.tStart>=2,'policy','all','logic','xor');
+         ev = p.find('eventProp','modality','eventVal','hand','func',@(x) x.tStart>=2,'policy','all','logic','not');
 
          testCase.assertTrue(numel(ev)==1);
-         testCase.assertTrue(numel(ev{1})==2);
-         testCase.assertEqual(ev{1}(1).name,'cue');
-         testCase.assertEqual(ev{1}(2).name,'feedback');
+         testCase.assertTrue(numel(ev{1})==1);
+         testCase.assertEqual(ev{1}(1).name,'fix');
       end
       
       function findEventValArray(testCase)
