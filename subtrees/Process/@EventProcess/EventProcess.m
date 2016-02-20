@@ -6,7 +6,7 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       isValidEvent       % start/end time of events in windows?
    end
    properties
-      nullEvent = metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN)
+      null = metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN)
    end
    properties(SetAccess = protected, Hidden, Transient)
       updateEventListener_@event.proplistener % listener
