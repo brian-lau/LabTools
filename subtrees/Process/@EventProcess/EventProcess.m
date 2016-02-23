@@ -1,4 +1,4 @@
-% Event processes
+% Event process
 
 classdef(CaseInsensitiveProperties) EventProcess < PointProcess         
    properties(SetAccess = private, Dependent)

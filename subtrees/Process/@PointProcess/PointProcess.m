@@ -21,7 +21,6 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       count               % # of events in each window
    end
    properties(Dependent, Hidden)
-      %trailingDim_
       trailingInd_        % Convenience for expanding non-leading dims
    end
    

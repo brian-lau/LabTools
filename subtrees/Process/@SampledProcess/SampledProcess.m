@@ -19,7 +19,6 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       dim                 % Dimensionality of each window
    end
    properties(Dependent, Hidden)
-      %trailingDim_
       trailingInd_        % Convenience for expanding non-leading dims
    end
    
@@ -250,10 +249,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          dim = dim(2:end); % leading dim is always time
          trailingInd = repmat({':'},1,numel(dim));
       end
-      
-      %
-      %obj = chop(self,shiftToWindow)
-      
+            
       % In-place transformations
       self = filter(self,b,varargin)
       [self,h,d] = lowpass(self,varargin)

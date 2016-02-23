@@ -74,17 +74,17 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       history = false     % Boolean indicating add queueable methods (TODO)
    end
    properties(Transient)
-      segment@Segment             % Reference to parent Segment
+      segment@Segment     % Reference to parent Segment
    end
    properties(Abstract)
-     trailingInd_
+     trailingInd_         % Cell array for expanding trailing dimension
    end
    properties(SetAccess = protected, Hidden, Transient)
       loadListener_@event.proplistener % lazyLoad listener
       evalListener_@event.listener     % deferredEval listener
    end
    properties(SetAccess = immutable)
-      serializeOnSave = false
+      serializeOnSave = false 
       version = '0.8.2'   % Version string
    end
    events
@@ -353,6 +353,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       
       s = sync(self,event,varargin)
       s = sync__(self,event,varargin)
+      
+      function obj = new(self)
+         obj = copy(self);
+         obj.fix();
+      end
 
       function bool = checkVersion(self,req)
          ver = self.version;
