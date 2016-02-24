@@ -1,8 +1,36 @@
-% shiftToWindow boolean for shifting time so that start of each window = 0, default = true
-% copyInfo boolean for copying info (since it's a handle), default = true
-% copyLabel boolean for copying info (since it's a handle), default = false
+% CHOP - Convert a windowed Process into an array of Processes
+%
+%     chop(self,varargin)
+%
+%     Each window is converted into a Process of the same type as input.
+%     The result of chop() replaces the input variable in the workspace.
+%     chop() is permanent, ie, resetting a chopped object will not return
+%     it to its scalar form.
+%
+%     All inputs are passed in using name/value pairs. The name is a string
+%     followed by the value (described below).
+%     The order of the pairs does not matter, nor does the case.
+%
+% INPUTS
+%     shiftToWindow - boolean, optional, default = True
+%               boolean for shifting time so that start of each window = 0
+%     copyInfo - boolean, optional, default = True
+%               boolean for copying info dictionary (since it's a handle object)
+%     copyLabel - boolean, optional, default = False
+%               boolean for copying labels (since they're handles object)
+%
+%
+% EXAMPLES
+%     s = SampledProcess((1:10)','tStart',1);
+%     s.window = [1 5; 6 10];
+%     s.chop() 
 
-function obj = chop(self,varargin)
+%     $ Copyright (C) 2016 Brian Lau <brian.lau@upmc.fr> $
+%     Released under the BSD license. The license and most recent version
+%     of the code can be found on GitHub:
+%     https://github.com/brian-lau/Process
+
+function chop(self,varargin)
 
 p = inputParser;
 p.KeepUnmatched = true;
