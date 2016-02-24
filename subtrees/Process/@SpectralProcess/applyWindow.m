@@ -41,7 +41,7 @@ for i = 1:nWindowReq
    
    % NaN-pad when window extends beyond process. This extension is
    % done to the nearest sample that fits in the window.
-   [preT,preV] = extendPre(tStart,minWin,self.tStep,dim);
+   [preT,preV] = extendPre(min(tStart,maxWin+self.dt),minWin,self.tStep,dim);
    [postT,postV] = extendPost(tEnd,maxWin-b,self.tStep,dim);
    
    % Times mark leading block edge (for TF methods stepping in blocks), so
