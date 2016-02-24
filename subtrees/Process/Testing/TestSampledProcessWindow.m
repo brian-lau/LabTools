@@ -172,6 +172,22 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
          testCase.assertEqual(s.times,{times(ind)},testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,{values});
       end
+
+%       % rewindow single, initial valid, second invalid
+%       function rewindowSingleValidWindowInitialInvalid(testCase,Fs)
+%          values = (0:2*ceil(Fs))'; % times range from 0 to at least 2 seconds
+%          dt = 1/Fs;
+%          
+%          s = SampledProcess('values',values,'Fs',Fs);
+%          
+%          win2 = [-2 -1];
+%          s.window = win2;
+%          
+%          times = (win2(1):dt:win2(2))';
+%          
+%          testCase.assertEqual(s.times,{times},testCase.tolType,testCase.tol);
+%          testCase.assertEqual(s.values,{nan(size(s.values{1}))});
+%       end
       
       % rewindow single, initial valid, second invalid
       
@@ -199,7 +215,7 @@ classdef TestSampledProcessWindow < matlab.unittest.TestCase
             T{i,1} = times(ind);
             V{i,1} = temp(ind);
          end
-         
+                 
          testCase.assertEqual(s.times,T,testCase.tolType,testCase.tol);
          testCase.assertEqual(s.values,V);
       end
