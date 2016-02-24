@@ -154,7 +154,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
                   'tStart must be less than tEnd.');
          end
 
-         if isnumeric(self.values_{1})
+         if ~self.reset_ && isnumeric(self.values_{1})
             dim = size(self.values_{1});
             [pre,preV] = extendPre(self.tStart,tStart,self.tStep,dim(2:end));
             if ~isempty(pre)
@@ -167,7 +167,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             else
                self.tStart = tStart;
             end
-         elseif isa(self.values_{1},'DataSource')
+         else
             self.tStart = tStart;
          end
       end
@@ -181,7 +181,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
                   'tEnd must be greater than tStart.');
          end
          
-         if isnumeric(self.values_{1})
+         if ~self.reset_ && isnumeric(self.values_{1})
             dim = size(self.values_{1});
             [post,postV] = extendPost(self.tEnd,tEnd,self.tStep,dim(2:end));
             if ~isempty(post)
@@ -194,7 +194,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
             else
                self.tEnd = tEnd;
             end
-         elseif isa(self.values_{1},'DataSource')
+         else
             self.tEnd = tEnd;
          end         
       end

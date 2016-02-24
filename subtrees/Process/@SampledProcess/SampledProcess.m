@@ -153,7 +153,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
                   'tStart must be less than tEnd.');
          end
 
-         if ismatrix(self.values_{1})
+         if ~self.reset_ && ismatrix(self.values_{1})
             dim = size(self.values_{1});
             [pre,preV] = extendPre(self.tStart,tStart,1/self.Fs_,dim(2:end));
             if ~isempty(pre)
@@ -166,7 +166,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             else
                self.tStart = tStart;
             end
-         elseif isa(self.values_{1},'DataSource')
+         else
             self.tStart = tStart;
          end
       end
@@ -180,7 +180,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
                   'tEnd must be greater than tStart.');
          end
          
-         if ismatrix(self.values_{1})
+         if ~self.reset_ && ismatrix(self.values_{1})
             dim = size(self.values_{1});
             [post,postV] = extendPost(self.tEnd,tEnd,1/self.Fs_,dim(2:end));
             if ~isempty(post)
@@ -193,7 +193,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
             else
                self.tEnd = tEnd;
             end
-         elseif isa(self.values_{1},'DataSource')
+         else
             self.tEnd = tEnd;
          end         
       end

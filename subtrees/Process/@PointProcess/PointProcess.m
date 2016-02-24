@@ -192,7 +192,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                   'tStart must be less than tEnd.');
          end
          
-         if tStart > self.tStart
+         if ~self.reset_ & (tStart > self.tStart)
             self.tStart = tStart;
             self.discardBeforeStart();
          else
@@ -208,7 +208,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
             assert(self.tStart <= tEnd,'PointProcess:tEnd:InputValue',...
                   'tEnd must be greater than tStart.');
          end
-         if tEnd < self.tEnd
+         if ~self.reset_ & (tEnd < self.tEnd)
             self.tEnd = tEnd;
             self.discardAfterEnd();
          else

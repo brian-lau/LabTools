@@ -85,7 +85,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties(SetAccess = immutable)
       serializeOnSave = false 
-      version = '0.8.2'   % Version string
+      version = '0.8.3'   % Version string
    end
    events
       runImmediately      % trigger queue evaluation
@@ -114,8 +114,12 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    
    methods(Abstract, Access = protected)
       applySubset(self)
-      applyWindow(self);
-      applyOffset(self,offset);
+      applyWindow(self)
+      applyOffset(self,offset)
+   end
+   
+   methods(Abstract)
+      times = undoTimesOffset(self)
    end
    
    methods(Access = protected)
@@ -223,7 +227,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
 
          newOffset = checkOffset(offset,size(self.window,1));
          self.offset = newOffset;
-         if newOffset ~= 0
+         if ~self.reset_ && any(newOffset ~= 0)
             applyOffset(self,newOffset);
             self.cumulOffset = self.cumulOffset + newOffset;
          end
@@ -343,7 +347,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       self = map(self,func,varargin)
       
       % Keep current data/transformations as original
-      self = fix(self)
+      self = fix(self,varargin)
 
       bool = hasLabel(self,label)
       keys = infoKeys(self,flatBool)
