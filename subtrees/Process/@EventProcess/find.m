@@ -114,27 +114,7 @@ else
    eventTypeInd = false(nev,1);
 end
 
-if ~isempty(par.eventVal)
-   if ischar(par.eventVal)
-      v = arrayfun(@(x) strcmp(x.(par.eventProp),par.eventVal),events,'uni',0,'ErrorHandler',@valErrorHandler);
-   else
-      if par.nansequal && ~par.strictHandleEq
-         % equality of numerics as well as values in fields of structs & object properties
-         % NaNs are considered equal
-         v = arrayfun(@(x) isequaln(x.(par.eventProp),par.eventVal),events,'uni',0,'ErrorHandler',@valErrorHandler);
-      elseif ~par.nansequal && ~par.strictHandleEq
-         % equality of numerics as well as values in fields of structs & object properties
-         % NaNs are not considered equal
-         v = arrayfun(@(x) isequal(x.(par.eventProp),par.eventVal),events,'uni',0,'ErrorHandler',@valErrorHandler);
-      else
-         % This will match handle references, ie. false even if contents match
-         v = arrayfun(@(x) x.(par.eventProp)==par.eventVal,events,'uni',0,'ErrorHandler',@valErrorHandler);
-      end
-   end
-   eventPropInd = vertcat(v{:});
-else
-   eventPropInd = false(nev,1);
-end
+[~,eventPropInd] = events.match(par);
 
 if ~isempty(par.func)
    funcInd = arrayfun(par.func,events,'ErrorHandler',@funcErrorHandler);
@@ -183,17 +163,6 @@ else
    err = MException(err.identifier,err.message);
    cause = MException('EventProcess:find:func',...
       'Problem in function handle.');
-   err = addCause(err,cause);
-   throw(err);
-end
-
-function result = valErrorHandler(err,varargin)
-if strcmp(err.identifier,'MATLAB:noSuchMethodOrField');
-   result = false;
-else
-   err = MException(err.identifier,err.message);
-   cause = MException('EventProcess:find:eventProp',...
-      'Problem in eventProp/Val pair.');
    err = addCause(err,cause);
    throw(err);
 end

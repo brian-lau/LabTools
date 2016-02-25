@@ -131,5 +131,57 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
             end
          end
       end
+      
+      function [events,bool] = match(self,varargin)
+         if (nargin==2) && isstruct(varargin{1})
+            par = varargin{1};
+         else
+            p = inputParser;
+            p.KeepUnmatched= false;
+            p.FunctionName = 'metadata.Event match method';
+            p.addParameter('eventProp','name',@ischar);
+            p.addParameter('eventVal',[]);
+            p.addParameter('nansequal',true,@islogical);
+            p.addParameter('strictHandleEq',false,@islogical);p.parse(varargin{:});
+            par = p.Results;
+         end
+         
+         nObj = numel(self);
+         
+         if ~isempty(par.eventVal)
+            if ischar(par.eventVal)
+               v = arrayfun(@(x) strcmp(x.(par.eventProp),par.eventVal),self,'uni',0,'ErrorHandler',@valErrorHandler);
+            else
+               if par.nansequal && ~par.strictHandleEq
+                  % equality of numerics as well as values in fields of structs & object properties
+                  % NaNs are considered equal
+                  v = arrayfun(@(x) isequaln(x.(par.eventProp),par.eventVal),self,'uni',0,'ErrorHandler',@valErrorHandler);
+               elseif ~par.nansequal && ~par.strictHandleEq
+                  % equality of numerics as well as values in fields of structs & object properties
+                  % NaNs are not considered equal
+                  v = arrayfun(@(x) isequal(x.(par.eventProp),par.eventVal),self,'uni',0,'ErrorHandler',@valErrorHandler);
+               else
+                  % This will match handle references, ie. false even if contents match
+                  v = arrayfun(@(x) x.(par.eventProp)==par.eventVal,self,'uni',0,'ErrorHandler',@valErrorHandler);
+               end
+            end
+            bool = vertcat(v{:});
+         else
+            bool = false(nObj,1);
+         end
+         events = self(bool);         
+      end
+   end
+end
+
+function result = valErrorHandler(err,varargin)
+   if strcmp(err.identifier,'MATLAB:noSuchMethodOrField');
+      result = false;
+   else
+      err = MException(err.identifier,err.message);
+      cause = MException('EventProcess:find:eventProp',...
+         'Problem in eventProp/Val pair.');
+      err = addCause(err,cause);
+      throw(err);
    end
 end

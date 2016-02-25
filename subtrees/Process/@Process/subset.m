@@ -73,7 +73,7 @@ if mod(nargin-1,2)==1 && ~isstruct(varargin{1})
 end
 
 p = inputParser;
-p.KeepUnmatched= false;
+p.KeepUnmatched = false;
 p.FunctionName = 'Process subset method';
 p.addParameter('index',[],@(x) isnumeric(x));
 p.addParameter('label',[],@(x) ischar(x) || iscell(x) || isa(x,'metadata.Label'));
@@ -112,33 +112,7 @@ else
    indexInd = false(nl,1);
 end
 
-if ~isempty(par.label) % requires full label match (ignores labelProp/Val)
-   if isa(par.label,'metadata.Label') 
-      [~,ind] = intersect(obj.labels,par.label,'stable');
-      labelInd = false(nl,1);
-      labelInd(ind) = true;
-   end
-elseif ~isempty(par.labelVal)
-   if ischar(par.labelVal)
-      v = arrayfun(@(x) strcmp(x.(par.labelProp),par.labelVal),labels,'uni',0,'ErrorHandler',@valErrorHandler);
-   else
-      if par.nansequal && ~par.strictHandleEq
-         % equality of numerics as well as values in fields of structs & object properties
-         % NaNs are considered equal
-         v = arrayfun(@(x) isequaln(x.(par.labelProp),par.labelVal),labels,'uni',0,'ErrorHandler',@valErrorHandler);
-      elseif ~par.nansequal && ~par.strictHandleEq
-         % equality of numerics as well as values in fields of structs & object properties
-         % NaNs are not considered equal
-         v = arrayfun(@(x) isequal(x.(par.labelProp),par.labelVal),events,'uni',0,'ErrorHandler',@valErrorHandler);
-      else
-         % This will match handle references, ie. false even if contents match
-         v = arrayfun(@(x) x.(par.labelProp)==par.labelVal,events,'uni',0,'ErrorHandler',@valErrorHandler);
-      end
-   end
-   labelInd = vertcat(v{:});
-else
-   labelInd = false(nl,1);
-end
+[~,labelInd] = labels.match(par);
 
 if ~isempty(par.quality)
    if isnumeric(par.quality)
@@ -183,15 +157,3 @@ tf = baseInd & selection;
 obj.selection_ = tf';
 
 obj.applySubset();
-
-%%
-function result = valErrorHandler(err,varargin)
-if strcmp(err.identifier,'MATLAB:noSuchMethodOrField');
-   result = false;
-else
-   err = MException(err.identifier,err.message);
-   cause = MException('Process:subset:eventProp',...
-      'Problem in eventProp/Val pair.');
-   err = addCause(err,cause);
-   throw(err);
-end
