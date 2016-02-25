@@ -245,7 +245,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       [s,labels] = extract(self,reqLabels)
       output = apply(self,fun,nOpt,varargin)
       [out,n] = mean(self,varargin)
-      [out,n] = std(self,varargin)
+      %[out,n] = std(self,varargin)
       
       % Visualization
       h = plot(self,varargin)

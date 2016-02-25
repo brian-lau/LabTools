@@ -8,7 +8,7 @@
 function [out,n] = mean(self,varargin)
 
 p = inputParser;
-p.FunctionName = 'SpectralProcess mean method';
+p.FunctionName = 'SampledProcess mean method';
 p.addParameter('labels',[],@(x) ischar(x) || iscell(x) || isa(x,'metadata.Label'));
 p.addParameter('outputStruct',false,@(x) isscalar(x) || islogical(x));
 p.addParameter('minN',1,@(x) isscalar(x));
@@ -29,7 +29,7 @@ try
    % TODO possibly adjust windows to min/max across all processes?
 catch err
    if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-      cause = MException('SpectralProcess:mean:InputValue',...
+      cause = MException('SampledProcess:mean:InputValue',...
          'Not all processes have the same number of windows.');
       err = addCause(err,cause);
    end
@@ -37,52 +37,16 @@ catch err
 end
 
 try
-   f = cat(1,self.f);
-   if size(unique(f,'rows'),1) ~= 1
-      error('Not all processes have the same frequency sampling.');
-   else
-      f = f(1,:);
-   end
-catch err
-   if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-      cause = MException('SpectralProcess:mean:InputValue',...
-         'Not all processes have the same frequency sampling.');
-      err = addCause(err,cause);
-   end
-   rethrow(err);
-end
-
-% previously, I exactly matched the time vectors, but I'm worried that this
-% will fail due to small floating point inaccuracies that accumulate
-% this also suggests that even with exact window/tStep/tBlock/offset, we
-% could end up with a missing sample at the beginning end of window?
-try
    dt = cat(1,self.dt);
    if size(unique(dt)) ~= 1
-      error('Not all processes have the same frequency sampling.');
+      error('Not all processes have the same temporal sampling.');
    else
       dt = dt(1,:);
    end
 catch err
    if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-      cause = MException('SpectralProcess:mean:InputValue',...
+      cause = MException('SampledProcess:mean:InputValue',...
          'Not all processes have the same temporal sampling.');
-      err = addCause(err,cause);
-   end
-   rethrow(err);
-end
-
-try
-   tBlock = cat(1,self.tBlock);
-   if size(unique(tBlock)) ~= 1
-      error('Not all processes have the same temporal sampling.');
-   else
-      tBlock = tBlock(1,:);
-   end
-catch err
-   if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-      cause = MException('SpectralProcess:mean:InputValue',...
-         'Not all processes have the same frequency sampling.');
       err = addCause(err,cause);
    end
    rethrow(err);
@@ -94,15 +58,15 @@ if ~isempty(par.labels)
 end
 
 [s,l] = extract(self,uLabels);
-s = cat(3,s.values);
+s = cat(2,s.values);
 l = cat(2,l{:});
 
-values = nan(size(s,1),size(s,2),numel(uLabels));
+values = nan(size(s,1),numel(uLabels));
 n = zeros(size(uLabels));
 for i = 1:numel(uLabels)
    ind = l == uLabels(i); % handle equality!
    if sum(ind) >= par.minN
-      values(:,:,i) = nanmean(s(:,:,ind),3);
+      values(:,i) = nanmean(s(:,ind),2);
    end
    n(i) = sum(ind);
 end
@@ -115,10 +79,8 @@ if par.outputStruct
    out.values = values(:,:,ind);
    out.labels = uLabels(ind);
 else
-   out = SpectralProcess(values(:,:,ind),...
-      'f',f,...
-      'tBlock',tBlock,...
-      'tStep',dt,...
+   out = SampledProcess(values(:,ind),...
+      'Fs',1/dt,...
       'labels',uLabels(ind),...
       'tStart',relWindow(1),...
       'tEnd',relWindow(2)...
