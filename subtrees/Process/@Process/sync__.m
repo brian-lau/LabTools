@@ -60,10 +60,11 @@ if isempty(par.window)
    clear temp;
 else
    window = par.window;
+
+   window = bsxfun(@plus,window,actualOffset);
+   window = bsxfun(@plus,window,-vec([self.cumulOffset]));
+   window = num2cell(window,2);
 end
-window = bsxfun(@plus,window,actualOffset);
-window = bsxfun(@plus,window,-vec([self.cumulOffset]));
-window = num2cell(window,2);
 
 self.setWindow(window);
 self.setOffset(-actualOffset);

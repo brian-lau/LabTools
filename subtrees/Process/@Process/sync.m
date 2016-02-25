@@ -15,7 +15,6 @@ p.parse(event,varargin{:});
 par = p.Results;
 
 notify(self,'isSyncing',SyncEventData(par));
-disp('running sync');
 
 nObj = numel(self);
 if (numel(event)==1) && (nObj>1)
@@ -50,6 +49,7 @@ if isempty(par.window)
    % find window that includes all data
    temp = vertcat(self.window);
    temp = bsxfun(@minus,temp,actualOffset);
+
    window = [min(temp(:,1)) max(temp(:,2))];
    window = checkWindow(window,size(window,1));
    
@@ -59,10 +59,11 @@ if isempty(par.window)
    clear temp;
 else
    window = par.window;
+   
+   window = bsxfun(@plus,window,actualOffset);
+   window = bsxfun(@plus,window,-vec([self.cumulOffset]));
+   window = num2cell(window,2);
 end
-window = bsxfun(@plus,window,actualOffset);
-window = bsxfun(@plus,window,-vec([self.cumulOffset]));
-window = num2cell(window,2);
 
 self.setWindow(window);
 self.setOffset(-actualOffset);
