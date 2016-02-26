@@ -28,25 +28,25 @@ end
 uLabels = unique(cat(2,self.labels),'stable');
 nLabels = numel(uLabels);
 
-if strfind(method,'avg')
-   try
-      f = cat(1,self.f);
-   catch err
-      if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-         cause = MException('SpectralProcess:normalize:InputValue',...
-            'Not all processes have the same frequency axis.');
-         err = addCause(err,cause);
-      end
-      rethrow(err);
-   end
-   if size(unique(f,'rows'),1) ~= 1
-      error('SpectralProcess:normalize:InputValue',...
-         'Not all processes have common frequency axis.');
-   else
-      f = f(1,:);
-      nf = numel(f);
-   end
-end
+% if strfind(method,'avg')
+%    try
+%       f = cat(1,self.f);
+%    catch err
+%       if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
+%          cause = MException('SpectralProcess:normalize:InputValue',...
+%             'Not all processes have the same frequency axis.');
+%          err = addCause(err,cause);
+%       end
+%       rethrow(err);
+%    end
+%    if size(unique(f,'rows'),1) ~= 1
+%       error('SpectralProcess:normalize:InputValue',...
+%          'Not all processes have common frequency axis.');
+%    else
+%       f = f(1,:);
+%       nf = numel(f);
+%    end
+% end
 
 obj = copy(self);
 % Sync to event
@@ -54,9 +54,20 @@ par.processTime = false;
 obj.sync__(par.event,par);
 
 if strfind(method,'avg')
-   temp = obj.mean('outputStruct',true);
-   normMean = nanmean(temp.values);
-   normStd = nanstd(temp.values);
+   [s,l] = extract(obj);
+   s = cat(3,s.values);
+   l = cat(2,l{:});
+   normMean = nan(1,size(s,2),nLabels);
+   normStd = nan(1,size(s,2),nLabels);
+   for i = 1:nLabels
+      ind = l==uLabels(i);
+      if any(ind)
+         % Collapse over Processes, permuting to stack time windows
+         temp = reshape(permute(s(:,:,ind),[2 1 3]),nf,size(s,1)*sum(ind))';
+         normMean(1,:,i) = nanmean(temp);
+         normStd(1,:,i) = nanstd(temp);
+      end
+   end
 else
    normVals = arrayfun(@(x) x.values{1},obj,'uni',0);
 end

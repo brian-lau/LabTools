@@ -256,6 +256,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       [self,h,d] = highpass(self,varargin)
       [self,h,d] = bandpass(self,varargin)
       self = detrend(self)
+      self = normalize(self,varargin)
       
       % Transformations potentially altering sampling
       self = resample(self,newFs,varargin)
