@@ -244,7 +244,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
       % Output
       [s,labels] = extract(self,reqLabels)
       output = apply(self,fun,nOpt,varargin)
-      [out,n] = mean(self,varargin)
+      [out,n,count] = mean(self,varargin)
       %[out,n] = std(self,varargin)
       
       % Visualization

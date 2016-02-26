@@ -12,7 +12,7 @@
 
 suite = matlab.unittest.TestSuite.fromFolder(pwd);
 runner = matlab.unittest.TestRunner.withTextOutput;
-dir = '/Users/brian/Documents/Code/Repos/LabTools/subtrees/Process/@SampledProcess';
-runner.addPlugin(matlab.unittest.plugins.CodeCoveragePlugin.forFolder(dir));
+%dir = '/Users/brian/Documents/Code/Repos/LabTools/subtrees/Process/@SampledProcess';
+%runner.addPlugin(matlab.unittest.plugins.CodeCoveragePlugin.forFolder(dir));
 result = runner.run(suite);
 table(result)
