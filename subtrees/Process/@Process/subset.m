@@ -156,4 +156,6 @@ end
 tf = baseInd & selection;
 obj.selection_ = tf';
 
-obj.applySubset();
+if ~all(obj.selection_)
+   obj.applySubset();
+end
