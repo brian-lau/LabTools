@@ -4,7 +4,12 @@ function [s,labels] = extract(self,reqLabels)
 s(numel(self),1) = struct('times',[],'values',[]);
 labels = cell(numel(self),1);
 for i = 1:numel(self)
-   [labels{i,1},~,ind] = intersect(reqLabels,self.labels,'stable');
+   if nargin < 2
+      labels{i,1} = self(i).labels;
+      ind = 1:self(i).n;
+   else
+      [labels{i,1},~,ind] = intersect(reqLabels,self(i).labels,'stable');
+   end
    
    if any(ind)
       if size(self(i).window,1) == 1
