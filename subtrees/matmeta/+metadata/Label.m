@@ -48,9 +48,8 @@ classdef Label < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyable
          
          if ~isempty(par.label) % requires full label match (ignores labelProp/Val)
             if isa(par.label,'metadata.Label')
-               [~,ind] = intersect(self,par.label,'stable');
-               bool = false(nObj,1);
-               bool(ind) = true;
+               bool = ismember(self,par.label);
+               bool = bool(:);
             end
          elseif ~isempty(par.labelVal)
             if ischar(par.labelVal)
