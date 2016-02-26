@@ -265,7 +265,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       % Output
       [s,labels] = extract(self,reqLabels)
       output = apply(self,fun,nOpt,varargin)
-      [out,n] = mean(self,varargin)
+      [out,n,count] = mean(self,varargin)
       obj = psd(self,varargin)
       obj = tfr(self,varargin)
       obj = coh(self,varargin)

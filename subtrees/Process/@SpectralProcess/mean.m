@@ -5,18 +5,23 @@
 % checktimes?
 % quality check
 
-function [out,n] = mean(self,varargin)
+function [out,n,count] = mean(self,varargin)
 
 p = inputParser;
 p.FunctionName = 'SpectralProcess mean method';
 p.addParameter('labels',[],@(x) ischar(x) || iscell(x) || isa(x,'metadata.Label'));
 p.addParameter('outputStruct',false,@(x) isscalar(x) || islogical(x));
 p.addParameter('minN',1,@(x) isscalar(x));
-p.addParameter('type','nanmean',@ischar);
+p.addParameter('method','nanmean',@(x) any(strcmp(x,...
+   {'mean' 'nanmean' 'trimmean' 'winsor'})));
+p.addParameter('percent',5,@(x) isscalar(x));
 p.parse(varargin{:});
 par = p.Results;
 
-% issue warning when nObj = 1, tell them to use apply
+if numel(self) == 1
+   warning('Process mean operates on Process arrays.');
+   return;
+end
 
 try
    % TODO this will not work properly with multiple windows
@@ -98,18 +103,28 @@ s = cat(3,s.values);
 l = cat(2,l{:});
 
 values = nan(size(s,1),size(s,2),numel(uLabels));
+count = zeros(size(s,1),size(s,2),numel(uLabels));
 n = zeros(size(uLabels));
 for i = 1:numel(uLabels)
    ind = l == uLabels(i); % handle equality!
    if sum(ind) >= par.minN
-      values(:,:,i) = nanmean(s(:,:,ind),3);
+      switch par.method
+         case 'nanmean'
+            values(:,:,i) = nanmean(s(:,:,ind),3);
+         case 'mean'
+            values(:,i) = mean(s(:,:,ind),3);
+         case 'trimmean'
+            values(:,i) = trimmean(s(:,:,ind),par.percent,'round',3);
+      end
    end
+   count(:,:,i) = sum(~isnan(s(:,:,ind)),3);
    n(i) = sum(ind);
 end
 
 % Only return valid means
 ind = n >= par.minN;
 n = n(ind);
+count = count(:,:,ind);
 
 if par.outputStruct
    out.values = values(:,:,ind);
