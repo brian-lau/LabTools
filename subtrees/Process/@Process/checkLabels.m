@@ -2,8 +2,13 @@ function l = checkLabels(self,labels)
 
 n = self.n;
 if isempty(labels)
-   l = arrayfun(@(x) metadata.Label('name',['id' num2str(x)]),1:n,'uni',0);
-   l = cat(2,l{:});
+   if n == 0
+      l = metadata.Label;
+      l(1) = [];
+   else
+      l = arrayfun(@(x) metadata.Label('name',['id' num2str(x)]),1:n,'uni',0);
+      l = cat(2,l{:});
+   end
 elseif iscell(labels)
    assert(numel(labels)==n,'Process:labels:InputFormat',...
       '# labels does not match # of signals');

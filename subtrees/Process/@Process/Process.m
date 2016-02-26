@@ -243,10 +243,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
          %----------------------------------------
          
-         if self.n
-            labels = checkLabels(self,labels);
-            self.labels = labels;
-         end
+         labels = checkLabels(self,labels);
+         self.labels = labels;
       end
       
       function set.quality(self,quality)
@@ -259,13 +257,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
          %----------------------------------------
 
-         if self.n
-            quality = checkQuality(self,quality);
-            self.quality = quality;
-            % Fix change
-            if ~isempty(self.quality_)
-               self.quality_(self.selection_) = quality;
-            end
+         quality = checkQuality(self,quality);
+         self.quality = quality;
+         % Fix change
+         if ~isempty(self.quality_)
+            self.quality_(self.selection_) = quality;
          end
       end
       
