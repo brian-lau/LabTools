@@ -134,29 +134,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       evalOnDemand(self,varargin)
       revalOnDemand(self)
       
-      function disableSegmentListeners(self)
-         for i = 1:numel(self)
-            if ~isempty(self(i).segment)
-               if self(i).segment.coordinateProcesses
-                  [self(i).segment.listeners_.offset.Enabled] = deal(false);
-                  [self(i).segment.listeners_.window.Enabled] = deal(false);
-                  [self(i).segment.listeners_.sync.Enabled] = deal(false);
-               end
-            end
-         end
-      end
-      
-      function enableSegmentListeners(self)
-         for i = 1:numel(self)
-            if ~isempty(self(i).segment)
-               if self(i).segment.coordinateProcesses
-                  [self(i).segment.listeners_.offset.Enabled] = deal(true);
-                  [self(i).segment.listeners_.window.Enabled] = deal(true);
-                  [self(i).segment.listeners_.sync.Enabled] = deal(true);
-               end
-            end
-         end
-      end
+      disableSegmentListeners(self)
+      enableSegmentListeners(self)
    end
 
    methods            
@@ -323,12 +302,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
          end
       end
       
-      chop(self,varargin)
-
       % Assignment for object arrays
       self = setWindow(self,window)
       self = setOffset(self,offset)
-      
+
+      chop(self,varargin)
       self = subset(self,varargin)
 
       bool = isQueueable(self)
@@ -349,19 +327,13 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       keys = infoKeys(self,flatBool)
       bool = infoHasKey(self,key)
       bool = infoHasValue(self,value,varargin)
+      bool = checkVersion(self,req)
+
       info = copyInfo(self)      
       
       s = sync(self,event,varargin)
       s = sync__(self,event,varargin)
       
-      function obj = new(self)
-         obj = copy(self);
-         obj.fix();
-      end
-
-      function bool = checkVersion(self,req)
-         ver = self.version;
-         bool = checkVersion(ver,req);
-      end
+      obj = new(self)
    end
 end

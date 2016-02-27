@@ -1,6 +1,3 @@
-% should be able to handle passing in raw values to normalize by
-% need to implement normalize by average across elements
-% qualityMask
 function self = normalize(self,event,varargin)
 
 p = inputParser;
@@ -14,21 +11,15 @@ p.addParameter('method','divide',@(x) any(strcmp(x,...
    'z-avg', 'z-score-avg' 'z-avg', 'z-score-avg' 'd-avg' 'divide-avg'})));
 p.parse(event,varargin{:});
 par = p.Results;
-method = lower(par.method);
-
-% Allow same event or different events
-% Allow same window or different windows
+meanPar = p.Unmatched;
 
 if ~isempty(par.window)
-   assert(all([self.tStep] <= (par.window(2)-par.window(1))),...
+   assert(all([self.dt] <= (par.window(2)-par.window(1))),...
       'SpectralProcess:normalize:window:InputValue',...
       'Window must be wide enough to contain at least 1 sample');
 end
 
-uLabels = unique(cat(2,self.labels),'stable');
-nLabels = numel(uLabels);
-
-if strfind(method,'avg')
+if strfind(par.method,'avg')
    try
       f = cat(1,self.f);
    catch err
@@ -44,7 +35,6 @@ if strfind(method,'avg')
          'Not all processes have common frequency axis.');
    else
       f = f(1,:);
-      nf = numel(f);
    end
 end
 
@@ -53,16 +43,18 @@ obj = copy(self);
 par.processTime = false;
 obj.sync__(par.event,par);
 
-if strfind(method,'avg')
-   temp = obj.mean('outputStruct',true);
+if strfind(par.method,'avg')
+   meanPar.outputStruct = true;
+   temp = obj.mean(meanPar);
    normMean = nanmean(temp.values);
    normStd = nanstd(temp.values);
+   uLabels = temp.labels;
 else
    normVals = arrayfun(@(x) x.values{1},obj,'uni',0);
 end
 
 for i = 1:numel(self)
-   switch method
+   switch par.method
       case {'s' 'subtract'}
          self(i).values{1} = bsxfun(@minus,self(i).values{1},nanmean(normVals{i},1));
       case {'z', 'z-score'}
@@ -72,13 +64,25 @@ for i = 1:numel(self)
          self(i).values{1} = bsxfun(@rdivide,self(i).values{1},nanmean(normVals{i},1)) - 1;
       case {'s-avg' 'subtract-avg'}
          [~,ind] = intersect(self(i).labels,uLabels,'stable');
-         self(i).values{1} = bsxfun(@minus,self(i).values{1},normMean(1,:,ind));
+         if any(ind)
+            self(i).values{1} = bsxfun(@minus,self(i).values{1},normMean(1,:,ind));
+         else
+            self(i).values{1}(:,:,:) = NaN;
+         end
       case {'z-avg', 'z-score-avg'}
          [~,ind] = intersect(self(i).labels,uLabels,'stable');
-         self(i).values{1} = bsxfun(@minus,self(i).values{1},normMean(1,:,ind));
-         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},normStd(1,:,ind));
+         if any(ind)
+            self(i).values{1} = bsxfun(@minus,self(i).values{1},normMean(1,:,ind));
+            self(i).values{1} = bsxfun(@rdivide,self(i).values{1},normStd(1,:,ind));
+         else
+            self(i).values{1}(:,:,:) = NaN;
+         end
       case {'d-avg' 'divide-avg'}
          [~,ind] = intersect(self(i).labels,uLabels,'stable');
-         self(i).values{1} = bsxfun(@rdivide,self(i).values{1},normMean(1,:,ind));
+         if any(ind)
+            self(i).values{1} = bsxfun(@rdivide,self(i).values{1},normMean(1,:,ind));
+         else
+            self(i).values{1}(:,:,:) = NaN;
+         end
    end
 end
