@@ -92,7 +92,6 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          self.times_ = {tvec(par.tStart,self.tStep,dim(1))}; 
          self.times = self.times_;
          self.Fs_ = 1/self.tStep;
-         self.Fs = self.Fs_;
          
          self.set_n();
       
@@ -213,6 +212,10 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          self.tStep = tStep;
       end
       
+      function Fs = get.Fs(self)
+         Fs = self.Fs_;
+      end
+      
       function dt = get.dt(self)
          dt = 1/self.Fs;
       end
@@ -235,9 +238,6 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          trailingInd = repmat({':'},1,numel(dim));
       end
       
-      %
-      obj = chop(self,shiftToWindow)
-
       % In-place transformations
       self = normalize(self,varargin)
       
