@@ -28,8 +28,11 @@
 %               should return a vector of booleans with size equal to the #
 %               of channels in Process
 %     logic   - string, optional, default = 'or'
-%               One of {'or' 'any' 'and' 'all' 'not'} defining the logic to
-%               be applied.
+%               One of following defining the logic to be applied:
+%               {'any' 'or' 'union'} logical OR of all criteria
+%               'notany' negation of logical OR of all criteria
+%               {'all' 'and' 'intersection'} logical AND of all criteria
+%               'notall' negation of logical AND of all criteria
 %     nansequal - boolean, optional, default = True
 %               True indicates that NaNs should be treated as equal
 %     strictHandleEq - boolean, optional, default = False
@@ -53,7 +56,7 @@
 %     p.subset('labelProp','grouping','labelVal','group1') % channels 1,3 by grouping
 %
 %     p.reset();
-%     p.subset('labelProp','grouping','labelVal','group1','logic','not') % channels 2 by exclusion
+%     p.subset('labelProp','grouping','labelVal','group1','logic','notany') % channels 2 by exclusion
 %
 %     p.reset();
 %     p.subset('func',@(x) x.quality > 0.25) % channels 2,3 by function
@@ -81,7 +84,8 @@ p.addParameter('labelProp','name',@ischar);
 p.addParameter('labelVal',[]);
 p.addParameter('quality',[],@(x) isnumeric(x) || isa(x,'function_handle'));
 p.addParameter('func',[],@(x) isa(x,'function_handle'));
-p.addParameter('logic','or',@(x) any(strcmp(x,{'any' 'or' 'union' 'all' 'and' 'intersection' 'not'})));
+p.addParameter('logic','or',@(x) any(strcmp(x,...
+   {'any' 'or' 'union' 'notany' 'all' 'and' 'intersection' 'notall'})));
 p.addParameter('nansequal',true,@islogical);
 p.addParameter('strictHandleEq',false,@islogical);p.parse(varargin{:});
 par = p.Results;
@@ -134,9 +138,9 @@ end
 switch lower(par.logic)
    case {'or' 'union' 'any'}
       selection = indexInd | labelInd | qualityInd | funcInd;
-   case {'not'}
+   case {'notany'}
       selection = ~(indexInd | labelInd | qualityInd | funcInd);
-   case {'and' 'intersection' 'all'}
+   case {'and' 'intersection' 'all' 'notall'}
       if isempty(par.index)
          indexInd = true(nl,1);
       end
@@ -150,6 +154,9 @@ switch lower(par.logic)
          funcInd = true(nl,1);
       end
       selection = indexInd & labelInd & qualityInd & funcInd;
+      if strcmp(par.logic,'notall')
+         selection = ~selection;
+      end
 end
 
 % Match against current selection

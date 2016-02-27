@@ -159,9 +159,22 @@ classdef TestSampledProcessSubset < matlab.unittest.TestCase
          p = testCase.p;
          
          l = p.labels([1 3]);
-         p.subset('label',l,'logic','not');
+         p.subset('label',l,'logic','notany');
          
          testCase.assertEqual(p.values{1},testCase.values(:,2));
+      end
+      
+      function subsetLogicNOTALL(testCase)
+         p = testCase.p;
+         
+         l = p.labels;
+         l(1).grouping = 'group';
+         l(2).grouping = 'group';
+         l(3).grouping = 'group';
+         p.subset('label',l(1),'labelProp','grouping','labelVal','group',...
+            'logic','notany');
+         
+         testCase.assertEqual(p.values{1},testCase.values(:,2:3));
       end
       
       function subsetEmpty(testCase)
