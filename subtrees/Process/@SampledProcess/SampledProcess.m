@@ -294,7 +294,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
    end
    
    methods(Access = protected)
-      applySubset(self)
+      applySubset(self,subsetOriginal)
       applyWindow(self)
       applyOffset(self,offset)
    end

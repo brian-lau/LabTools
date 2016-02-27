@@ -39,6 +39,9 @@
 %               True indicates that handle compatible labelVals will
 %               require that the handles match, not just the contents of
 %               the handle object
+%     subsetOriginal - boolean, optional, default = False
+%               True indicates that original times/values will also be
+%               subset, which cannot be reversed by resetting
 %
 % EXAMPLES
 %     p = PointProcess('times',{(1:2)' (6:10)' (11:20)'},'quality',[0 1 1]);
@@ -87,7 +90,9 @@ p.addParameter('func',[],@(x) isa(x,'function_handle'));
 p.addParameter('logic','or',@(x) any(strcmp(x,...
    {'any' 'or' 'union' 'notany' 'all' 'and' 'intersection' 'notall'})));
 p.addParameter('nansequal',true,@islogical);
-p.addParameter('strictHandleEq',false,@islogical);p.parse(varargin{:});
+p.addParameter('strictHandleEq',false,@islogical);
+p.addParameter('subsetOriginal',false,@islogical);
+p.parse(varargin{:});
 par = p.Results;
 
 nObj = numel(self);
@@ -164,5 +169,5 @@ tf = baseInd & selection;
 obj.selection_ = tf';
 
 if ~all(obj.selection_)
-   obj.applySubset();
+   obj.applySubset(par.subsetOriginal);
 end

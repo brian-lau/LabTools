@@ -265,7 +265,7 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
    end
    
    methods(Access = protected)
-      applySubset(self)
+      applySubset(self,subsetOriginal)
       applyWindow(self)
       applyOffset(self,offset)
    end
