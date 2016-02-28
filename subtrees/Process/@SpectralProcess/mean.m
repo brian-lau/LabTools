@@ -146,7 +146,7 @@ end
 s = cat(3,s.values);
 l = cat(2,l{:});
 
-uLabels = unique(cat(2,self.labels),'stable');
+uLabels = unique(cat(2,obj.labels),'stable');
 
 values = nan(size(s,1),size(s,2),numel(uLabels));
 if nargout == 3
