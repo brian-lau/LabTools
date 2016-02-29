@@ -47,11 +47,8 @@ if numel(self) > 1
 end
 
 nWindow = size(self.window,1);
-% Looped allocation if there is a circular reference.
-% http://www.mathworks.com/support/bugreports/893538
-for i = 1:nWindow
-   obj(i) = feval(class(self));
-end
+% Preallocate
+obj(nWindow,1) = feval(class(self));
 
 oldOffset = self.offset;
 oldCumulOffset = self.cumulOffset;
