@@ -318,7 +318,10 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       self = setInclusiveWindow(self)
       self = reset(self,n)
       self = undo(self,n)
+      
+      % 
       self = map(self,func,varargin)
+      self = clip(self,value,varargin)
       
       % Keep current data/transformations as original
       self = fix(self,varargin)
