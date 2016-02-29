@@ -147,46 +147,55 @@ s = cat(3,s.values);
 l = cat(2,l{:});
 
 uLabels = unique(cat(2,obj.labels),'stable');
+clear obj;
 
 values = nan(size(s,1),size(s,2),numel(uLabels));
 if nargout == 3
    count = zeros(size(s,1),size(s,2),numel(uLabels));
 end
+ind = false(numel(uLabels),size(s,3));
 n = zeros(size(uLabels));
 for i = 1:numel(uLabels)
-   ind = l == uLabels(i); % handle equality!
-   if sum(ind) >= par.minN
+   ind(i,:) = l == uLabels(i); % handle equality!
+   if sum(ind(i,:)) >= par.minN
       switch par.method
          case 'nanmean'
-            values(:,:,i) = nanmean(s(:,:,ind),3);
+            values(:,:,i) = nanmean(s(:,:,ind(i,:)),3);
          case 'mean'
-            values(:,:,i) = mean(s(:,:,ind),3);
+            values(:,:,i) = mean(s(:,:,ind(i,:)),3);
          case 'trimmean'
-            values(:,:,i) = trimmean(s(:,:,ind),par.percent,'round',3);
+            values(:,:,i) = trimmean(s(:,:,ind(i,:)),par.percent,'round',3);
+         case 'winsor'
+            % TODO, update stat.winsor to work columnwise
+            values(:,:,i) = nanmean(stat.winsor(s(:,:,ind(i,:)),...
+               [par.percent 100-par.percent]),2);
       end
    end
    if nargout == 3
-      count(:,:,i) = sum(~isnan(s(:,:,ind)),3);
+      count(:,:,i) = sum(~isnan(s(:,:,ind(i,:))),3);
    end
-   n(i) = sum(ind);
+   n(i) = sum(ind(i,:));
 end
 
 % Only return valid means
-ind = n >= par.minN;
-n = n(ind);
+ind2 = n >= par.minN;
+n = n(ind2);
 if nargout == 3
-   count = count(:,:,ind);
+   count = count(:,:,ind2);
 end
 
 if par.outputStruct
-   out.values = values(:,:,ind);
-   out.labels = uLabels(ind);
+   out.values = values(:,:,ind2);
+   out.labels = uLabels(ind2);
+   out.fullValues = s;
+   out.fullLabels = l;
+   out.fullIndex = ind;
 else
-   out = SpectralProcess(values(:,:,ind),...
+   out = SpectralProcess(values(:,:,ind2),...
       'f',f,...
       'tBlock',tBlock,...
       'tStep',dt,...
-      'labels',uLabels(ind),...
+      'labels',uLabels(ind2),...
       'tStart',relWindow(1),...
       'tEnd',relWindow(2)...
       );

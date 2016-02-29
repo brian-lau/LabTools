@@ -110,53 +110,53 @@ s = cat(2,s.values);
 l = cat(2,l{:});
 
 uLabels = unique(cat(2,obj.labels),'stable');
+clear obj;
 
 values = nan(size(s,1),numel(uLabels));
 if nargout == 3
    count = zeros(size(s,1),numel(uLabels));
 end
+ind = false(numel(uLabels),size(s,2));
 n = zeros(size(uLabels));
 for i = 1:numel(uLabels)
-   ind = l == uLabels(i); % handle equality!
-   if sum(ind) >= par.minN
+   ind(i,:) = l == uLabels(i); % handle equality!
+   if sum(ind(i,:)) >= par.minN
       switch par.method
          case 'nanmean'
-            values(:,i) = nanmean(s(:,ind),2);
+            values(:,i) = nanmean(s(:,ind(i,:)),2);
          case 'mean'
-            values(:,i) = mean(s(:,ind),2);
+            values(:,i) = mean(s(:,ind(i,:)),2);
          case 'trimmean'
-            values(:,i) = trimmean(s(:,ind),par.percent,'round',2);
+            values(:,i) = trimmean(s(:,ind(i,:)),par.percent,'round',2);
          case 'winsor'
             % TODO, update stat.winsor to work columnwise
-            if numel(par.percent) == 1
-               values(:,i) = nanmean(...
-                  stat.winsor(s(:,ind),[par.percent 100-par.percent]),...
-                  2);
-            elseif numel(par.percent) == 2
-               
-            end
+            values(:,i) = nanmean(stat.winsor(s(:,ind(i,:)),...
+               [par.percent 100-par.percent]),2);
       end
    end
    if nargout == 3
-      count(:,i) = sum(~isnan(s(:,ind)),2);
+      count(:,i) = sum(~isnan(s(:,ind(i,:))),2);
    end
-   n(i) = sum(ind);
+   n(i) = sum(ind(i,:));
 end
 
 % Only return valid means
-ind = n >= par.minN;
-n = n(ind);
+ind2 = n >= par.minN;
+n = n(ind2);
 if nargout == 3
-   count = count(:,ind);
+   count = count(:,ind2);
 end
 
 if par.outputStruct
-   out.values = values(:,:,ind);
-   out.labels = uLabels(ind);
+   out.values = values(:,ind2);
+   out.labels = uLabels(ind2);
+   out.fullValues = s;
+   out.fullLabels = l;
+   out.fullIndex = ind;
 else
-   out = SampledProcess(values(:,ind),...
+   out = SampledProcess(values(:,ind2),...
       'Fs',1/dt,...
-      'labels',uLabels(ind),...
+      'labels',uLabels(ind2),...
       'tStart',relWindow(1),...
       'tEnd',relWindow(2)...
       );
