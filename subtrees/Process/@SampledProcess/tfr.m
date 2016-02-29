@@ -13,8 +13,10 @@ function obj = tfr(self,varargin)
 
 nObj = numel(self);
 if nObj > 1
+   % Preallocate
+   %obj(nObj,1) = SampledProcess();
    for i = 1:nObj
-      obj(i) = tfr(self(i),varargin{:});
+      obj(i) = tfr(self(i),varargin{:}); %Preallocate?
    end
    return
 end
@@ -29,10 +31,10 @@ else
    p.addParameter('tBlock',1,@(x) isnumeric(x) && isscalar(x));
    p.addParameter('tStep',[],@(x) isnumeric(x) && isscalar(x));
    p.addParameter('f',0:100,@(x) isnumeric(x) && isvector(x));
-   p.addParameter('tapers',[5 9],@(x) isnumeric(x) && isvector(x));
-   p.addParameter('pad',0,@(x) isnumeric(x) && isscalar(x));
+   %p.addParameter('tapers',[5 9],@(x) isnumeric(x) && isvector(x));
+   %p.addParameter('pad',0,@(x) isnumeric(x) && isscalar(x));
    p.parse(varargin{:});
-   %params = p.Unmatched;
+   params = p.Unmatched;
 end
 par = p.Results;
 
@@ -48,19 +50,24 @@ tStep = nStep*self.dt;
 
 switch lower(par.method)
    case {'stft' 'spectrogram'}      
-      window = nBlock; % use Hanning window default
+      window = nBlock; % Hamming window is used for each segment
       noverlap = nBlock - nStep;
       n = numel(self.labels);
       for i = 1:n
-         [temp,f,~] = spectrogram(self.values{1}(:,i),window,noverlap,par.f,self.Fs);
+         %[temp,f,~] = spectrogram(self.values{1}(:,i),window,noverlap,par.f,self.Fs);
+         [~,f,~,temp] = spectrogram(self.values{1}(:,i),window,noverlap,par.f,self.Fs);
          S(:,:,i) = abs(temp');
       end
    case {'chronux' 'multitaper'}
-      tfParams.tapers = par.tapers;
-      tfParams.pad = par.pad;
-      tfParams.Fs = self.Fs;
-      tfParams.fpass = par.f;
-      [S,~,f] = mtspecgramc(self.values{1}, [tBlock tStep], tfParams);
+      fn = fieldnames(params);
+      if isempty(fn)
+         params.tapers = [5 9];
+         params.pad = 1;
+      end
+      params.Fs = self.Fs;
+      params.fpass = [min(par.f) max(par.f)];
+      params.trialave = 0;
+      [S,~,f] = mtspecgramc(self.values{1},[tBlock tStep],params);
    case {'stockwell', 'strans'}
       %TODO
    case {'wavelet', 'cwt'}
