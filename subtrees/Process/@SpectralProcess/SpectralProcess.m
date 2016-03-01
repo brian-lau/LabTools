@@ -17,8 +17,10 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
    properties(SetAccess = protected, Dependent)
       dt                  % 1/Fs
    end
+   properties
+      params
+   end
    properties(SetAccess = protected)
-      params              
       tBlock              % Duration of each spectral estimate
       tStep               % Duration of step taken for each spectral estimate
       f                   % Frequencies
