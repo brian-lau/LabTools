@@ -1,13 +1,57 @@
-% handle windows?
+% TFR - Transform SampledProcesses into time-frequency representations
+%
+%     obj = tfr(SampledProcess,varargin)
+%     SampledProcess.tfr(varargin)
+%
+%     Currently returns the power spectral density.
+%
+%     When input is an array of Processes, will iterate and transform each.
+%
+%     All inputs are passed in using name/value pairs. The name is a string
+%     followed by the value (described below).
+%     The order of the pairs does not matter, nor does the case.
+%
+% INPUTS
+%     method - string, optional, default = 'multitaper'
+%              One of following indicating type of transformation
+%              'multitaper' - Multitaper tfr using Chronux toolbox
+%              'stft'       - Spectrogram using Signal Processing toolbox
+%              'cwt'        - Continuous wavelet transform Wavelet toolbox
+%              'stockwell'  - S-transform
+%     f      - [fmin fmax], optional, default = [0 100]
+%
+%     tBlock - scalar, optional, default = 1 sec
+%              Parameter is used by multitaper and stft methods only
+%     tStep  - scalar, optional, default = 0.5 sec
+%              Parameter is used by multitaper and stft methods only
+%     
+% OUTPUTS
+%     obj    - SpectralProcess
+%
+% EXAMPLES
+%     t = [0:0.001:2]';                    % 2 secs @ 1kHz sample rate
+%     y1 = chirp(t,10,2,10,'q');
+%     y2 = chirp(t,60,2,180,'q');
+%     y3 = cos(2*pi*20*t); y3(t>.5) = 0;
+%     y4 = cos(2*pi*100*t); y4((t<.25)|(t>1)) = 0;
+% 
+%     s = SampledProcess([y1*.25+y3+y4;y1+y2],'Fs',1000);
+% 
+%     tf(1) = tfr(s,'method','stft','tBlock',.5,'tStep',.05,'f',[0:200]);
+%     tf(2) = tfr(s,'method','chronux','tBlock',.5,'tStep',.05,'f',[0:200],'tapers',[2 3]);
+%     tf(3) = tfr(s,'method','cwt','f',[.1 200],'numVoices',32);
+%     tf(4) = tfr(s,'method','stockwell','gamma',2,'f',[0.1 200],'decimate',3);
+%     plot(tf,'log',false);
 
-%method stft, chronux, wavelet, stockwell
-%params
-%link
-% correct time vector?
-% tBlock = 0.5;
-% tStep= 0.1;
-%f = 0:500;
+%     $ Copyright (C) 2016 Brian Lau <brian.lau@upmc.fr> $
+%     Released under the BSD license. The license and most recent version
+%     of the code can be found on GitHub:
+%     https://github.com/brian-lau/Process
 
+% TODO
+% multiple windows?
+% link SampledProcess handle?
+% type?
 function obj = tfr(self,varargin)
 
 p = inputParser;
@@ -18,6 +62,7 @@ p.addParameter('method','chronux',@(x) any(strcmp(x,...
 p.addParameter('tBlock',1,@(x) isnumeric(x) && isscalar(x));
 p.addParameter('tStep',[],@(x) isnumeric(x) && isscalar(x));
 p.addParameter('f',0:100,@(x) isnumeric(x) && isvector(x));
+p.addParameter('type','psd',@ischar);
 p.parse(varargin{:});
 params = p.Unmatched;
 par = p.Results;
@@ -26,7 +71,6 @@ nObj = numel(self);
 obj(nObj,1) = SpectralProcess();
 for i = 1:nObj
    obj(i) = tfrEach(self(i),par,params);
-   %obj(i).params = p;
 end
 
 %%
@@ -74,9 +118,28 @@ switch lower(par.method)
       
       [S,~,f] = mtspecgramc(obj.values{1},[tBlock tStep],params);
    case {'stockwell', 'strans'}
+      params.Fs = obj.Fs;
+      params.fpass = [min(par.f) max(par.f)];
+      N = obj.dim{1}(1);
+      N2 = fix(N/2);
+      j = 1;
+      if N2*2 == N
+         j = 0;
+      end
+      % Frequencies (cycles/sample)
+      f = [0:N2 -N2+1-j:-1]/N;
+      % Frequencies (cycles/second)
+      ff = obj.Fs*f;
+      fpass = [min(params.fpass) max(params.fpass)];
+      ind = find((ff>=min(fpass)) & (ff<=max(fpass)));
+      if isfield(params,'decimate')
+         dec = max(1,fix(params.decimate));
+         ind = ind(1:dec:end);
+      end
+      S = zeros(obj.dim{1}(1),numel(ind),n);
       for i = 1:n
-         [temp,f] = sig.stran2(obj.values{1}(:,i)',obj.Fs,par.f);
-         S(:,:,i) = abs(temp)'; % abs unnecessary?
+         [temp,f] = sig.fst(obj.values{1}(:,i)',params);
+         S(:,:,i) = abs(temp).^2';
       end
       tStep = obj.dt;
       tBlock = obj.dt;
@@ -84,7 +147,7 @@ switch lower(par.method)
       % Currently required Wavelet toolbox
       % consider https://github.com/grinsted/wavelet-coherence
       
-      if isempty(fn)
+      if isempty(fn) || ~isfield(params,'wavelet')
          params.wavelet = 'bump';
       end
       
@@ -94,7 +157,7 @@ switch lower(par.method)
          case 'bump'
             params.f0 = 5/(2*pi);
          otherwise
-            error('Wavelet not supported');
+            error('SampledProcess:tfr:InputParam','Wavelet not supported');
       end
       
       if ~isfield(params,'numVoices')
@@ -108,7 +171,7 @@ switch lower(par.method)
       end
       
       if ~isfield(params,'padmode')
-         params.padmode = 'zpd';
+         params.padmode = 'none';
       end
       
       S = zeros(obj.dim{1}(1),numel(params.scales),n);
@@ -127,6 +190,7 @@ tfr = SpectralProcess(S,...
    'f',f,...
    'tBlock',tBlock,...
    'tStep',tStep,...
+   'params',params,...
    'labels',obj.labels,...
    'tStart',obj.tStart,...
    'tEnd',obj.tEnd,...
@@ -134,12 +198,6 @@ tfr = SpectralProcess(S,...
    'window',obj.window...
    );
 tfr.cumulOffset = obj.cumulOffset;
-%    out = SampledProcess(values(:,ind2),...
-%       'Fs',1/dt,...
-%       'labels',uLabels(ind2),...
-%       'tStart',relWindow(1),...
-%       'tEnd',relWindow(2)...
-%       );
 
 % Utility for wavelet
 function scales = getScales(minfreq,maxfreq,f0,dt,NumVoices)
