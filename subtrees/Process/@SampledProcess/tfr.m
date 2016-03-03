@@ -126,9 +126,7 @@ switch lower(par.method)
       if N2*2 == N
          j = 0;
       end
-      % Frequencies (cycles/sample)
       f = [0:N2 -N2+1-j:-1]/N;
-      % Frequencies (cycles/second)
       ff = obj.Fs*f;
       fpass = [min(params.fpass) max(params.fpass)];
       ind = find((ff>=min(fpass)) & (ff<=max(fpass)));
