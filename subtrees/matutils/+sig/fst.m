@@ -17,11 +17,17 @@
 %     Fs    - scalar, optional, sampling frequency
 %     fpass - [1x2], optional, default = [0 nyquist]
 %             Limits for calculating S-transform
-%     gamma - scalar, 1x2 or 1x3 vector, optional, default = 1
-%             Parameters controlling the scaling of Gaussian window.
-%             scalar  - sigma = gamma/f, # of cycles within 1 stdev
-%             [a b]   - sigma = (a*f + b)/f
-%             [a b c] - sigma = (a*f^c + b)/f
+%     params- scalar, 1x2 or 1x3 vector, optional, default = 1
+%             Parameters controlling the scaling of Gaussian window, the
+%             # of cycles within 1 stdev
+%             m         - sigma = m/f [STOCKWELL] 
+%             r         - sigma = f^(1-p)/f [SEJDIC]
+%             [m k]     - sigma = (m*f + k)/f
+%             [m p k]   - sigma = (m*f^p + k)/f
+%             [r m p k] - sigma = (m*f^p + k)/f^r
+%     sejdic- boolean, optional, default = False
+%             This toggles between the two possibilities for scalar
+%             parameters
 %     decimate - scalar, optional, default = 1
 %             Decimation factor for frequency sampling, eg, 4 picks every
 %             fourth frequency sample within fpass
@@ -36,22 +42,21 @@
 %     for time-frequency synchrony analysis and source localization.
 %     EURSIP Journal on Advances in Signal Processing.
 %
-%     Moukadem A, Abdeslam D and Dieterlen A (2014). Chapter 2 in
-%     Time-Frequency Domain for Segmentation and Classification of
-%     Non-Stationary Signals: The Stockwell transform Applied on Biosignals
-%     and Electrical Signals.
+%     Moukadem A, Bouguila Z, Abdeslam D and Dieterlen A (2015). A new 
+%     optimized  Stockwell transform applied on synthetic and real non-
+%     stationary signals. Digital Signal Processing
 %
 %     Stockwell RG, Mansinha L, Lowe RP (1996). Localization of the complex
 %     spectrum: The S transform. IEEE Trans on Sig Proc 44(4): 998-1001.
 %
 % EXAMPLE
 %     t = 0:0.001:2;                   % 2 secs @ 1kHz sample rate
-%     x1 = 0.01 + chirp(t,5,1,100,'q');% Start @ 5Hz, cross 100Hz at t=1sec
+%     x1 = 0.1 + chirp(t,5,1,100,'q');% Start @ 5Hz, cross 100Hz at t=1sec
 %     x2 = cos(2*pi*200*t); x2(t>.5) = 0;
 %     x3 = cos(2*pi*350*t); x3((t<.25)|(t>1)) = 0;
 %     x = x1 + x2 + x3;
 %
-%     [S,f] = sig.fst(x,'Fs',1000,'gamma',2);
+%     [S,f] = sig.fst(x,'Fs',1000);
 %  
 %     figure; 
 %     subplot(411); plot(t,x);
@@ -79,7 +84,8 @@ p.FunctionName = 'S-transform';
 p.addRequired('x',@(x) isnumeric(x));
 p.addParameter('Fs',1,@(x) isnumeric(x));
 p.addParameter('fpass',[],@(x) isnumeric(x));
-p.addParameter('gamma',1,@(x) isnumeric(x));
+p.addParameter('params',[1 1 0 0],@(x) isnumeric(x));
+p.addParameter('sejdic',false,@islogical);
 p.addParameter('decimate',1,@(x) isnumeric(x));
 p.parse(x,varargin{:});
 par = p.Results;
@@ -89,13 +95,28 @@ if M > 1
    error('fst:inputSize','Input must be a row vector');
 end
 
+nParams = numel(par.params);
+% r m p k
+if nParams == 1
+   if par.sejdic
+      params = [par.params 0 1 1];
+   else
+      params = [1 par.params 0 0];
+   end
+elseif nParams == 2
+   params = [1 par.params(1) 1 par.params(2)];
+elseif nParams == 3
+   params = [1 par.params(:)'];
+elseif nParams == 4
+   params = par.params;
+end
+   
 N2 = fix(N/2);
 j = 1;
 if N2*2 == N
    j = 0;
 end
 
-% Frequencies (cycles/sample)
 f = [0:N2 -N2+1-j:-1]/N;
 % Frequencies (cycles/second)
 ff = par.Fs*f;
@@ -121,23 +142,6 @@ if min(fpass) == 0
    ind(1) = [];
 end
 
-% Determine how we want to scale the Gaussian
-% sigma = gamma/f, # of cycles within 1 standard deviation
-if isscalar(par.gamma)
-   gamma = par.gamma;
-elseif numel(par.gamma) == 2
-   % Assous & Boashash eq. 18
-   gamma = par.gamma(1)*f + par.gamma(2);
-   %gamma = (1/N)*f + 4*var(x);
-elseif numel(par.gamma) == 3
-   % Moukadem et al. eq. 2.41
-   gamma = par.gamma(1)*f.^par.gamma(3) + par.gamma(2);
-end
-
-% Gaussian windows in frequency-domain
-W = 2*(pi*bsxfun(@rdivide,f.*gamma,f(ind)'));
-G = exp((-W.^2)/2);
-
 if fpass(1) == 0
    dc = 1;
 else
@@ -145,8 +149,9 @@ else
 end
 count = 1;
 for i = ind
-   Xs = circshift(X,[0,-(i-1)]);        % circshift the spectrum X
-   S(count+dc,:) = ifft(Xs.*G(count,:));
+   Xs = circshift(X,[0,-(i-1)]); % circshift the spectrum X
+   W = gwin(f,ff(i),params);
+   S(count+dc,:) = ifft(Xs.*W);
    count = count + 1;
 end
 
@@ -164,3 +169,14 @@ if nargout == 3
    t = 0:dt:(dt*(N-1));
 end
 
+% r m p k
+function [w,gamma] = gwin(t,f,params)
+r = params(1); 
+m = params(2);
+p = params(3);
+k = params(4);
+
+gamma = m*f^(p-r+1) + k*f^(1-r);
+w = (f/(gamma*sqrt(2*pi))) * exp((-f^2*t.^2)/(2*gamma^2));
+w = w/sum(w);
+w = fft(w);
