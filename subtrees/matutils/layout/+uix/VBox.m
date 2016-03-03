@@ -9,7 +9,7 @@ classdef VBox < uix.Box
     %  See also: uix.HBox, uix.Grid, uix.VButtonBox, uix.VBoxFlex
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1165 $ $Date: 2015-12-06 03:09:17 -0500 (Sun, 06 Dec 2015) $
+    %  $Revision: 1262 $ $Date: 2016-02-25 01:13:37 +0000 (Thu, 25 Feb 2016) $
     
     properties( Access = public, Dependent, AbortSet )
         Heights % heights of contents, in pixels and/or weights
@@ -110,6 +110,9 @@ classdef VBox < uix.Box
     methods( Access = protected )
         
         function redraw( obj )
+            %redraw  Redraw
+            %
+            %  c.redraw() redraws the container c.
             
             % Compute positions
             bounds = hgconvertunits( ancestor( obj, 'figure' ), ...
@@ -152,6 +155,9 @@ classdef VBox < uix.Box
         end % redraw
         
         function addChild( obj, child )
+            %addChild  Add child
+            %
+            %  c.addChild(d) adds the child d to the container c.
             
             % Add to sizes
             obj.Heights_(end+1,:) = -1;
@@ -163,6 +169,9 @@ classdef VBox < uix.Box
         end % addChild
         
         function removeChild( obj, child )
+            %removeChild  Remove child
+            %
+            %  c.removeChild(d) removes the child d from the container c.
             
             % Remove from sizes
             tf = obj.Contents_ == child;

@@ -14,7 +14,7 @@ classdef TabPanel < uix.Container & uix.mixin.Panel
     %  See also: uitabgroup, uitab, uix.CardPanel
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1216 $ $Date: 2015-12-18 17:33:06 -0600 (Fri, 18 Dec 2015) $
+    %  $Revision: 1235 $ $Date: 2016-01-07 10:37:42 +0000 (Thu, 07 Jan 2016) $
     
     properties( Access = public, Dependent, AbortSet )
         FontAngle % font angle
@@ -54,7 +54,6 @@ classdef TabPanel < uix.Container & uix.mixin.Panel
         TabHeight = -1 % cache of tab height (-1 denotes stale cache)
         TabWidth_ = 50 % backing for TabWidth
         Dividers % tab dividers
-        LocationObserver % location observer
         BackgroundColorListener % listener
         SelectionChangedListener % listener
     end

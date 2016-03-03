@@ -11,7 +11,7 @@ classdef BoxPanel < uix.Panel & uix.mixin.Panel
     %  See also: uix.Panel, uipanel, uix.CardPanel
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1212 $ $Date: 2015-12-18 13:16:39 -0600 (Fri, 18 Dec 2015) $
+    %  $Revision: 1255 $ $Date: 2016-01-29 13:59:51 +0000 (Fri, 29 Jan 2016) $
     
     properties( Dependent )
         TitleColor % title background color [RGB]
@@ -56,9 +56,12 @@ classdef BoxPanel < uix.Panel & uix.mixin.Panel
             %  p = uix.BoxPanel(p1,v1,p2,v2,...) sets parameter p1 to value
             %  v1, etc.
             
-            % Set default colors
+            % Define default colors
             foregroundColor = [1 1 1];
             backgroundColor = [0.05 0.25 0.5];
+            
+            % Set default colors
+            obj.ForegroundColor = foregroundColor;
             
             % Create panels and decorations
             titleBox = uix.HBox( 'Internal', true, 'Parent', obj, ...
