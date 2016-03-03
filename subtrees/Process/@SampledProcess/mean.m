@@ -1,4 +1,4 @@
-% MEAN - Take mean of array of SampledProcesses
+% MEAN - Take elementwise mean of values in array of SampledProcesses
 %
 %     [out,n,count] = mean(SampledProcess,varargin)
 %     [out,n,count] = SampledProcess.mean(varargin)

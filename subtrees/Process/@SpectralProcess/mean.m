@@ -1,4 +1,4 @@
-% MEAN - Take mean of array of SpectralProcesses
+% MEAN - Take elementwise mean of values in array of SpectralProcesses
 %
 %     [out,n,count] = mean(SpectralProcess,varargin)
 %     [out,n,count] = SpectralProcess.mean(varargin)

@@ -51,6 +51,19 @@ s.offset = -2;
 tf = tfr(s,'method','cwt','f',[.1 500]);
 plot(tf,'log',false);
 
+%% Example calls to different TFR methods
+t = [0:0.001:2]';                    % 2 secs @ 1kHz sample rate
+y1 = chirp(t,10,2,10,'q');
+y2 = chirp(t,60,2,60,'q');
+s = SampledProcess([y1*.25;y1+y2],'Fs',1000);
+s.setOffset(-2);
+
+tf(1) = tfr(s,'method','stft','f',1:100,'tBlock',.5,'tStep',.05);
+tf(2) = tfr(s,'method','multitaper','f',1:100,'tBlock',.5,'tStep',.05,'tapers',[2 3]);
+tf(3) = tfr(s,'method','cwt','f',[1 100],'padmode','sym');
+tf(4) = tfr(s,'method','stockwell','f',[1 100],'params',.5,'pad',200,'padmode','sym','decimate',4);
+plot(tf,'log',false);
+
 %%
 t = [0:0.001:2]';                    % 2 secs @ 1kHz sample rate
 y1 = chirp(t,100,2,100,'q');
