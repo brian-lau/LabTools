@@ -120,25 +120,8 @@ switch lower(par.method)
    case {'stockwell', 'strans'}
       params.Fs = obj.Fs;
       params.fpass = [min(par.f) max(par.f)];
-      N = obj.dim{1}(1);
-      N2 = fix(N/2);
-      j = 1;
-      if N2*2 == N
-         j = 0;
-      end
-      f = [0:N2 -N2+1-j:-1]/N;
-      ff = obj.Fs*f;
-      fpass = [min(params.fpass) max(params.fpass)];
-      ind = find((ff>=min(fpass)) & (ff<=max(fpass)));
-      if isfield(params,'decimate')
-         dec = max(1,fix(params.decimate));
-         ind = ind(1:dec:end);
-      end
-      S = zeros(obj.dim{1}(1),numel(ind),n);
-      for i = 1:n
-         [temp,f] = sig.fst(obj.values{1}(:,i)',params);
-         S(:,:,i) = abs(temp).^2';
-      end
+      [S,f] = sig.fst(obj.values{1}',params);
+      S = abs(S).^2';
       tStep = obj.dt;
       tBlock = obj.dt;
    case {'wavelet', 'cwt'}
