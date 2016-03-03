@@ -265,13 +265,14 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
 
       % Output
       [s,labels] = extract(self,reqLabels)
+      value = valueAt(self,time,varargin)
       output = apply(self,fun,nOpt,varargin)
       [out,n,count] = mean(self,varargin)
       obj = psd(self,varargin)
       obj = tfr(self,varargin)
       obj = coh(self,varargin)
       obj = pac(self,varargin)
-            
+      
       % Visualization
       h = plot(self,varargin)
       % plotTrajectory
