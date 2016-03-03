@@ -15,12 +15,14 @@
 %             'positive'  - set values >= value to value
 %             {'negative' 'invert'}  - set values <= value to value
 %             'abs'    - set abs(values) >= abs(value) to value
+%     setval - numeric scalar, optional, default = value
+%             Replace values meeting clip criteria with setval
 %
 %     EXAMPLES
 %     s = SampledProcess([-10:10]');
 %     s.values{1}
 %     s.clip(6); 
-%     s.clip(-7,'method','invert');
+%     s.clip(-7,'method','invert','setval',NaN);
 %     s.values{1}
 
 %     $ Copyright (C) 2016 Brian Lau <brian.lau@upmc.fr> $
@@ -35,17 +37,23 @@ p.FunctionName = 'Process clip method';
 p.addRequired('value',@(x) isnumeric(x) && isscalar(x));
 p.addParameter('method','positive',@(x) any(strcmp(x,...
    {'invert' 'negative' 'abs'})));
-p.addParameter('percent',5,@(x) isscalar(x));
+p.addParameter('setval',[],@(x) isnumeric(x) && isscalar(x) && ~isnan(x));
 p.parse(value,varargin{:});
 par = p.Results;
 
+if isempty(par.setval)
+   setval = par.value;
+else
+   setval = par.setval;
+end
+
 switch par.method
    case {'positive'}
-      f = @(x) x.*(x<par.value) + par.value.*(x>=par.value);
+      f = @(x) x.*(x<par.value) + setval.*(x>=par.value);
    case {'invert' 'negative'}
-      f = @(x) x.*(x>par.value) + par.value.*(x<=par.value);
+      f = @(x) x.*(x>par.value) + setval.*(x<=par.value);
    case {'abs'}
-      f = @(x) x.*(abs(x)<abs(par.value)) + par.value.*(abs(x)>=abs(par.value));
+      f = @(x) x.*(abs(x)<abs(par.value)) + setval.*(abs(x)>=abs(par.value));
 end
 
 self.map(@(x) f(x));
