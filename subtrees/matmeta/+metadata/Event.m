@@ -30,13 +30,13 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
          p = inputParser;
          p.KeepUnmatched= true;
          p.FunctionName = 'Event constructor';
-         p.addParameter('name','',@ischar);
-         p.addParameter('description','',@ischar);
-         p.addParameter('timeUnit','seconds',@ischar);
-         p.addParameter('timeReference',[],@(x) isa(x,'metadata.Event'));
-         p.addParameter('tStart',[],@isnumeric);
-         p.addParameter('tEnd',[],@isnumeric);
-         p.addParameter('experiment',[],@(x) isa(x,'metadata.Experiment'));
+         p.addParamValue('name','',@ischar);
+         p.addParamValue('description','',@ischar);
+         p.addParamValue('timeUnit','seconds',@ischar);
+         p.addParamValue('timeReference',[],@(x) isa(x,'metadata.Event'));
+         p.addParamValue('tStart',[],@isnumeric);
+         p.addParamValue('tEnd',[],@isnumeric);
+         p.addParamValue('experiment',[],@(x) isa(x,'metadata.Experiment'));
          p.parse(varargin{:});
          par = p.Results;
          
@@ -139,10 +139,10 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
             p = inputParser;
             p.KeepUnmatched= false;
             p.FunctionName = 'metadata.Event match method';
-            p.addParameter('eventProp','name',@ischar);
-            p.addParameter('eventVal',[]);
-            p.addParameter('nansequal',true,@islogical);
-            p.addParameter('strictHandleEq',false,@islogical);p.parse(varargin{:});
+            p.addParamValue('eventProp','name',@ischar);
+            p.addParamValue('eventVal',[]);
+            p.addParamValue('nansequal',true,@islogical);
+            p.addParamValue('strictHandleEq',false,@islogical);p.parse(varargin{:});
             par = p.Results;
          end
          
