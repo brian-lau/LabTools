@@ -251,7 +251,8 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       end
             
       % In-place transformations
-      self = filter(self,b,varargin)
+      self = filter(self,f,varargin)
+      self = filtfilt(self,f,varargin)
       [self,h,d] = lowpass(self,varargin)
       [self,h,d] = highpass(self,varargin)
       [self,h,d] = bandpass(self,varargin)

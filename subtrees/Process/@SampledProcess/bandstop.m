@@ -50,9 +50,9 @@ for i = 1:numel(self)
    end
    
    if isempty(par.method)
-      h = design(d,'FilterStructure','dffir');
+      h = design(d,'MinOrder','even');
    else
-      h = design(d,par.method,'FilterStructure','dffir');
+      h = design(d,par.method,'MinOrder','odd');
    end
    
    if par.plot
@@ -64,6 +64,6 @@ for i = 1:numel(self)
    end
    
    if ~par.designOnly
-      self(i).filter(h.Numerator,'a',1);
+      self(i).filter(h.Numerator);
    end
 end
