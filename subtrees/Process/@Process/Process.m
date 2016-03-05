@@ -335,8 +335,11 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       info = copyInfo(self)      
       
       s = sync(self,event,varargin)
-      s = sync__(self,event,varargin)
       
       obj = new(self)
+   end
+   
+   methods(Hidden)
+      s = sync__(self,event,varargin)
    end
 end
