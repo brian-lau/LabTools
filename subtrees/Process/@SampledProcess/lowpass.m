@@ -147,17 +147,17 @@ for i = 1:numel(self)
          assert(~isempty(par.Fpass)&&~isempty(par.Fstop),...
             'Minimum order filter requires Fpass and Fstop to be specified.');
          d = fdesign.lowpass('Fp,Fst,Ap,Ast',...
-            par.Fpass,par.Fstop,par.ripple,par.attenuation,self.Fs);
+            par.Fpass,par.Fstop,par.ripple,par.attenuation,Fs);
       else % specified-order filter
          if ~isempty(par.Fpass) && isempty(par.Fstop)
             d = fdesign.lowpass('N,Fp,Ap,Ast',...
-               par.order,par.Fpass,par.ripple,par.attenuation,self.Fs);
+               par.order,par.Fpass,par.ripple,par.attenuation,Fs);
          elseif ~isempty(par.Fpass) && ~isempty(par.Fstop)
             d = fdesign.lowpass('N,Fp,Fst,Ap',...
-               par.order,par.Fpass,par.Fstop,par.ripple,self.Fs);
+               par.order,par.Fpass,par.Fstop,par.ripple,Fs);
          elseif ~isempty(par.Fc) % 6dB cutoff
             d = fdesign.lowpass('N,Fc,Ap,Ast',...
-               par.order,par.Fc,par.ripple,par.attenuation,self.Fs);
+               par.order,par.Fc,par.ripple,par.attenuation,Fs);
          else
             error('SampledProcess:lowpass:InputValue',...
                'Incomplete filter design specification');
