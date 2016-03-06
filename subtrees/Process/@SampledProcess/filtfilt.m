@@ -17,9 +17,7 @@
 %     plot(s,'handle',h);
 %
 %     % compare to causal filter
-%     s.reset;
-%     s.filter(f,'compensateDelay',false);
-%     plot(s,'handle',h);
+%     s.reset().filter(f,'compensateDelay',false).plot('handle',h);
 %     legend('original','filtfilt','filter - no compensation');
 %
 %     SEE ALSO

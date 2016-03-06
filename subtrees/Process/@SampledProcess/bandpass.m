@@ -132,9 +132,9 @@ addParameter(p,'attenuation1',60,@isnumeric); % Stopband attenuation in dB
 addParameter(p,'attenuation2',60,@isnumeric); % Stopband attenuation in dB
 addParameter(p,'ripple',0.01,@isnumeric); % Passband ripple in dB
 addParameter(p,'method','',@ischar);
-addParameter(p,'plot',false,@(x) islogical(x) || isa(x,'sigtools.fvtool'));
-addParameter(p,'verbose',false,@islogical);
-addParameter(p,'designOnly',false,@islogical);
+addParameter(p,'plot',false,@(x) isscalar(x) || isa(x,'sigtools.fvtool'));
+addParameter(p,'verbose',false,@(x) islogical(x) || isscalar(x));
+addParameter(p,'designOnly',false,@(x) islogical(x) || isscalar(x));
 parse(p,varargin{:});
 par = p.Results;
 designPars = p.Unmatched;
@@ -200,7 +200,7 @@ for i = 1:numel(self)
 end
 
 if isa(par.plot,'sigtools.fvtool') || par.plot
-   if islogical(par.plot) || ~isvalid(par.plot)
+   if islogical(par.plot) || isnumeric(par.plot) || ~isvalid(par.plot)
       hft = fvtool(h);
    else
       addfilter(par.plot,h);

@@ -56,6 +56,7 @@
 %   o batched (looped) filtering (eg. for memmapped data)
 %   o filter state for managing contiguous blocks? eg., chopped process
 %   o nan's anywhere will result in all nans with filtfilt
+%   o match padmode when calling down to filtfilthd
 function self = filter(self,f,varargin)
 
 p = inputParser;
@@ -63,7 +64,7 @@ p.KeepUnmatched = true;
 addRequired(p,'f',@(x) isnumeric(x) ...
                     || ~isempty(strfind(class(x),'dfilt')) ...
                     || isa(x,'digitalFilter'));
-addParameter(p,'compensateDelay',true,@islogical);
+addParameter(p,'compensateDelay',true,@(x) islogical(x) || isscalar(x));
 addParameter(p,'padmode','sym',@(x) any(strcmp(x,{'sym' 'zpd'})));
 parse(p,f,varargin{:});
 par = p.Results;
