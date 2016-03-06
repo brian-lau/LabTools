@@ -7,27 +7,27 @@ par.KeepUnmatched = true;
 addRequired(par,'lfpfile',@ischar);
 
 % Trim data from beginning and end (after filtering)
-addParamValue(par,'trim',0,@isscalar);
+addParameter(par,'trim',0,@isscalar);
 
 % Remove line noise
-addParamValue(par,'deline',false,@islogical);
+addParameter(par,'deline',false,@islogical);
 % removePLI parameters
-addParamValue(par,'M',5,@isscalar);
-addParamValue(par,'B',[50 .2 4],@(x) isnumeric(x) && (numel(x)==3));
-addParamValue(par,'P',[0.01 4 4],@(x) isnumeric(x) && (numel(x)==3));
-addParamValue(par,'W',2,@isscalar);
+addParameter(par,'M',5,@isscalar);
+addParameter(par,'B',[50 .2 4],@(x) isnumeric(x) && (numel(x)==3));
+addParameter(par,'P',[0.01 4 4],@(x) isnumeric(x) && (numel(x)==3));
+addParameter(par,'W',2,@isscalar);
 
 % threshold
-addParamValue(par,'threshold',300,@isscalar);
+addParameter(par,'threshold',300,@isscalar);
 
 % Highpass filter cutoff, 0 skips highpass filtering
-addParamValue(par,'Fpass',1.5,@isscalar);
-addParamValue(par,'Fstop',0.001,@isscalar);
+addParameter(par,'Fpass',1.5,@isscalar);
+addParameter(par,'Fstop',0.01,@isscalar);
 
 % detrend
 
 % resample
-addParamValue(par,'resample',512,@isscalar);
+addParameter(par,'resample',512,@isscalar);
 
 parse(par,lfpfile,varargin{:});
 
@@ -89,14 +89,29 @@ end
 
 if par.Results.threshold
    fprintf('Thresholding\n');
-   %f = @(x) x.*(abs(x)<=par.Results.threshold);
-   f = @(x) x.*(abs(x)<=par.Results.threshold) + par.Results.threshold.*(abs(x)>par.Results.threshold);
-   s.map(@(x) f(x));
+   s.clip(par.Results.threshold,'method','abs');
 end
 
 if par.Results.Fpass
    fprintf('Highpass filtering\n');
-   highpass(s,'Fpass',par.Results.Fpass,'Fstop',par.Results.Fstop); 
+   try
+      load('/Users/brian/Documents/Code/Repos/LabAnalyses/FIR_highpass.mat');
+      i = Fs == s.Fs;
+      j = Fpass == par.Results.Fpass;
+      k = Fstop == par.Results.Fstop;
+      fprintf('\tUsing cached filter\n');
+      tic;
+      s.filter(h(i,j,k));
+      h = h(i,j,k);
+      toc
+   catch
+      fprintf('\tBuilding filter anew\n');
+      beep;
+      keyboard
+      tic;
+      [~,h,d] = highpass(s,'Fpass',par.Results.Fpass,'Fstop',par.Results.Fstop);
+      toc
+   end
 end
 
 if par.Results.deline
@@ -110,7 +125,7 @@ if par.Results.deline
 end
 
 if par.Results.trim
-   s.window = [2 s.window(end)-2];
+   s.window = [par.Results.trim s.window(end)-par.Results.trim];
    s.chop();
 end   
 
@@ -118,10 +133,8 @@ if (par.Results.resample < s.Fs) && par.Results.resample
    fprintf('Resampling\n');
    origFs = s.Fs;
    s.resample(par.Results.resample);
-   fix(s);
    if exist('t','var')
       t.resample(par.Results.resample);
-      fix(t);
    end
 else
    origFs = s.Fs;
@@ -131,4 +144,5 @@ fix(s);
 
 preprocessParams = par.Results;
 preprocessParams.origFs = origFs;
+preprocessParams.highpass = info(h,'long'); 
 s.info('preprocessParams') = preprocessParams;
