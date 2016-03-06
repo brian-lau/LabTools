@@ -253,16 +253,21 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       % In-place transformations
       self = filter(self,f,varargin)
       self = filtfilt(self,f,varargin)
-      [self,h,d] = lowpass(self,varargin)
-      [self,h,d] = highpass(self,varargin)
-      [self,h,d] = bandpass(self,varargin)
+      [self,h,d,hft] = lowpass(self,varargin)
+      [self,h,d,hft] = highpass(self,varargin)
+      [self,h,d,hft] = bandpass(self,varargin)
+      [self,h,d,hft] = bandstop(self,varargin)
       self = detrend(self)
       self = normalize(self,varargin)
-      
+      %amplitude = abs(values);
+      %phase = angle(values);
+
       % Transformations potentially altering sampling
       self = resample(self,newFs,varargin)
       %decimate
       %interp
+      % diff
+      % int
 
       % Output
       [s,labels] = extract(self,reqLabels)
@@ -273,6 +278,8 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       obj = tfr(self,varargin)
       obj = coh(self,varargin)
       obj = pac(self,varargin)
+      % xcov
+      % xcorr
       
       % Visualization
       h = plot(self,varargin)
