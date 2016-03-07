@@ -257,7 +257,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       [self,h,d,hft] = highpass(self,varargin)
       [self,h,d,hft] = bandpass(self,varargin)
       [self,h,d,hft] = bandstop(self,varargin)
-      [self,h,d,hft] = notch(SampledProcess,varargin)
+      [self,h,d,hft] = notch(self,varargin)
       self = detrend(self)
       self = normalize(self,varargin)
       %amplitude = abs(values);
