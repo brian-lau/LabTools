@@ -1,6 +1,6 @@
 % LOAD CLINICAL DATA & COORDINATES?
 
-function [s,t] = loadSingleRun(lfpfile,varargin)
+function [s,t,params] = loadSingleRun(lfpfile,varargin)
 
 par = inputParser;
 par.KeepUnmatched = true;
@@ -142,7 +142,7 @@ end
 
 fix(s);
 
-preprocessParams = par.Results;
-preprocessParams.origFs = origFs;
-preprocessParams.highpass = info(h,'long'); 
-s.info('preprocessParams') = preprocessParams;
+params = par.Results;
+params.origFs = origFs;
+params.highpass = info(h,'long'); 
+%s.info('preprocessParams') = preprocessParams;

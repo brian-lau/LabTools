@@ -100,7 +100,7 @@ for i = 1:nWindow
    obj(i).quality = obj(i).quality_;
    
    obj(i).window_ = obj(i).window;
-   obj(i).offset_ = self.offset_ + self.window(i,1);
+   obj(i).offset_ = 0;
 end
 
 if nargout == 0

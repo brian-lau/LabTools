@@ -69,10 +69,12 @@ try
    % TODO this will not work properly with multiple windows
    relWindow = cat(1,self.relWindow);
    if size(unique(relWindow,'rows'),1) ~= 1
-      error('Not all processes have the same relative window.');
-   else
-      relWindow = relWindow(1,:);
+      m = max(max(diff(relWindow)));
+      if m > 1e-13
+         error('Not all processes have the same relative window.');
+      end
    end
+   relWindow = relWindow(1,:);
    % TODO possibly adjust windows to min/max across all processes?
 catch err
    if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
@@ -143,9 +145,18 @@ else
    obj.subset(subsetPar);
 end
 [s,l] = extract(obj);
-s = cat(3,s.values);
-l = cat(2,l{:});
-
+try
+   s = cat(3,s.values);
+   l = cat(2,l{:});
+catch
+   nt = linq(s).select(@(x) numel(x.times)).toArray;
+   t = linspace(relWindow(1),relWindow(2),max(nt))';
+   for i = 1:numel(s)
+      s2(i).values = interp1(s(i).times,s(i).values,t,'linear','extrap');
+   end
+   s = cat(3,s2.values);
+   l = cat(2,l{:});
+end
 uLabels = unique(cat(2,obj.labels),'stable');
 clear obj;
 

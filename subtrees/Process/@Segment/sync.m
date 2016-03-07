@@ -28,6 +28,7 @@ else
    syncPars = [];
 end
 
+% Separate parameters for sync and EventProcess.find
 if ~isempty(fieldnames(eventPars))
    fn = fieldnames(eventPars);
    match = intersect(fn,validSyncParams);
@@ -51,6 +52,7 @@ for i = 1:numel(self)
          temp = extract(self(i),p.Results.eventProcessName,'label');
       end
       % Will return Null event defined in EventProcess if nothing found
+      
       event = temp.find(eventPars);
    elseif isa(p.Results.event,'metadata.Event')
       % FIXME, check dimensions for scalar event

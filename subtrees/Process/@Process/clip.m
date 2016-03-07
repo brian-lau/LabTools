@@ -18,7 +18,7 @@
 %     setval - numeric scalar, optional, default = value
 %             Replace values meeting clip criteria with setval
 %
-%     EXAMPLES
+% EXAMPLES
 %     s = SampledProcess([-10:10]');
 %     s.values{1}
 %     s.clip(6); 
