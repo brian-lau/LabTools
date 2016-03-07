@@ -3,8 +3,16 @@
 %     filter(SampledProcess,f,varargin)
 %     SampledProcess.filter(f,varargin)
 %
-%     For linear-phase FIR filters, default is a single-pass of filtering
-%     with compensation for the delay imposed by the filter.
+%     For linear-phase FIR filters data is filtered using a single-pass, 
+%     and by default, filter delay is compensated by shifting filtered 
+%     values by the group delay of the filter.
+%
+%     For nonlinear-phase FIR or IIR filters data is filtered using filtfilt
+%     by default, which cascades a forward and backward pass (two-pass).
+%     This effectively doubles the filter order and squares the stopband 
+%     attenuation and passband ripple, which should be taken into account 
+%     when designing filters or determining the actual attenuation and 
+%     cutoffs applied to filtered data.
 %
 %     All inputs are passed in using name/value pairs. The name is a string
 %     followed by the value (described below).
@@ -16,19 +24,15 @@
 %         Compensate for delay induced by filter. 
 %         If false, data is filtered using a single-pass. Delay depends on
 %         filter, and can be examined using grpdelay(f).
-%         If true, behavior depends on the filter. 
+%         If true, behavior depends on the filter (see above) 
 %         If f is a linear-phase FIR filter, delay compensated by shifting
 %         filtered values by the group delay of the filter (single-pass). 
-%         For nonlinear-phase FIR or IIR filters, data is filtered using 
-%         filtfilt, which cascades a forward and backward pass (two-pass).
-%         This effectively doubles the filter order and squares the stopband
-%         attenuation and passband ripple, which should be taken into account 
-%         when designing filters or determining theactual attenuation and 
-%         cutoffs applied to filtered data.
+%         For nonlinear-phase FIR or IIR filters, data is filtered by
+%         cascading a forward and backward pass (two-pass, see above).
 %     padmode - string, optional, default = 'sym'
 %         Determines how edge effects are treated.
 %         Only relevant when compensateDelay = True.
-%         'sym' - pad ends with reflected data with length equal to group delay
+%         'sym' - pad ends with reflected data length equal to group delay
 %         'zpd' - pad ends with zeros equal in length to group delay
 %
 % EXAMPLES

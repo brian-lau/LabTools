@@ -3,11 +3,10 @@
 %     [self,h,d,hft] = notch(SampledProcess,varargin)
 %     SampledProcess.notch(varargin)
 %
-%     The default is to filter using an IIR filter, designed with an 
-%     equiripple or least-squares design algorithm 
+%     An elliptic (equiripple) IIR filter is designed to meet specifications.
 %
 %     Data is filtered using a zero-phase filter (double-pass), compensating 
-%     for the delay imposed by the designed filter (see SampledProcess.filter).
+%     for the delay imposed by the filter (see SampledProcess.filtfilt).
 %
 %     When input is an array of SampledProcesses, will iterate and treat 
 %     each using the same filter, provided they all have the sampled
@@ -61,25 +60,17 @@
 %     hft  - handle to filter plot
 %
 % EXAMPLES
-%     s = SampledProcess(randn(1000,1),'Fs',1000);
+%     t = (0:.001:1)';
+%     s = SampledProcess(cos(2*pi*10*t)+cos(2*pi*50*t),'Fs',1000);
+%     h = plot(s);
 %     % Filter process
-%     s.bandstop('order',200,'Fc1',50,'Fc2',100);
-% 
-%     % Compare equiripple default to other design algorithms
-%     [~,h,d,hh] = s.bandstop('Fpass1',30,'Fstop1',60,...
-%                  'Fstop2',100,'Fpass2',130,'designOnly',true,...
-%                  'plot',true,'verbose',true);
-%     s.bandstop('Fpass1',30,'Fstop1',60,...
-%                  'Fstop2',100,'Fpass2',130,'designOnly',true,...
-%                  'plot',hh,'verbose',true,'method','kaiserwin');
-%     s.bandstop('order',100,'Fc1',45,'Fc2',115,'designOnly',true,'plot',hh,...
-%                  'method','fircls','verbose',true);
-%     legend('equiripple','kaiser','cls')
+%     s.notch('order',6,'F',50);
+%     plot(s,'handle',h);
 %
 %     % Processing SampledProcess arrays with mixed sampling frequencies
 %     s(1) = SampledProcess(randn(1000,1),'Fs',1000);
 %     s(2) = SampledProcess(randn(2000,1),'Fs',2000);
-%     arrayfun(@(x) x.bandstop('order',200,'Fc1',50,'Fc2',100),s,'uni',0);
+%     arrayfun(@(x) x.notch('order',6,'F',50),s,'uni',0);
 %
 %     SEE ALSO
 %     bandstop, bandpass, highpass, lowpass, filter, filtfilt
@@ -133,18 +124,11 @@ for i = 1:numel(self)
                'Incomplete filter design specification');
       else % specified-order filter
          d  = fdesign.notch('N,F0,BW,Ap,Ast',...
-            par.order,par.F,par.BW,par.attenuation,par.ripple,Fs); %ellip
+            par.order,par.F,par.BW,par.ripple,par.attenuation,Fs);
       end
       
       if isempty(par.method)
-         dm = designmethods(d,'default');
-         do = designoptions(d,dm{1});
-         if isfield(do,'MinOrder')
-            % Force even order for integer group delay
-            h = design(d,'MinOrder','even');
-         else
-            h = design(d);
-         end
+         h = design(d);
       else
          try
             h = design(d,par.method,designPars);
@@ -167,7 +151,8 @@ for i = 1:numel(self)
    end % end filter design
    
    if ~par.designOnly
-      self(i).filter(h);
+      % Only IIR filter designs available
+      self(i).filtfilt(h);
    end
 end
 

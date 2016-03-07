@@ -3,6 +3,12 @@
 %     filtfilt(SampledProcess,f,varargin)
 %     SampledProcess.filtfilt(f,varargin)
 %
+%     Data filtered using a forward and backward pass (two-pass) to achieve
+%     zero-phase shift. This effectively doubles the filter order and 
+%     squares the stopband attenuation and passband ripple, which should be 
+%     taken into account when designing filters or determining the actual 
+%     attenuation and cutoffs applied to filtered data.
+%
 % INPUTS
 %     f - numeric vector | dfilt object | designFilter object, required
 %
