@@ -240,6 +240,10 @@ classdef(CaseInsensitiveProperties) SpectralProcess < Process
          trailingInd = repmat({':'},1,numel(dim));
       end
       
+      [bool,rw,dt,tb,times] = isTimeCompatible(self)
+      
+      self = makeTimeCompatible(self)
+      
       % In-place transformations
       self = normalize(self,varargin)
       

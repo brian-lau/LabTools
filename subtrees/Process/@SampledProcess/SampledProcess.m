@@ -249,7 +249,11 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
          dim = dim(2:end); % leading dim is always time
          trailingInd = repmat({':'},1,numel(dim));
       end
-            
+      
+      [bool,rw,dt,t] = isTimeCompatible(self)
+      
+      self = makeTimeCompatible(self)
+
       % In-place transformations
       self = filter(self,f,varargin)
       self = filtfilt(self,f,varargin)
