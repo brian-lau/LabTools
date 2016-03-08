@@ -32,14 +32,6 @@ else
    h = p.Results.handle;
 end
 
-% if numel(self) > 1
-%    for i = 1:numel(self)
-%       g = subplot(numel(self),1,i); hold on
-%       plot(self(i),'handle',g,varargin{:});
-%    end
-%    return
-% end
-
 % FIXME multiple windows?
 values = self.values{1};
 t = self.times{1} + self.tBlock/2;

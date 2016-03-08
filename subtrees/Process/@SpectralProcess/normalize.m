@@ -67,25 +67,7 @@ p.parse(event,varargin{:});
 par = p.Results;
 meanPar = p.Unmatched;
 
-if strfind(par.method,'avg')
-   try
-      f = cat(1,self.f);
-   catch err
-      if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-         cause = MException('SpectralProcess:normalize:InputValue',...
-            'Not all processes have the same frequency axis.');
-         err = addCause(err,cause);
-      end
-      rethrow(err);
-   end
-   if size(unique(f,'rows'),1) ~= 1
-      error('SpectralProcess:normalize:InputValue',...
-         'Not all processes have common frequency axis.');
-   else
-      f = f(1,:);
-      nf = numel(f);
-   end
-end
+
 
 if ~isempty(par.process)
    % DEFINING A COMPATIBLE 2ND PROCESS
@@ -114,6 +96,26 @@ if ~isavg
          upper(par.method),upper(par.method));
       par.method = [par.method '-avg'];
       isavg = true;
+   end
+end
+
+if isavg
+   try
+      f = cat(1,self.f);
+   catch err
+      if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
+         cause = MException('SpectralProcess:normalize:InputValue',...
+            'Not all processes have the same frequency axis.');
+         err = addCause(err,cause);
+      end
+      rethrow(err);
+   end
+   if size(unique(f,'rows'),1) ~= 1
+      error('SpectralProcess:normalize:InputValue',...
+         'Not all processes have common frequency axis.');
+   else
+      f = f(1,:);
+      nf = numel(f);
    end
 end
 
