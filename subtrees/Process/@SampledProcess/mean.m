@@ -64,40 +64,6 @@ p.parse(varargin{:});
 par = p.Results;
 subsetPar = p.Unmatched;
 
-try
-   % TODO this will not work properly with multiple windows
-   relWindow = cat(1,self.relWindow);
-   if size(unique(relWindow,'rows'),1) ~= 1
-      error('Not all processes have the same relative window.');
-   else
-      relWindow = relWindow(1,:);
-   end
-   % TODO possibly adjust windows to min/max across all processes?
-catch err
-   if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-      cause = MException('SampledProcess:mean:InputValue',...
-         'Not all processes have the same number of windows.');
-      err = addCause(err,cause);
-   end
-   rethrow(err);
-end
-
-try
-   dt = cat(1,self.dt);
-   if size(unique(dt)) ~= 1
-      error('Not all processes have the same temporal sampling.');
-   else
-      dt = dt(1,:);
-   end
-catch err
-   if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-      cause = MException('SampledProcess:mean:InputValue',...
-         'Not all processes have the same temporal sampling.');
-      err = addCause(err,cause);
-   end
-   rethrow(err);
-end
-
 fn = fieldnames(subsetPar);
 if isempty(fn)
    obj = self;
@@ -105,6 +71,9 @@ else
    obj = copy(self);
    obj.subset(subsetPar);
 end
+
+makeTimeCompatible(obj);
+
 [s,l] = extract(obj);
 s = cat(2,s.values);
 l = cat(2,l{:});
@@ -155,9 +124,9 @@ if par.outputStruct
    out.fullIndex = ind;
 else
    out = SampledProcess(values(:,ind2),...
-      'Fs',1/dt,...
+      'Fs',self(1).Fs,...
       'labels',uLabels(ind2),...
-      'tStart',relWindow(1),...
-      'tEnd',relWindow(2)...
+      'tStart',self(1).relWindow(1),...
+      'tEnd',self(1).relWindow(2)...
       );
 end

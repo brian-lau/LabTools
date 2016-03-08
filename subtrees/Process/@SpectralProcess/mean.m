@@ -66,67 +66,11 @@ par = p.Results;
 subsetPar = p.Unmatched;
 
 try
-   % TODO this will not work properly with multiple windows
-   relWindow = cat(1,self.relWindow);
-   if size(unique(relWindow,'rows'),1) ~= 1
-      m = max(max(diff(relWindow)));
-      if m > 1e-13
-         error('Not all processes have the same relative window.');
-      end
-   end
-   relWindow = relWindow(1,:);
-   % TODO possibly adjust windows to min/max across all processes?
-catch err
-   if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-      cause = MException('SpectralProcess:mean:InputValue',...
-         'Not all processes have the same number of windows.');
-      err = addCause(err,cause);
-   end
-   rethrow(err);
-end
-
-try
    f = cat(1,self.f);
    if size(unique(f,'rows'),1) ~= 1
       error('Not all processes have the same frequency sampling.');
    else
       f = f(1,:);
-   end
-catch err
-   if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-      cause = MException('SpectralProcess:mean:InputValue',...
-         'Not all processes have the same frequency sampling.');
-      err = addCause(err,cause);
-   end
-   rethrow(err);
-end
-
-% previously, I exactly matched the time vectors, but I'm worried that this
-% will fail due to small floating point inaccuracies that accumulate
-% this also suggests that even with exact window/tStep/tBlock/offset, we
-% could end up with a missing sample at the beginning end of window?
-try
-   dt = cat(1,self.dt);
-   if size(unique(dt)) ~= 1
-      error('Not all processes have the same frequency sampling.');
-   else
-      dt = dt(1,:);
-   end
-catch err
-   if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
-      cause = MException('SpectralProcess:mean:InputValue',...
-         'Not all processes have the same temporal sampling.');
-      err = addCause(err,cause);
-   end
-   rethrow(err);
-end
-
-try
-   tBlock = cat(1,self.tBlock);
-   if size(unique(tBlock)) ~= 1
-      error('Not all processes have the same temporal sampling.');
-   else
-      tBlock = tBlock(1,:);
    end
 catch err
    if strcmp(err.identifier,'MATLAB:catenate:dimensionMismatch')
@@ -144,19 +88,13 @@ else
    obj = copy(self);
    obj.subset(subsetPar);
 end
+
+makeTimeCompatible(obj);
+
 [s,l] = extract(obj);
-try
-   s = cat(3,s.values);
-   l = cat(2,l{:});
-catch
-   nt = linq(s).select(@(x) numel(x.times)).toArray;
-   t = linspace(relWindow(1),relWindow(2),max(nt))';
-   for i = 1:numel(s)
-      s2(i).values = interp1(s(i).times,s(i).values,t,'linear','extrap');
-   end
-   s = cat(3,s2.values);
-   l = cat(2,l{:});
-end
+s = cat(3,s.values);
+l = cat(2,l{:});
+
 uLabels = unique(cat(2,obj.labels),'stable');
 clear obj;
 
@@ -204,10 +142,10 @@ if par.outputStruct
 else
    out = SpectralProcess(values(:,:,ind2),...
       'f',f,...
-      'tBlock',tBlock,...
-      'tStep',dt,...
+      'tBlock',self(1).tBlock,...
+      'tStep',self(1).dt,...
       'labels',uLabels(ind2),...
-      'tStart',relWindow(1),...
-      'tEnd',relWindow(2)...
+      'tStart',self(1).relWindow(1),...
+      'tEnd',self(1).relWindow(2)...
       );
 end
