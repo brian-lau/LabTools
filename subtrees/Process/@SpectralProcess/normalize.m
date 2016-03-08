@@ -62,15 +62,10 @@ p.addParameter('eventStart',true,@(x) isscalar(x) && islogical(x));
 p.addParameter('method','z-score',@(x) any(strcmp(x,...
    {'s' 'subtract' 'z', 'z-score' 'd' 'divide' 'p' 'percentage' 's-avg' 'subtract-avg'...
    'z-avg', 'z-score-avg' 'z-avg', 'z-score-avg' 'd-avg' 'divide-avg' 'p-avg' 'percentage-avg'})));
+p.addParameter('process',[],@(x) isa(x,'SpectralProcess'));
 p.parse(event,varargin{:});
 par = p.Results;
 meanPar = p.Unmatched;
-
-if ~isempty(par.window)
-   assert(all([self.dt] <= (par.window(2)-par.window(1))),...
-      'SpectralProcess:normalize:window:InputValue',...
-      'Window must be wide enough to contain at least 1 sample');
-end
 
 if strfind(par.method,'avg')
    try
@@ -92,12 +87,37 @@ if strfind(par.method,'avg')
    end
 end
 
-obj = copy(self);
+if ~isempty(par.process)
+   % DEFINING A COMPATIBLE 2ND PROCESS
+   % dt not necessary since we collapse over time
+   % if isavg, all labels in self must exist in obj
+   % if ~isavg, all labels and label order must match identically
+   obj = copy(par.process);
+else
+   obj = copy(self);
+end
+
+if ~isempty(par.window)
+   assert(all([obj.dt] <= (par.window(2)-par.window(1))),...
+      'SpectralProcess:normalize:window:InputValue',...
+      'Window must be wide enough to contain at least 1 sample');
+end
+
 % Sync to event
 par.processTime = false;
 obj.sync__(par.event,par);
 
-if strfind(par.method,'avg')
+isavg = ~isempty(strfind(par.method,'avg'));
+if ~isavg
+   if numel(obj) ~= numel(self)
+      fprintf('%s normalization converted to %s-avg method due to array mismatch.\n',...
+         upper(par.method),upper(par.method));
+      par.method = [par.method '-avg'];
+      isavg = true;
+   end
+end
+
+if isavg
    meanPar.outputStruct = true;
    temp = obj.mean(meanPar);
    uLabels = temp.labels;
