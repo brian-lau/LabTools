@@ -18,9 +18,9 @@ function varargout = plot(self,varargin)
    xlim = get(h,'xlim');
    ylim = get(h,'ylim');
 
-   if numel(self) > 1
-      self = self(1);
-   end
+%    if numel(self) > 1
+%       self = self(1);
+%    end
    
    menu = uicontextmenu();
    % Create top-level menu item
@@ -42,7 +42,7 @@ function varargout = plot(self,varargin)
          axis([xlim  ylim(1) ylim(2)+d]);
       end
    end
-
+   
    if nargout >= 1
       varargout{1} = h;
    end
@@ -173,7 +173,11 @@ function pickColor(~,~,obj,h)
    ph = gco;
    event = find(obj,'eventProp','name','eventVal',ph.UserData);
    
-   color = event.name.color;
+   try
+      color = event.name.color;
+   catch
+      error('EventProcess:plot','Event names do not have color properties');
+   end
 
    cc = javax.swing.JColorChooser;
    cp = cc.getChooserPanels;

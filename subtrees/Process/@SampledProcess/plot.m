@@ -10,35 +10,56 @@ function hh = plot(self,varargin)
    p.addParameter('stack',0,@(x) isnumeric(x) || islogical(x));
    p.addParameter('sep',3,@(x) isscalar(x));
    p.parse(varargin{:});
+   par = p.Results;
    %params = p.Unmatched;
 
-   if isempty(p.Results.handle) || ~ishandle(p.Results.handle)
+   if isempty(par.handle) || ~ishandle(par.handle)
       figure;
       h = subplot(1,1,1);
    else
-      h = p.Results.handle;
+      h = par.handle;
    end
    hold(h,'on');
    
    if numel(self) > 1
-      self = self(1);
+      uicontrol('Style','slider','Min',1,'Max',numel(self),...
+         'SliderStep',[1 5]./numel(self),'Value',1,'Position',[0 0 150 20],...
+         'Parent',h.Parent,'Tag','ArraySlider',...
+         'Callback',{@updatePlot self par.stack par.sep h});
+%       uicontrol('Style','slider','Min',1,'Max',1,...
+%          'SliderStep',[1 5]./numel(self),'Value',1,'Position',[150 0 150 20],...
+%          'Parent',h.Parent,'Tag','WindowSlider',...
+%          'Callback',{@updatePlot self par.stack par.sep h});
    end
-
-   % FIXME multiple windows?
-   values = self.values{1};
-   t = self.times{1};
-   plotLines(t,values,p.Results.stack,p.Results.sep,self.labels,self,h);
-   setLabels(h);
-   axis tight;
-   %xlim([min(t) max(t)]);
    
+   updatePlot([],[],self,par.stack,par.sep,h);
+
    if nargout
       hh = h;
    end
-
 end
 
-function plotLines(t,values,stack,sep,labels,obj,h)
+function updatePlot(~,~,obj,stack,sep,h)
+   if numel(obj) > 1
+      slider = findobj(h.Parent,'Tag','ArraySlider');
+      ind1 = min(max(1,round(slider.Value)),numel(obj));
+   else
+      ind1 = 1;
+   end
+   
+   values = obj(ind1).values{1};
+   t = obj(ind1).times{1};
+   
+   delete(findobj(h,'Type','Line'));
+   delete(findobj(h.Parent,'Tag','Menu'));
+   delete(findobj(h,'Tag','TextLabel'));
+
+   plotLines(t,values,stack,sep,obj(ind1),h);
+   setLabels(h);
+   axis tight;
+end
+
+function plotLines(t,values,stack,sep,obj,h)
    if stack
       n = size(values,2);
       sf = (0:n-1)*sep;
@@ -58,16 +79,17 @@ function plotLines(t,values,stack,sep,labels,obj,h)
    uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj h});
    uimenu(lineMenu,'Label','Edit label','Callback',{@testme obj h});
    uimenu(lineMenu,'Label','Edit quality','Callback',{@testme obj h});
+   set(lineMenu,'Tag','Menu');
    set(lh,'uicontextmenu',lineMenu);
    for i= 1:numel(lh)
-      set(lh(i),'UserData',labels(i),'Tag','Label');
+      set(lh(i),'UserData',obj.labels(i),'Tag','Label');
    end
 end
 
 function setLabels(h,label)
    right = h.XLim(2);
-   lh = findall(h,'Tag','Label');
-   if nargin < 3
+   lh = findobj(h,'Tag','Label');
+   if nargin < 2
       for i = 1:numel(lh)
          y = (max(lh(i).YData) + min(lh(i).YData))/2;
          text(right,y,lh(i).UserData.name,'VerticalAlignment','middle',...
@@ -75,7 +97,7 @@ function setLabels(h,label)
             'UserData',lh(i).UserData,'Tag','TextLabel','Parent',h);
       end
    else
-      th = findall(h,'Tag','TextLabel');
+      th = findobj(h,'Tag','TextLabel');
       ind = find([th.UserData]==label);
       for i = ind
          th(i).String = th(i).UserData.name;
