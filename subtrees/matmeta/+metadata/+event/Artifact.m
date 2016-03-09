@@ -11,13 +11,22 @@ classdef Artifact < metadata.Event
          end
          
          p = inputParser;
-         p.KeepUnmatched= true;
+         p.KeepUnmatched = true;
          p.FunctionName = 'Artifact constructor';
          p.addParamValue('method','',@ischar);
          p.parse(varargin{:});
          par = p.Results;
-         
+                  
          self.method = par.method;
+         
+         % Default color
+         if ~any(strcmp(varargin,'color'))
+            if isa(self.name,'metadata.Label')
+               self.name.color = [0 0 0];
+            else
+               %warning('no color set');
+            end
+         end
       end
    end
 end

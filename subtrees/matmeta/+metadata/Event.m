@@ -9,6 +9,7 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
       timeReference
       tStart
       tEnd
+      %color = [0 0 0]
       experiment
    end
    properties(SetAccess = protected, Dependent = true, Transient = true)
@@ -30,13 +31,14 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
          p = inputParser;
          p.KeepUnmatched= true;
          p.FunctionName = 'Event constructor';
-         p.addParamValue('name','',@ischar);
+         p.addParamValue('name','',@(x) ischar(x) || isa(x,'metadata.Label'));
          p.addParamValue('description','',@ischar);
          p.addParamValue('timeUnit','seconds',@ischar);
          p.addParamValue('timeReference',[],@(x) isa(x,'metadata.Event'));
          p.addParamValue('tStart',[],@isnumeric);
          p.addParamValue('tEnd',[],@isnumeric);
          p.addParamValue('experiment',[],@(x) isa(x,'metadata.Experiment'));
+         p.addParamValue('color',[],@(x) isnumeric(x) || any(strcmp(x,{'b' 'g' 'r' 'c' 'm' 'y' 'k'})));
          p.parse(varargin{:});
          par = p.Results;
          
@@ -49,8 +51,20 @@ classdef Event < metadata.Section & matlab.mixin.Heterogeneous
          self.experiment = par.experiment;
          self.tStart_ = self.tStart;
          self.tEnd_ = self.tEnd;
+
+         if ~isempty(par.color)
+            if isa(self.name,'metadata.Label')
+               if ischar(par.color)
+                  self.name.color = str2rgb(par.color);
+               else
+                  self.name.color = par.color;
+               end
+            else
+               %warning('no color set');
+            end
+         end
       end
-      
+            
       function time = get.time(self)
          if ~isempty(self.tStart) && ~isempty(self.tEnd)
             time = [self.tStart self.tEnd];

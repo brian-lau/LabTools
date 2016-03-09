@@ -38,17 +38,24 @@ switch lower(ext)
    case '.poly5'
       signal = tms_read(lfpfile);
       temp = cell2mat(signal.data(1:end))';
-      labels = linq(signal.description);
-      labels = labels.select(@(x) x.SignalName')...
+      tags = linq(signal.description);
+      tags = tags.select(@(x) x.SignalName')...
          .where(@(x) strncmp(x,'(Lo)',4))...
          .select(@(x) x(6:end)).toList();
-      % Skip trigger channel % TODO, find data channels by name?
-      s = SampledProcess('values',temp(:,2:end),...
+      % Skip trigger channel
+      ind = ~strcmp(tags,'Trigger');
+      tags = tags(ind);
+      
+      for i = 1:numel(tags)
+         labels(i) = metadata.label.dbsDipole(tags{i});
+      end
+      
+      s = SampledProcess('values',temp(:,ind),...
          'Fs',signal.fs,...
          'tStart',0,...
-         'labels',labels(2:end));
+         'labels',labels);
       % Trigger
-      t = SampledProcess('values',temp(:,1),...
+      t = SampledProcess('values',temp(:,~ind),...
          'Fs',signal.fs,...
          'tStart',0,...
          'labels','trigger');
@@ -106,8 +113,7 @@ if par.Results.Fpass
       toc
    catch
       fprintf('\tBuilding filter anew\n');
-      beep;
-      keyboard
+      beep; keyboard
       tic;
       [~,h,d] = highpass(s,'Fpass',par.Results.Fpass,'Fstop',par.Results.Fstop);
       toc

@@ -29,6 +29,8 @@ function hh = plot(self,varargin)
    t = self.times{1};
    plotLines(t,values,p.Results.stack,p.Results.sep,self.labels,self,h);
    setLabels(h);
+   axis tight;
+   %xlim([min(t) max(t)]);
    
    if nargout
       hh = h;
@@ -52,10 +54,10 @@ function plotLines(t,values,stack,sep,labels,obj,h)
 
    % Attach menus
    lineMenu = uicontextmenu();
-   m1 = uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj 0});
-   m2 = uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj h});
-   m3 = uimenu(lineMenu,'Label','Edit label','Callback',{@testme obj h});
-   m3 = uimenu(lineMenu,'Label','Edit quality','Callback',{@testme obj h});
+   uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj 0});
+   uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj h});
+   uimenu(lineMenu,'Label','Edit label','Callback',{@testme obj h});
+   uimenu(lineMenu,'Label','Edit quality','Callback',{@testme obj h});
    set(lh,'uicontextmenu',lineMenu);
    for i= 1:numel(lh)
       set(lh(i),'UserData',labels(i),'Tag','Label');
@@ -67,7 +69,8 @@ function setLabels(h,label)
    lh = findall(h,'Tag','Label');
    if nargin < 3
       for i = 1:numel(lh)
-         text(right,lh(i).YData(end),lh(i).UserData.name,'VerticalAlignment','middle',...
+         y = (max(lh(i).YData) + min(lh(i).YData))/2;
+         text(right,y,lh(i).UserData.name,'VerticalAlignment','middle',...
             'FontAngle','italic','Color',lh(i).UserData.color,...
             'UserData',lh(i).UserData,'Tag','TextLabel','Parent',h);
       end
@@ -100,13 +103,9 @@ function pickColor(~,~,obj,h)
    
    color = obj.labels(ind).color;
    
-   if isa(h.UserData,'javax.swing.JColorChooser')
-      cc = h.UserData;
-   else
-      cc = javax.swing.JColorChooser;
-      cp = cc.getChooserPanels;
-      cc.setChooserPanels(cp([4 1]));
-   end
+   cc = javax.swing.JColorChooser;
+   cp = cc.getChooserPanels;
+   cc.setChooserPanels(cp([4 1]));
    cc.setColor(fix(color(1)*255),fix(color(2)*255),fix(color(3)*255));
 
    mouse = get(0,'PointerLocation');
@@ -114,10 +113,12 @@ function pickColor(~,~,obj,h)
    javacomponent(cc,[1,1,610,425],d);
    uiwait(d);
    color = cc.getColor;
+   
    obj.labels(ind).color(1) = color.getRed/255;
    obj.labels(ind).color(2) = color.getGreen/255;
    obj.labels(ind).color(3) = color.getBlue/255;
    lh.Color = obj.labels(ind).color;
-   h.UserData = cc;
+   
+   % Redraw labels
    setLabels(h,label);
 end

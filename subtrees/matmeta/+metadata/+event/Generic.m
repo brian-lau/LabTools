@@ -17,6 +17,15 @@ classdef Generic < metadata.Event
          par = p.Results;
          
          self.value = par.value;
+         
+         % Default color
+         if ~any(strcmp(varargin,'color'))
+            if isa(self.name,'metadata.Label')
+               self.name.color = [255 255 1]/255;
+            else
+               %warning('no color set');
+            end
+         end
       end
    end
 end

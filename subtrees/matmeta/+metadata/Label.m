@@ -15,11 +15,11 @@ classdef Label < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyable
          
          p = inputParser;
          p.KeepUnmatched= true;
-         p.addParameter('name','');
-         p.addParameter('description','');
-         p.addParameter('comment','');
-         p.addParameter('grouping','');
-         p.addParameter('color',[0 0 0],@(x) isnumeric(x));
+         p.addParamValue('name','');
+         p.addParamValue('description','');
+         p.addParamValue('comment','');
+         p.addParamValue('grouping','');
+         p.addParamValue('color',[0 0 0],@(x) isnumeric(x) || any(strcmp(x,{'b' 'g' 'r' 'c' 'm' 'y' 'k'})));
          p.parse(varargin{:});
          par = p.Results;
          

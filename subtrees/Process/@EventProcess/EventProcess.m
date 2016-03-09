@@ -99,7 +99,7 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
          end
       end
       
-      ev = find(self,varargin)
+      [ev,selection] = find(self,varargin)
       
       % add event
       self = insert(self,ev,labels)

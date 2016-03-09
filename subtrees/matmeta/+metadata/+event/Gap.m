@@ -16,6 +16,14 @@ classdef Gap < metadata.Event
          p.parse(varargin{:});
          par = p.Results;
          
+         % Default color
+         if ~any(strcmp(varargin,'color'))
+            if isa(self.name,'metadata.Label')
+               self.name.color = [152 78 163]/255;
+            else
+               %warning('no color set');
+            end
+         end
       end
    end
 end

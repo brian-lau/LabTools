@@ -17,6 +17,15 @@ classdef Response < metadata.Event
          par = p.Results;
          
          self.modality = par.modality;
+         
+         % Default color
+         if ~any(strcmp(varargin,'color'))
+            if isa(self.name,'metadata.Label')
+               self.name.color = [55 126 184]/255;
+            else
+               %warning('no color set');
+            end
+         end
       end
    end
 

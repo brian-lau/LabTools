@@ -112,9 +112,9 @@ classdef TestPointProcessSubset < matlab.unittest.TestCase
       function subsetLabelGroupingMissingProp(testCase)
          p = testCase.p;
          
-         p.labels(1) = metadata.label.dbsDipole('name','hello','contacts','0-1');
-         p.labels(3) = metadata.label.dbsDipole('name','goodbye','contacts','0-1');
-         p.subset('labelVal','0-1','labelProp','contacts');
+         p.labels(1) = metadata.label.dbsDipole('name','hello','contacts','01');
+         p.labels(3) = metadata.label.dbsDipole('name','goodbye','contacts','01');
+         p.subset('labelVal',[0 1],'labelProp','contacts');
 
          testCase.assertEqual(p.times,testCase.times(:,[1 3]));
          testCase.assertEqual(p.values,testCase.values(:,[1 3]));

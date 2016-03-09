@@ -83,6 +83,9 @@ updateSelectTab();
       gui.EventsButton = uicontrol('parent',gui.upperTab1,'Style','checkbox',...
          'String','Plot Events','Fontsize',14,...
          'Position',[10,top-75,110,25],'Callback',@onEventsButton);
+      gui.EventsOverlayButton = uicontrol('parent',gui.upperTab1,'Style','checkbox',...
+         'String','Overlay','Fontsize',14,...
+         'Position',[110,top-75,110,25],'Callback',@onEventsOverlayButton);
       gui.MousePanButton = uicontrol('parent',gui.upperTab1,'style','checkbox',...
          'position',[10,top-100,150,25],'Fontsize',14,...
          'String','Interactive zoom','Callback',@onMousePanButton);
@@ -277,7 +280,7 @@ updateSelectTab();
                'Position',[15,35,125,25],'Fontsize',10,'Tag','StackSliderText');
             StackSlider = uicontrol('parent',ViewPanelControl,'style','slider',...
                'position',[15,15,125,25],'Callback', @onStackSlider,'Tag','StackSlider');
-            set(StackSlider,'Min',0,'Max',6,'Value',0);
+            set(StackSlider,'Min',0,'Max',15,'Value',0);
             uicontrol('parent',ViewPanelControl,'style','checkbox',...
                'position',[5,65,80,25],'Fontsize',14,'Tag','Stack',...
                'String','Stack','Callback',@onStackButton);
@@ -292,19 +295,20 @@ updateSelectTab();
    end
 %-------------------------------------------------------------------------%
    function updateSyncTab()
-      ind = gui.ArraySlider.Value;
-      str = {'none' data.segment(ind).eventProcess.values{1}.name};
-      gui.SyncEventsPopup.String = str;
-      if isempty(data.segment(ind).validSync)
-         gui.SyncEventsPopup.Value = 1;
-      elseif isa(data.segment(ind).validSync,'metadata.Event')
-         if strcmp(data.segment(ind).validSync.name,'NULL')
-            gui.SyncEventsPopup.Value = 1;
-         else
-            ind = strcmp(data.segment(ind).validSync.name,str);
-            gui.SyncEventsPopup.Value = find(ind);
-         end
-      end
+%       ind = gui.ArraySlider.Value;
+%       %keyboard
+%       str = {'none' data.segment(ind).eventProcess.values{1}.name.name};
+%       gui.SyncEventsPopup.String = str;
+%       if isempty(data.segment(ind).validSync)
+%          gui.SyncEventsPopup.Value = 1;
+%       elseif isa(data.segment(ind).validSync,'metadata.Event')
+%          if strcmp(data.segment(ind).validSync.name,'NULL')
+%             gui.SyncEventsPopup.Value = 1;
+%          else
+%             ind = strcmp(data.segment(ind).validSync.name,str);
+%             gui.SyncEventsPopup.Value = find(ind);
+%          end
+%       end
    end
 %-------------------------------------------------------------------------%
    function updateSelectTab()
@@ -440,17 +444,34 @@ updateSelectTab();
       for i = 1:numel(labels)
          ax = findobj(gui.ViewPanelBoxes,'Tag',labels{i},'-and','Type','Axes');
          if numel(ax) > 0
-            plot(data.segment(ind).eventProcess,'handle',ax);
+            plot(data.segment(ind).eventProcess,'handle',ax,...
+               'overlay',gui.EventsOverlayButton.Value);
          end
       end
    end
 %-------------------------------------------------------------------------%
    function onEventsButton(~,~)
       if gui.EventsButton.Value
+         %if gui.EventsOverlayButton.Value
+            delete(findobj(gui.ViewPanelBoxes,'Tag','Event'));
+            delete(findobj(gui.Window,'Tag','Event')); % context menus
+            axis tight;
+         %end
+         plotE(gui.ArraySlider.Value);
+      else
+         delete(findobj(gui.ViewPanelBoxes,'Tag','Event'));
+         delete(findobj(gui.Window,'Tag','Event')); % context menus
+         axis tight;
+      end
+   end % onEventsButton
+%-------------------------------------------------------------------------%
+   function onEventsOverlayButton(~,~)
+      if gui.EventsButton.Value
          plotE(gui.ArraySlider.Value);
       else
          delete(findobj(gui.ViewPanelBoxes,'Tag','Event'));
          delete(findobj(gui.Window,'Tag','Event')); % context menus 
+         axis tight;
       end
    end % onEventsButton
 %-------------------------------------------------------------------------%
