@@ -87,7 +87,7 @@ function addEvent(~,~,obj,h,eventType)
 end
 
 function editEvent(source,~,obj)
-	event = find(obj,'name',source.UserData);
+	event = find(obj,'eventProp','name','eventVal',source.UserData);
    propertiesGUI(event);
 end
 
