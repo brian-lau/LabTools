@@ -103,8 +103,9 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       
       % add event
       self = insert(self,ev,labels)
-      % remove event
-      
+      % remove event (overload)
+      self = remove(self,times,labels)
+
       %% Display
       h = plot(self,varargin)
       
