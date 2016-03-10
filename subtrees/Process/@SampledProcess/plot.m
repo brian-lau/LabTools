@@ -21,7 +21,7 @@
 %              SD is calculated across all channels
 %              Slider at left of figure allows changing this
 % OUTPUTS
-%     hh     - Axis handle
+%     h      - Axis handle
 %
 % EXAMPLES
 %     %SampledProcess array where each element has channels with the same labels
@@ -39,7 +39,7 @@
 
 % TODO
 % o multiple windows
-function hh = plot(self,varargin)
+function varargout = plot(self,varargin)
 
    p = inputParser;
    p.KeepUnmatched = true;
@@ -82,25 +82,25 @@ function hh = plot(self,varargin)
    
    % Create the sep slider
    sepSlider = javax.swing.JSlider(javax.swing.JSlider.VERTICAL,sep_min,sep_max,sep_init);
-   [jsepSlider,hsepSlider] = javacomponent(sepSlider,[0,20,30,200],h.Parent);
+   [jsepSlider,hsepSlider] = javacomponent(sepSlider,[0 0 1 1],[]);
    set(hsepSlider,'UserData',jsepSlider,'Tag','SepSlider',...
-      'Units','norm','Position',[0 .25 .05 .5]);
+      'Units','norm','Position',[0 .25 .05 .5],'Parent',h.Parent);
    hjSlider = handle(sepSlider,'CallbackProperties');
    hjSlider.StateChangedCallback = {@updatePlot self gui};
 
    % First draw
-   refreshLines(self,gui);
+   refreshPlot(self,gui);
    
-   if nargout
-      hh = h;
+   if nargout >= 1
+      varargout{1} = h;
    end
 end
 
 function updatePlot(~,~,obj,gui)
-   refreshLines(obj,gui);
+   refreshPlot(obj,gui);
 end
 
-function refreshLines(obj,gui)
+function refreshPlot(obj,gui)
    if numel(obj) > 1
       ind1 = min(max(1,round(gui.arraySlider.Value)),numel(obj));
    else
@@ -126,11 +126,11 @@ function refreshLines(obj,gui)
       newdraw = true;
    else
       [bool,ind] = ismember(obj(ind1).labels,[lh.UserData]);
-      newdraw = all(~bool);
+      newdraw = any(~bool);
    end
    
+   % Draw lines
    if newdraw
-       % Need to draw lines
       delete(findobj(h,'Tag','Line'));
       if sep > 0
          n = size(values,2);
@@ -205,12 +205,11 @@ function refreshLines(obj,gui)
 end
 
 function setLabels(h,label)
-   right = h.XLim(2);
    lh = findobj(h,'Tag','Line');
    if nargin < 2
       for i = 1:numel(lh)
          y = (max(lh(i).YData) + min(lh(i).YData))/2;
-         text(right,y,lh(i).UserData.name,'VerticalAlignment','middle',...
+         text(lh(i).XData(end),y,lh(i).UserData.name,'VerticalAlignment','middle',...
             'FontAngle','italic','Color',lh(i).UserData.color,...
             'UserData',lh(i).UserData,'Tag','TextLabel','Parent',h);
       end
@@ -292,4 +291,5 @@ function editLabel(~,~,obj,h)
    lh = gco;
    label = lh.UserData;
    %TODO
+   disp('Not Finished');
 end
