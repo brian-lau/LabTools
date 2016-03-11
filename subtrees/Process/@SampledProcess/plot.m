@@ -68,14 +68,15 @@ function varargout = plot(self,varargin)
          'Parent',h.Parent,'Tag','ArraySlider');
       gui.arraySliderTxt = uicontrol('Style','text','String','Element 1/',...
          'HorizontalAlignment','left','Units','norm','Position',[.22 .005 .2 .05]);
-      set(gui.arraySlider,'Callback',{@updatePlot self gui});
+      % Use cellfun in the callback to allow adding multiple callbacks later
+      set(gui.arraySlider,'Callback',{@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self gui}} } );
    end
    
    sep_min = 0;
    sd = nanstd(self(1).values{1}(:));
-   sep_max = 30*sd;
+   sep_max = 10*sd*100;
    if par.stack
-      sep_init = par.sep*sd;
+      sep_init = par.sep*sd*100;
    else
       sep_init = 0;
    end
@@ -83,10 +84,11 @@ function varargout = plot(self,varargin)
    % Create the sep slider
    sepSlider = javax.swing.JSlider(javax.swing.JSlider.VERTICAL,sep_min,sep_max,sep_init);
    [jsepSlider,hsepSlider] = javacomponent(sepSlider,[0 0 1 1],[]);
-   set(hsepSlider,'UserData',jsepSlider,'Tag','SepSlider',...
+   set(hsepSlider,'UserData',jsepSlider,'Tag','LineScaleSlider',...
       'Units','norm','Position',[0 .25 .05 .5],'Parent',h.Parent);
    hjSlider = handle(sepSlider,'CallbackProperties');
-   hjSlider.StateChangedCallback = {@updatePlot self gui};
+   % Use cellfun in the callback to allow adding multiple callbacks later
+   hjSlider.StateChangedCallback = {@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self gui}} };
 
    % First draw
    refreshPlot(self,gui);
@@ -94,10 +96,6 @@ function varargout = plot(self,varargin)
    if nargout >= 1
       varargout{1} = h;
    end
-end
-
-function updatePlot(~,~,obj,gui)
-   refreshPlot(obj,gui);
 end
 
 function refreshPlot(obj,gui)
@@ -109,13 +107,13 @@ function refreshPlot(obj,gui)
    values = obj(ind1).values{1};
    t = obj(ind1).times{1};
    
-   hsepSlider = findobj(gui.h.Parent,'tag','SepSlider');
-   sep = hsepSlider.UserData.getValue();
+   hsepSlider = findobj(gui.h.Parent,'tag','LineScaleSlider');
+   sep = hsepSlider.UserData.getValue()/100;
 
    n = size(values,2);
    sd = nanstd(obj(ind1).values{1}(:));
    
-   hsepSlider.UserData.setMaximum(30*sd);
+   hsepSlider.UserData.setMaximum(10*sd*100);
    
    sf = (0:n-1)*sep; % shift factor
    h = gui.h;
@@ -152,7 +150,6 @@ function refreshPlot(obj,gui)
       [lh(q0).Color] = deal([.7 .7 .7 .4]);
    else
       % Ensure that line handles are ordered like data
-      %[bool,ind] = ismember([lh.UserData],obj(ind1).labels);
       lh = lh(ind);
       
       % Refresh data for each line
@@ -177,27 +174,28 @@ function refreshPlot(obj,gui)
    
    % Attach menus
    if newdraw
-      delete(findobj(h.Parent,'Tag','Menu'));
+      delete(findobj(h.Parent,'Tag','LineMenuElement'));
       lineMenu = uicontextmenu();
       uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj(ind1) 0});
       uimenu(lineMenu,'Label','Edit quality','Callback',{@setQuality obj(ind1) NaN});
       uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
       uimenu(lineMenu,'Label','Edit label','Callback',{@editLabel obj(ind1) h});
-      set(lineMenu,'Tag','Menu');
+      set(lineMenu,'Tag','LineMenuElement');
       set(lh,'uicontextmenu',lineMenu);
    end
    
    % Refresh labels
    if newdraw
-      delete(findobj(h,'Tag','TextLabel'));
+      delete(findobj(h,'Tag','LineTextLabel'));
       setLabels(gui.h);
-      axis tight;
    else
-      th = findobj(h,'Tag','TextLabel');
+      th = findobj(h,'Tag','LineTextLabel');
       for i = 1:n
          th(i).Position(2) = (max(lh(i).YData) + min(lh(i).YData))/2;
       end
    end
+   
+   axis([min(t) max(t) sf(1)-abs(min(min(values))) sf(end)+max(max(values))]);
    
    gui.arraySliderTxt.String = ['element ' num2str(ind1) '/' num2str(numel(obj))];
 
@@ -212,10 +210,10 @@ function setLabels(h,label)
          y = (max(lh(i).YData) + min(lh(i).YData))/2;
          text(lh(i).XData(end),y,lh(i).UserData.name,'VerticalAlignment','middle',...
             'FontAngle','italic','Color',lh(i).UserData.color,...
-            'UserData',lh(i).UserData,'Tag','TextLabel','Parent',h);
+            'UserData',lh(i).UserData,'Tag','LineTextLabel','Parent',h);
       end
    else
-      th = findobj(h,'Tag','TextLabel');
+      th = findobj(h,'Tag','LineTextLabel');
       ind = find([th.UserData]==label);
       for i = ind
          th(i).String = th(i).UserData.name;
