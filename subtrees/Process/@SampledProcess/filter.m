@@ -122,11 +122,26 @@ for i = 1:numel(self)
                case'zpd'
                   temp = [zeros(gd,self(i).n) ; temp ; zeros(gd,self(i).n)];
             end
-            temp = filter(f,temp);
+            temp = filter_local(f,temp);
             self(i).values{j} = temp(2*gd+1:2*gd+self(i).dim{j}(1),:);
          end
       else
-         self(i).values{j} = filter(f,self(i).values{j});
+         self(i).values{j} = filter_local(f,self(i).values{j});
       end
    end
 end
+
+%% Decide between filtering in time or frequency domain
+function y = filter_local(f,x)
+L = size(x,1);
+N = impzlength(f);
+if isfir(f) && (log2(L) < N) % For FIR filters, FFT can be much faster
+   if isa(f,'dfilt.dffir')
+      y = fftfilt(f.Numerator,x);
+   else % designFilter
+      y = fftfilt(f,x);
+   end
+else
+   y = filter(f,x);
+end
+

@@ -264,8 +264,9 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       [self,h,d,hft] = notch(self,varargin)
       self = detrend(self)
       self = normalize(self,varargin)
-      %amplitude = abs(values);
-      %phase = angle(values);
+      self = hilbert(self)
+      self = abs(values);
+      self = angle(values);
 
       % Transformations potentially altering sampling
       self = resample(self,newFs,varargin)
