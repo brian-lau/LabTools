@@ -1,10 +1,61 @@
+% PLOT - Plot EventProcess
+%
+%     plot(EventProcess)
+%     EventProcess.plot
+%
+%     Right clicking (ctrl-clicking) any line allows editing the quality,
+%     color and label associated with that line.
+%
+%     For an array of EventProcesses, a horizontal scrollbar in the
+%     bottom left allows browsing through the array elements.
+%
+%     All inputs are passed in using name/value pairs. The name is a string
+%     followed by the value (described below).
+%     The order of the pairs does not matter, nor does the case.
+%
+% INPUTS
+%     handle - axis handle, optional, default generates a new axis
+%     stack  - boolean, optional, default = true
+%              If true, offsets each channel by an integer multiple of sep.
+%     sep    - numeric scalar, optional, default = 3*SD
+%              SD is calculated across all channels
+%              Slider at left of figure allows changing this
+% OUTPUTS
+%     h      - Axis handle
+%
+% EXAMPLES
+%     fix = metadata.Label('name','fix');
+%     cue = metadata.Label('name','cue');
+%     button = metadata.Label('name','button');
+%     for i = 1:50
+%        t = rand;
+%        e(1) = metadata.event.Stimulus('tStart',t,'tEnd',t+1,'name',fix);
+%        t = 2 + rand;
+%        e(2) = metadata.event.Stimulus('tStart',t,'tEnd',t,'name',cue);
+%        t = 4 + rand;
+%        e(3) = metadata.event.Response('tStart',t,'tEnd',t+2,'name',button,'experiment',metadata.Experiment);
+% 
+%        events(i) = EventProcess('events',e);
+%     end
+%     plot(events)
+
+%     $ Copyright (C) 2016 Brian Lau <brian.lau@upmc.fr> $
+%     Released under the BSD license. The license and most recent version
+%     of the code can be found on GitHub:
+%     https://github.com/brian-lau/Process
+
+% TODO
+% o multiple windows
 function varargout = plot(self,varargin)
 
    p = inputParser;
    p.KeepUnmatched = true;
    p.FunctionName = 'EventProcess plot method';
    p.addParameter('handle',[],@(x) isnumeric(x) || ishandle(x));
-   p.addParameter('overlay',false);
+   p.addParameter('top',[],@isnumeric);
+   p.addParameter('bottom',[],@isnumeric);
+   p.addParameter('alpha',0.15,@isnumeric);
+   p.addParameter('stagger',false,@islogical);
    p.parse(varargin{:});
    par = p.Results;
 
@@ -14,11 +65,13 @@ function varargout = plot(self,varargin)
    else
       h = par.handle;
    end
-   hold on;
-   xlim = get(h,'xlim');
-   ylim = get(h,'ylim');
+   hold(h,'on');
    
    gui.h = h;
+   gui.alpha = par.alpha;   
+   gui.bottom = par.bottom;
+   gui.top = par.top;
+   
    set(h,'tickdir','out','ticklength',[0.005 0.025]);
 
    if numel(self) > 1
@@ -39,18 +92,6 @@ function varargout = plot(self,varargin)
       uimenu('Parent',topmenu,'Label',validEventTypes{i},'Callback',{@addEvent self gui validEventTypes{i}});
    end
    set(h,'uicontextmenu',menu);
-
-%    values = self.values{1};
-%    for i = 1:numel(values)
-%       if par.overlay
-%          plotEvent(values(i),self,h,ylim(2),ylim(1),0.15);
-%       else
-%          d = 0.07*diff(ylim);
-%          d2 = (d/numel(values));
-%          plotEvent(values(i),self,h,ylim(2)+d2*i,ylim(2)+d2*(i-1),0.4);
-%          axis([xlim  ylim(1) ylim(2)+d]);
-%       end
-%    end
    
    % First draw
    refreshPlot(self,gui);
@@ -71,13 +112,17 @@ function refreshPlot(obj,gui)
       ind1 = 1;
    end
    values = obj(ind1).values{1};
-   %t = obj(ind1).times{1};
    
    n = numel(values);
    
-   bottom = 0;
-   top = 1;
-   alpha = 0.15;
+   if isempty(gui.bottom)
+      bottom = h.YLim(1);
+   end
+   if isempty(gui.top)
+      top = h.YLim(2);
+   end
+%    bottom = gui.bottom;
+%    top = gui.top;
    
    h = gui.h;
    ph = findobj(h,'Tag','Event');
@@ -104,7 +149,7 @@ function refreshPlot(obj,gui)
          left = values(i).time(1);
          right = values(i).time(2);
          ph(i) = fill([left left right right],[bottom top top bottom],...
-            color,'FaceAlpha',alpha,'EdgeColor','none','Parent',h);
+            color,'FaceAlpha',gui.alpha,'EdgeColor','none','Parent',h);
          set(ph(i),'UserData',values(i).name,'Tag','Event');
          if values(i).duration == 0
             ph(i).EdgeColor = color;
@@ -124,7 +169,7 @@ function refreshPlot(obj,gui)
    if newdraw
       delete(findobj(h.Parent,'Tag','Menu'));
       eventMenu = uicontextmenu();
-      m1 = uimenu('Parent',eventMenu,'Label','Edit','Callback',{@editEvent obj(ind1)});
+      m1 = uimenu('Parent',eventMenu,'Label','View properties','Callback',{@editEvent obj(ind1)});
       m2 = uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj(ind1) h});
       m3 = uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj(ind1) h});
       m4 = uimenu('Parent',eventMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
@@ -161,55 +206,9 @@ function refreshPlot(obj,gui)
          th(i).Position(1) = values(i).time(1);
       end
    end
+   
+   gui.arraySliderTxt.String = ['element ' num2str(ind1) '/' num2str(numel(obj))];
 end
-
-% function plotEvent(event,obj,h,top,bottom,alpha)
-%    left = event.time(1);
-%    right = event.time(2);
-% 
-%    eventMenu = uicontextmenu();
-%    m1 = uimenu('Parent',eventMenu,'Label','Edit','Callback',{@editEvent obj});
-%    m2 = uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj h});
-%    m3 = uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj h});
-%    m4 = uimenu('Parent',eventMenu,'Label','Change color','Callback',{@pickColor obj h});
-%    set([m1 m2 m3 m4],'UserData',event.name,'Tag','Event');
-% 
-%    try
-%       color = event.name.color;
-%    catch
-%       color = [0 0 0];
-%    end
-%    
-%    if event.duration == 0
-%       eGraphic = line([left left],[bottom top],'Color',color,'Linewidth',2,'Parent',h);
-%       set(eGraphic,'UserData',event.name,'Tag','Event'); % Store event name 
-%       set(eGraphic,'uicontextmenu',eventMenu);
-%    else
-%       eGraphic = fill([left left right right],[bottom top top bottom],...
-%          color,'FaceAlpha',alpha,'EdgeColor','none','Parent',h);
-%       set(eGraphic,'UserData',event.name,'Tag','Event');
-%       set(eGraphic,'uicontextmenu',eventMenu);
-%    end
-%    
-%    try
-%       name = event.name.name;
-%    catch
-%       name = event.name;
-%    end
-%        
-%    eText = text(left,top,name,'VerticalAlignment','bottom',...
-%       'FontAngle','italic','Color',color,'Parent',h);
-%    set(eText,'UserData',event.name,'Tag','Event');
-% end
-
-% function setLabels(h,label)
-%    th = findall(h,'Tag','Event','Type','Text');
-%    ind = find([th.UserData]==label);
-%    for i = ind
-%       th(i).String = th(i).UserData.name;
-%       th(i).Color = th(i).UserData.color;
-%    end
-% end
 
 function addEvent(~,~,obj,gui,eventType)
    if numel(obj) > 1
@@ -239,48 +238,43 @@ function addEvent(~,~,obj,gui,eventType)
    end
 end
 
-function editEvent(source,~,obj)
-	event = find(obj,'eventProp','name','eventVal',source.UserData);
-   propertiesGUI(event);
+function editEvent(~,~,obj)
+   ph = gco;
+   ind = [obj.values{1}.name] == ph.UserData;
+   label = ph.UserData;
+   event = obj.values{1}(ind);	
+   warning('OFF','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
+   [h,event] = propertiesGUI(event);
+   warning('ON','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
 end
 
-function moveEvent(source,~,obj,h)
-%keyboard
-%    p = findobj(h,'UserData',source.UserData,'-and','Type','patch');
-%    if isempty(p)
-%       p = findobj(h,'UserData',source.UserData,'-and','Type','line');
-%    end
-   p = gco;
+function moveEvent(~,~,obj,h)
+   ph = gco;
+   ind = [obj.values{1}.name] == ph.UserData;
+   label = ph.UserData;
+   event = obj.values{1}(ind);
+   textLabel = findobj(h,'UserData',ph.UserData,'-and','Type','Text');
+   
    setptr(gcf,'hand');
-   fig.movepatch(p,'x',@mouseupEvent);
+   fig.movepatch(ph,'x',@mouseupEvent);
 
    function mouseupEvent(~,~)
-      if isa(p,'matlab.graphics.primitive.Line')
-         tStart = p.XData(1);
-         tEnd = tStart;
-      else
-         v = get(p,'Vertices');
-         tStart = v(1,1);
-         tEnd = v(3,1);
-      end
-   
-      q = linq(obj.values{1});
-      ind = find(q.select(@(x) strcmp(x.name,source.UserData)).toArray());
-      event = obj.values{1}(ind);
-keyboard
+      v = get(ph,'Vertices');
+      tStart = v(1,1);
+      tEnd = v(3,1);
       event.tStart = tStart;
       event.tEnd = tEnd;
       obj.values{1}(ind) = event;
       obj.times{1}(ind,:) = [tStart tEnd];
-      g = findobj(h,'UserData',source.UserData,'-and','Type','Text');
-      g.Position(1) = tStart;
+      
+      textLabel.Position(1) = tStart;
       % HACK - despite nextplot setting, this gets cleared?
-      p.UserData = source.UserData;
+      ph.UserData = label;
    end
 end
 
 function deleteEvent(~,~,obj,h)
-   ph = gco;  
+   ph = gco;
    obj.remove(ph.Vertices(1,1));
    g = findobj(h,'UserData',ph.UserData);
    delete(g);
@@ -312,5 +306,6 @@ function pickColor(~,~,obj,h)
    event.name.color(3) = color.getBlue/255;
    ph.FaceColor = event.name.color;
    
-   setLabels(h,event.name);
+   textLabel = findobj(h,'UserData',ph.UserData,'-and','Type','Text');
+   textLabel.Color = ph.FaceColor;
 end

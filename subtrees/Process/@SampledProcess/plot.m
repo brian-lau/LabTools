@@ -200,6 +200,7 @@ function refreshPlot(obj,gui)
    end
    
    gui.arraySliderTxt.String = ['element ' num2str(ind1) '/' num2str(numel(obj))];
+
    h.YTick = [0 1*sd 2*sd 3*sd];
    set(h,'yticklabel',{'0' sprintf('%1.2f (1 SD)',sd) sprintf('%1.2f (2 SD)',2*sd) sprintf('%1.2f (3 SD)',3*sd)});
 end

@@ -31,3 +31,19 @@ e(3) = metadata.event.Response('tStart',5,'tEnd',6,'name',button,'experiment',me
 
 events(1) = EventProcess('events',e,'tStart',0,'tEnd',10);
 events(2) = EventProcess('events',e,'tStart',0,'tEnd',10);
+
+
+fix = metadata.Label('name','fix');
+cue = metadata.Label('name','cue');
+button = metadata.Label('name','button');
+
+for i = 1:50
+   t = rand;
+   e(1) = metadata.event.Stimulus('tStart',t,'tEnd',t+1,'name',fix);
+   t = 2 + rand;
+   e(2) = metadata.event.Stimulus('tStart',t,'tEnd',t,'name',cue);
+   t = 4 + rand;
+   e(3) = metadata.event.Response('tStart',t,'tEnd',t+2,'name',button,'experiment',metadata.Experiment);
+   
+   events(i) = EventProcess('events',e);
+end
