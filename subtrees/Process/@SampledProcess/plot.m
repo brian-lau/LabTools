@@ -6,8 +6,15 @@
 %     Right clicking (ctrl-clicking) any line allows editing the quality,
 %     color and label associated with that line.
 %
-%     For an array of SampledProcesses, a horizontal scrollbar in the
-%     bottom left allows browsing through the array elements.
+%     A double slider at the bottom right controls the range of data 
+%     displayed (0-100% of the relative window of each SampledProcess).
+%     The left and right edges can be adjusted indepdendently, and
+%     click-dragging in between the two knobs moves the entire range.
+%     Double clicking in between the two knobs resets the range.
+%
+%     For an array of SampledProcesses, a horizontal slider at the bottom
+%     left allows browsing through the array elements. The vertical scrollbar
+%     allows controlling vertical spacing between channels.
 %
 %     All inputs are passed in using name/value pairs. The name is a string
 %     followed by the value (described below).
@@ -39,6 +46,8 @@
 
 % TODO
 % o multiple windows
+% o edit label
+% o use zoom ActionPostCallback to change label positions
 function varargout = plot(self,varargin)
 
    p = inputParser;
@@ -57,67 +66,134 @@ function varargout = plot(self,varargin)
       h = par.handle;
    end
    hold(h,'on');
+   set(h,'tickdir','out','ticklength',[0.005 0.025],'Visible','off');
+      
+   gui.id = char(java.util.UUID.randomUUID().toString());
    
-   gui.h = h;
-   set(h,'tickdir','out','ticklength',[0.005 0.025]);
-
    if numel(self) > 1
-      gui.arraySlider = uicontrol('Style','slider','Min',1,'Max',numel(self),...
-         'SliderStep',[1 5]./numel(self),'Value',1,...
-         'Units','norm','Position',[0.01 0.005 .2 .05],...
-         'Parent',h.Parent,'Tag','ArraySlider');
-      gui.arraySliderTxt = uicontrol('Style','text','String','Element 1/',...
-         'HorizontalAlignment','left','Units','norm','Position',[.22 .005 .2 .05]);
-      % Use cellfun in the callback to allow adding multiple callbacks later
-      set(gui.arraySlider,'Callback',{@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self gui}} } );
+      ah = findobj(h.Parent,'Tag','ArraySlider');
+      if isempty(ah)
+         gui.arraySlider = uicontrol('Style','slider','Min',1,'Max',numel(self),...
+            'SliderStep',[1 5]./numel(self),'Value',1,...
+            'Units','norm','Position',[0.01 0.005 .2 .04],...
+            'Parent',h.Parent,'Tag','ArraySlider');
+         gui.arraySliderTxt = uicontrol('Style','text','String','Element 1/',...
+            'HorizontalAlignment','left','Units','norm','Position',[.22 .005 .2 .04]);
+         % Use cellfun in the callback to allow adding multiple callbacks later
+         set(gui.arraySlider,'Callback',...
+            {@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self h gui.id}} } );
+      else
+         % Adding event plot to existing axis that has slider controls
+         % Attach callbacks to existing list, to be evaluated in sequence
+         gui.arraySlider = ah;
+         f = {@refreshPlot self h gui.id};
+         ah.Callback{2}{end+1} = f;
+      end
    end
-   
-   sep_min = 0;
-   sd = nanstd(self(1).values{1}(:));
-   sep_max = 10*sd*100;
-   if par.stack
-      sep_init = par.sep*sd*100;
-   else
-      sep_init = 0;
-   end
-   
-   % Create the sep slider
-   sepSlider = javax.swing.JSlider(javax.swing.JSlider.VERTICAL,sep_min,sep_max,sep_init);
-   [jsepSlider,hsepSlider] = javacomponent(sepSlider,[0 0 1 1],[]);
-   set(hsepSlider,'UserData',jsepSlider,'Tag','LineScaleSlider',...
-      'Units','norm','Position',[0 .25 .05 .5],'Parent',h.Parent);
-   hjSlider = handle(sepSlider,'CallbackProperties');
-   % Use cellfun in the callback to allow adding multiple callbacks later
-   hjSlider.StateChangedCallback = {@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self gui}} };
 
+   sh = findobj(h.Parent,'Tag','LineScaleSlider');
+   if isempty(sh)
+      % Set up slider parameters
+      sep_min = 0;
+      sd = nanstd(self(1).values{1}(:));
+      sep_max = 9*sd*10;
+      if par.stack
+         sep_init = par.sep*sd*10;
+      else
+         sep_init = 0;
+      end
+      
+      % Create the slider controlling separation between lines
+      sepSlider = javax.swing.JSlider(javax.swing.JSlider.VERTICAL,sep_min,sep_max,sep_init);
+      [jsepSlider,hsepSlider] = javacomponent(sepSlider,[0 0 1 1],[]);
+      set(hsepSlider,'UserData',jsepSlider,'Tag','LineScaleSlider',...
+         'Units','norm','Position',[0 .25 .04 .5],'Parent',h.Parent);
+      jsepSlider.StateChangedCallback = ...
+         {@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self h gui.id}} };
+   else
+      f = {@refreshPlot self h gui.id};
+      sh.UserData.StateChangedCallback{2}{end+1} = f;
+   end
+   
+   % This slider will be present if handle comes from SampledProcess.plot.
+   % If so, let the originating process control the time range, otherwise
+   % add control
+   rh = findobj(h.Parent,'Tag','RangeSlider');
+   if isempty(rh)
+      %win = cat(1,self.relWindow);
+      %gui.minmaxwin = [min(win(:,1)) max(win(:,2))];
+      rangeSlider = com.jidesoft.swing.RangeSlider(0,100,0,100);  % min,max,low,high
+      [rangeSlider,hrangeSlider] = javacomponent(rangeSlider,[0 0 1 1],[]);
+      set(hrangeSlider,'UserData',rangeSlider,'Tag','RangeSlider',...
+         'Units','norm','Position',[.5 .005 .425 .05],'Parent',h.Parent);
+      set(rangeSlider,'Enabled',false,'StateChangedCallback',{@setx self h gui.id});
+   end
+   
+   % Stash plot-specific parameters
+   if isempty(h.UserData)
+      h.UserData = {gui};
+   else
+      h.UserData = [h.UserData {gui}];
+   end
+   
    % First draw
-   refreshPlot(self,gui);
+   refreshPlot(self,h,gui.id);
+   h.Visible = 'on';
    
    if nargout >= 1
       varargout{1} = h;
    end
 end
 
-function refreshPlot(obj,gui)
+function setx(e,~,obj,h,id)
+   % Extract specific parameters for this ID
+   gui = linq(h.UserData).where(@(x) strcmp(x.id,id)).select(@(x) x).toArray;
+
    if numel(obj) > 1
-      ind1 = min(max(1,round(gui.arraySlider.Value)),numel(obj));
+      ind1 = max(1,round(gui.arraySlider.Value));
    else
       ind1 = 1;
    end
+   
+   minmaxwin = obj(ind1).relWindow;
+   d = minmaxwin(2) - minmaxwin(1);  
+%    d = gui.minmaxwin(2) - gui.minmaxwin(1);
+   h.XLim(1) = minmaxwin(1) + e.getLowValue*d/100;
+   h.XLim(2) = minmaxwin(1) + e.getHighValue*d/100 + 100*eps(h.XLim(1));
+
+   th = findobj(h,'Tag',id,'-and','Type','Text');
+   for i = 1:numel(th)
+      th(i).Position(1) = h.XLim(2);
+   end
+end
+
+function refreshPlot(obj,h,id)
+   % Extract specific parameters for this ID
+   gui = linq(h.UserData).where(@(x) strcmp(x.id,id)).select(@(x) x).toArray;
+
+   if numel(obj) > 1
+      ind1 = max(1,round(gui.arraySlider.Value));
+   else
+      ind1 = 1;
+   end
+   
+   if ind1 > numel(obj)
+      delete(findobj(h,'Tag',id));
+      return;
+   end   
+   
    values = obj(ind1).values{1};
    t = obj(ind1).times{1};
    
-   hsepSlider = findobj(gui.h.Parent,'tag','LineScaleSlider');
-   sep = hsepSlider.UserData.getValue()/100;
+   hsepSlider = findobj(h.Parent,'tag','LineScaleSlider');
+   sep = hsepSlider.UserData.getValue()/10;
 
    n = size(values,2);
    sd = nanstd(obj(ind1).values{1}(:));
-   
-   hsepSlider.UserData.setMaximum(10*sd*100);
+   %hsepSlider.UserData.setMaximum(9*sd*10); % THIS TRIGGERS CALLBACK
    
    sf = (0:n-1)*sep; % shift factor
-   h = gui.h;
-   lh = findobj(h,'Tag','Line');
+   lh = findobj(h,'Tag',id,'-and','-and','Type','Line','LineStyle','-');
    
    % Do we need to draw from scratch, or can we replace data in handles?
    if isempty(lh)
@@ -126,23 +202,20 @@ function refreshPlot(obj,gui)
       [bool,ind] = ismember(obj(ind1).labels,[lh.UserData]);
       newdraw = any(~bool);
    end
-   
+      
    % Draw lines
    if newdraw
-      delete(findobj(h,'Tag','Line'));
+      delete(findobj(h,'Tag',id,'-and','Type','Line'));
       if sep > 0
          n = size(values,2);
          sf = (0:n-1)*sep;
          lh = plot(t,bsxfun(@plus,values,sf),'Parent',h);
-         % Plot zero level for each line
-         plot(repmat([t(1) t(end)]',1,n),[sf' , sf']',...
-            '--','color',[.7 .7 .7 .4],'Parent',h,'Tag','BaseLine');
       else
          lh = plot(t,values,'Parent',h);
       end
       % Store the label for each line
       for i= 1:numel(lh)
-         set(lh(i),'UserData',obj(ind1).labels(i),'Tag','Line');
+         set(lh(i),'UserData',obj(ind1).labels(i),'Tag',id);
       end
       % Distribute label colors, masking for quality=0
       q0 = obj(ind1).quality == 0;
@@ -151,7 +224,6 @@ function refreshPlot(obj,gui)
    else
       % Ensure that line handles are ordered like data
       lh = lh(ind);
-      
       % Refresh data for each line
       data = bsxfun(@plus,values,sf);
       for i = 1:n
@@ -159,67 +231,61 @@ function refreshPlot(obj,gui)
       end
    end
    
-   % Refresh zero level for each line
+   % Draw zero level for each line
    if newdraw
-      delete(findobj(h,'Tag','BaseLine'));
-      % Plot zero level for each line
-      plot(repmat([t(1) t(end)]',1,n),[sf' , sf']',...
-         '--','color',[.7 .7 .7 .4],'Parent',h,'Tag','BaseLine');
-   else
-      blh = findobj(h,'Tag','BaseLine');
-      for i = 1:n
-         blh(i).YData = [sf(i) sf(i)];
-      end
-   end
+      temp = [sf; sf; nan(size(sf))]; % Draw as single line
+      plot(repmat([t(1) t(end) NaN]',n,1),temp(:),...
+         '--','color',[.7 .7 .7 .4],'Parent',h,'Tag',id);
+  else
+     blh = findobj(h,'Tag',id,'-and','LineStyle','--');
+     temp = [sf; sf; nan(size(sf))];
+     blh.YData = temp(:)';
+  end
    
    % Attach menus
    if newdraw
-      delete(findobj(h.Parent,'Tag','LineMenuElement'));
+      delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
       lineMenu = uicontextmenu();
       uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj(ind1) 0});
       uimenu(lineMenu,'Label','Edit quality','Callback',{@setQuality obj(ind1) NaN});
       uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
       uimenu(lineMenu,'Label','Edit label','Callback',{@editLabel obj(ind1) h});
-      set(lineMenu,'Tag','LineMenuElement');
+      set(lineMenu,'Tag',id);
       set(lh,'uicontextmenu',lineMenu);
    end
    
    % Refresh labels
    if newdraw
-      delete(findobj(h,'Tag','LineTextLabel'));
-      setLabels(gui.h);
-   else
-      th = findobj(h,'Tag','LineTextLabel');
+      delete(findobj(h,'Tag',id,'-and','Type','Text'));
       for i = 1:n
-         th(i).Position(2) = (max(lh(i).YData) + min(lh(i).YData))/2;
+         text(t(end),sf(i),lh(i).UserData.name,'VerticalAlignment','middle',...
+            'FontAngle','italic','Color',lh(i).UserData.color,...
+            'UserData',lh(i).UserData,'Tag',id,'Parent',h);
+      end
+   else
+      th = findobj(h,'Tag',id,'-and','Type','Text');
+      th = th(ind);
+      for i = 1:n
+         th(i).Position(2) = sf(i);
       end
    end
    
-   axis([min(t) max(t) sf(1)-abs(min(min(values))) sf(end)+max(max(values))]);
+   if isempty(h.Parent.KeyPressFcn) % Zoom is not active
+      rh = findobj(h.Parent,'Tag','RangeSlider');
+      if ~rh.UserData.isEnabled
+         h.XLim(1) = t(1);
+         h.XLim(2) = t(end);
+         rh.UserData.Enabled = true;
+      end
+      h.YLim(1) = sf(1)-abs(min(min(values)));
+      h.YLim(2) = sf(end)+max(max(values));
+   end
    
    gui.arraySliderTxt.String = ['element ' num2str(ind1) '/' num2str(numel(obj))];
 
    h.YTick = [0 1*sd 2*sd 3*sd];
-   set(h,'yticklabel',{'0' sprintf('%1.2f (1 SD)',sd) sprintf('%1.2f (2 SD)',2*sd) sprintf('%1.2f (3 SD)',3*sd)});
-end
-
-function setLabels(h,label)
-   lh = findobj(h,'Tag','Line');
-   if nargin < 2
-      for i = 1:numel(lh)
-         y = (max(lh(i).YData) + min(lh(i).YData))/2;
-         text(lh(i).XData(end),y,lh(i).UserData.name,'VerticalAlignment','middle',...
-            'FontAngle','italic','Color',lh(i).UserData.color,...
-            'UserData',lh(i).UserData,'Tag','LineTextLabel','Parent',h);
-      end
-   else
-      th = findobj(h,'Tag','LineTextLabel');
-      ind = find([th.UserData]==label);
-      for i = ind
-         th(i).String = th(i).UserData.name;
-         th(i).Color = th(i).UserData.color;
-      end
-   end
+   set(h,'yticklabel',{'0' sprintf('%1.2f (1 SD)',sd) sprintf('%1.2f (2 SD)',2*sd) ...
+      sprintf('%1.2f (3 SD)',3*sd)});
 end
 
 function setQuality(~,~,obj,quality)
@@ -282,8 +348,9 @@ function pickColor(~,~,obj,h)
       lh.Color = obj.labels(ind).color;
    end
    
-   % Redraw labels
-   setLabels(h,label);
+   % Redraw label
+   th = findobj(h,'Tag',lh.Tag,'-and','Type','Text','-and','UserData',lh.UserData);
+   th.Color = lh.Color;
 end
 
 function editLabel(~,~,obj,h)

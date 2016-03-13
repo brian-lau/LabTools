@@ -3,11 +3,11 @@
 %     plot(EventProcess)
 %     EventProcess.plot
 %
-%     Right clicking (ctrl-clicking) any line allows editing the quality,
-%     color and label associated with that line.
+%     Right clicking (ctrl-clicking) on events displays options for moving or
+%     deleting events. Right clicking outside of events allows adding events.
 %
-%     For an array of EventProcesses, a horizontal scrollbar in the
-%     bottom left allows browsing through the array elements.
+%     For an array of EventProcesses, a horizontal scrollbar at the bottom
+%     left allows browsing through the array elements.
 %
 %     All inputs are passed in using name/value pairs. The name is a string
 %     followed by the value (described below).
@@ -77,78 +77,95 @@ function varargout = plot(self,varargin)
       h = par.handle;
    end
    hold(h,'on');
-   
-   gui.h = h;
+   set(h,'tickdir','out','ticklength',[0.005 0.025],'Visible','off');
+
+   gui.id = char(java.util.UUID.randomUUID().toString());
    gui.alpha = par.alpha;   
    gui.bottom = par.bottom;
    gui.top = par.top;
    gui.overlap = par.overlap;
    gui.stagger = par.stagger;
    
-   set(h,'tickdir','out','ticklength',[0.005 0.025]);
-
    if numel(self) > 1
       ah = findobj(h.Parent,'Tag','ArraySlider');
       if isempty(ah)
          gui.arraySlider = uicontrol('Style','slider','Min',1,'Max',numel(self),...
             'SliderStep',[1 5]./numel(self),'Value',1,...
-            'Units','norm','Position',[0.01 0.005 .2 .05],...
+            'Units','norm','Position',[0.01 0.005 .2 .04],...
             'Parent',h.Parent,'Tag','ArraySlider');
          gui.arraySliderTxt = uicontrol('Style','text','String','Element 1/',...
-            'HorizontalAlignment','left',...
-            'Units','norm','Position',[.22 .005 .2 .05]);
-         set(gui.arraySlider,'Callback',{@updatePlot self gui});
+            'HorizontalAlignment','left','Units','norm','Position',[.22 .005 .2 .04]);
+         % Use cellfun in the callback to allow adding multiple callbacks later
+         set(gui.arraySlider,'Callback',...
+            {@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self h gui.id}} } );
       else
          % Adding event plot to existing axis that has slider controls
          % Attach callbacks to existing list, to be evaluated in sequence
          gui.arraySlider = ah;
-         f = {@refreshPlot self gui};
-         ah.Callback{2}{2} = f;
-
-         sh = findobj(h.Parent,'Tag','LineScaleSlider');
-         if ~isempty(sh)
-            sh.UserData.StateChangedCallback{2}{2} = f;
-         end
+         f = {@refreshPlot self h gui.id};
+         ah.Callback{2}{end+1} = f;
       end
    end
+
+   % This slider will be present if handle comes from SampledProcess.plot,
+   % in which case, we link a callback to refresh events 
+   sh = findobj(h.Parent,'Tag','LineScaleSlider');
+   if ~isempty(sh)
+      f = {@refreshPlot self h gui.id};
+      sh.UserData.StateChangedCallback{2}{end+1} = f;
+   end
    
-   menu = uicontextmenu('Tag','EventMenuTop');
-   % Create top-level menu item
+   % Stash plot-specific parameters
+   if isempty(h.UserData)
+      h.UserData = {gui};
+   else
+      h.UserData = [h.UserData {gui}];
+   end
+   
+   % Create top-level menu for Events
+   menu = uicontextmenu('Tag',gui.id);
    topmenu = uimenu('Parent',menu,'Label','Add event');
    validEventTypes = {'Generic' 'Artifact' 'Stimulus' 'Response'};
    for i = 1:numel(validEventTypes)
-      uimenu('Parent',topmenu,'Label',validEventTypes{i},'Callback',{@addEvent self gui validEventTypes{i}});
+      uimenu('Parent',topmenu,'Label',validEventTypes{i},...
+         'Callback',{@addEvent self h gui.id validEventTypes{i}});
    end
    set(h,'uicontextmenu',menu);
    
    % First draw
-   refreshPlot(self,gui);
+   refreshPlot(self,h,gui.id);
+   h.Visible = 'on';
 
    if nargout >= 1
       varargout{1} = h;
    end
 end
 
-function updatePlot(~,~,obj,gui)
-   refreshPlot(obj,gui);
-end
+function refreshPlot(obj,h,id)
+   % Extract specific parameters for this ID
+   gui = linq(h.UserData).where(@(x) strcmp(x.id,id)).select(@(x) x).toArray;
 
-function refreshPlot(obj,gui)
    if numel(obj) > 1
-      ind1 = min(max(1,round(gui.arraySlider.Value)),numel(obj));
+      ind1 = max(1,round(gui.arraySlider.Value));
    else
       ind1 = 1;
    end
+   
+   if ind1 > numel(obj)
+      delete(findobj(h,'Tag',id));
+      return;
+   end
+   
    values = obj(ind1).values{1};
    n = numel(values);
    
    if isempty(gui.bottom)
-      bottom = gui.h.YLim(1);
+      bottom = h.YLim(1);
    else
       bottom = gui.bottom;
    end
    if isempty(gui.top)
-      top = gui.h.YLim(2);
+      top = h.YLim(2);
    else
       top = gui.top;
    end
@@ -163,8 +180,7 @@ function refreshPlot(obj,gui)
    
    step = (top - bottom)/n;
       
-   h = gui.h;
-   ph = findobj(h,'Tag','Event');
+   ph = findobj(h,'Tag',id,'-and','Type','Patch');
    
    % Do we need to draw from scratch, or can we replace data in handles?
    if isempty(ph)
@@ -177,7 +193,7 @@ function refreshPlot(obj,gui)
    end
    
    if newdraw
-      delete(findobj(h,'Tag','Event')); clear ph;
+      delete(findobj(h,'Tag',id,'-and','Type','Patch')); clear ph;
       for i = 1:n
          try
             color = values(i).name.color;
@@ -195,7 +211,7 @@ function refreshPlot(obj,gui)
          end
          ph(i) = fill([left left right right],topbottom,...
             color,'FaceAlpha',gui.alpha,'EdgeColor','none','Parent',h);
-         set(ph(i),'UserData',values(i).name,'Tag','Event');
+         set(ph(i),'UserData',values(i).name,'Tag',id);
          if values(i).duration == 0
             ph(i).EdgeColor = color;
          end
@@ -219,19 +235,19 @@ function refreshPlot(obj,gui)
       
    % Attach menus
    if newdraw
-      delete(findobj(h.Parent,'Tag','EventMenuElement'));
+      delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
       eventMenu = uicontextmenu();
       m1 = uimenu('Parent',eventMenu,'Label','View properties','Callback',{@editEvent obj(ind1)});
       m2 = uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj(ind1) h});
       m3 = uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj(ind1) h});
       m4 = uimenu('Parent',eventMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
-      set(eventMenu,'Tag','EventMenuElement');
+      set(eventMenu,'Tag',id);
       set(ph,'uicontextmenu',eventMenu);
    end
    
    % Refresh labels
    if newdraw
-      delete(findobj(h,'Tag','EventTextLabel'));
+      delete(findobj(h,'Tag',id,'-and','Type','Text'));
       for i = 1:n
          try
             color = values(i).name.color;
@@ -253,11 +269,11 @@ function refreshPlot(obj,gui)
          left = values(i).time(1);
          eText = text(left,top2,name,'VerticalAlignment','bottom',...
             'FontAngle','italic','Color',color,'Parent',h);
-         set(eText,'UserData',values(i).name,'Tag','EventTextLabel');
+         set(eText,'UserData',values(i).name,'Tag',id);
       end
       axis tight;
    else
-      th = findobj(h,'Tag','EventTextLabel');
+      th = findobj(h,'Tag',id,'-and','Type','Text');
       th = th(ind);
       for i = 1:n
          if gui.stagger
@@ -277,7 +293,10 @@ function refreshPlot(obj,gui)
    gui.arraySliderTxt.String = ['element ' num2str(ind1) '/' num2str(numel(obj))];
 end
 
-function addEvent(~,~,obj,gui,eventType)
+function addEvent(~,~,obj,h,id,eventType)
+   % Extract specific parameters for this ID
+   gui = linq(h.UserData).where(@(x) strcmp(x.id,id)).select(@(x) x).toArray;
+
    if numel(obj) > 1
       ind1 = min(max(1,round(gui.arraySlider.Value)),numel(obj));
    else
@@ -285,8 +304,9 @@ function addEvent(~,~,obj,gui,eventType)
    end
    
    d = dragRect('xx');
-   g = ancestor(gui.h,'Figure');
-   set(g,'WindowKeyPressFcn',{@keypressEvent});
+   g = ancestor(h,'Figure');
+   orig = g.WindowKeyPressFcn;
+   g.WindowKeyPressFcn = {@keypressEvent};
    
    function keypressEvent(~,~)
       name = inputdlg('Event name:','Event name');
@@ -299,9 +319,9 @@ function addEvent(~,~,obj,gui,eventType)
          event.tEnd = d.xPoints(1);
       end
       obj(ind1).insert(event);
-      refreshPlot(obj,gui);
+      refreshPlot(obj,h,id);
       delete(d);
-      set(g,'WindowKeyPressFcn','');
+      g.WindowKeyPressFcn = orig;
    end
 end
 
