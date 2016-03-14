@@ -130,7 +130,14 @@ elseif nParams == 3
 elseif nParams == 4
    params = par.params;
 end
-   
+
+nfft = N;
+if isempty(nfft)
+   nfft = 2^nextpow2(N);
+   N = nfft;
+end
+X = fft(x,nfft,2);
+
 N2 = fix(N/2);
 j = 1;
 if N2*2 == N
@@ -161,15 +168,13 @@ else
    dc = 0;
 end
 
-X = fft(x,[],2);
-
 count = 1;
 S = zeros(numel(ind),N,M);
 for i = ind
    Xs = circshift(X,-(i-1),2);
    W = gwin(f,ff(i),params);
    for k = 1:M
-      S(count+dc,:,k) = ifft(Xs(k,:).*W,[],2);
+      S(count+dc,:,k) = ifft(Xs(k,:).*W,nfft,2);
    end
    count = count + 1;
 end
@@ -194,7 +199,7 @@ end
 
 if nargout == 3
    dt = 1/par.Fs;
-   t = 0:dt:(dt*(Nt-1));
+   t = 0:dt:(dt*(N-1));
 end
 
 % Fourier transformed Gaussian

@@ -5,6 +5,16 @@
 % will fail due to small floating point inaccuracies that accumulate
 % this also suggests that even with exact window/tStep/tBlock/offset, we
 % could end up with a missing sample at the beginning end of window?
+% s = SampledProcess((1:10)')
+% 
+% s(2) = SampledProcess((1:10)')
+% s(2).offset = .00001
+% s(1).window = [0 9]
+% s(2).window = [0 9]-.00001
+% 
+% s = SampledProcess((1:10)')
+% s(2) = SampledProcess((1:10)')
+% s(2).labels(1) = s(1).labels;
 
 function [bool,rw,dt,tb,t] = isTimeCompatible(self)
 

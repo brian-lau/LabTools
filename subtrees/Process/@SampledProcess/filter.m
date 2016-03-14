@@ -61,6 +61,7 @@
 %   o filter state for managing contiguous blocks? eg., chopped process
 %   o nan's anywhere will result in all nans with filtfilt
 %   o match padmode when calling down to filtfilthd
+%   o cascade vector of filters
 function self = filter(self,f,varargin)
 
 p = inputParser;
