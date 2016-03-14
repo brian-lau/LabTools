@@ -4,7 +4,7 @@ classdef Label < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyable
       description
       comment
       grouping
-      color = [0 0 0]
+      color = [0.2 0.2 0.2]
    end
    
    methods
@@ -19,7 +19,8 @@ classdef Label < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyable
          p.addParamValue('description','');
          p.addParamValue('comment','');
          p.addParamValue('grouping','');
-         p.addParamValue('color',[0 0 0],@(x) isnumeric(x) || any(strcmp(x,{'b' 'g' 'r' 'c' 'm' 'y' 'k'})));
+         p.addParamValue('color',[0.2 0.2 0.2],@(x) isnumeric(x) ...
+            || any(strcmp(x,{'b' 'g' 'r' 'c' 'm' 'y' 'k'})));
          p.parse(varargin{:});
          par = p.Results;
          
