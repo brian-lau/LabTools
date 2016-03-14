@@ -286,6 +286,8 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       obj = pac(self,varargin)
       % xcov
       % xcorr
+      obj = filterBank(self,h,d)
+
       
       % Visualization
       h = plot(self,varargin)
