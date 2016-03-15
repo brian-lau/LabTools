@@ -76,9 +76,6 @@ par = p.Results;
 
 if isnumeric(f) && isvector(f)
    f = dfilt.dffir(f);
-elseif ~ismethod(f,'isfir') % dfilt or designFilter objects
-   error('SampledProcess:filter:InputValue',...
-      'Unrecognized filter type');
 end
 
 usefiltfilt = false;
