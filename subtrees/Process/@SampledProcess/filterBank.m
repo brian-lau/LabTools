@@ -49,6 +49,7 @@ for i = 1:nObj
    
    x = zeros(len,nF*n);
    for j = 1:nF
+      %temp.filtfilt(f(j),filtPar);
       temp.filter(f(j),filtPar);
       ind = (1:n)+(j-1)*n;
       x(:,ind) = temp.values{1};

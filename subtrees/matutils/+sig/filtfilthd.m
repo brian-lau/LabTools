@@ -47,7 +47,7 @@ function x=filtfilthd(varargin)
 %
 % -------------------------------------------------------------------------
 % Author: Malcolm Lidierth 10/07
-% Copyright © The Author & King's College London 2007
+% Copyright ? The Author & King's College London 2007
 % -------------------------------------------------------------------------
 %
 % Revisions:
@@ -58,6 +58,8 @@ function x=filtfilthd(varargin)
 %               Handles row vectors properly
 %   31.01.08    Allow impzlength to be specified on input
 %                           
+
+import sig.*
 
 % ARGUMENT CHECKS
 if isnumeric(varargin{1}) && isnumeric(varargin{2})
@@ -186,7 +188,7 @@ function y=lpredict(x, np, npred, pos)
 % http://www.mathworks.com/matlabcentral/fileexchange/loadFile.do?objectId=16798&objectType=FILE
 % -------------------------------------------------------------------------
 % Author: Malcolm Lidierth 10/07
-% Copyright © The Author & King's College London 2007
+% Copyright ? The Author & King's College London 2007
 % -------------------------------------------------------------------------
 % Order input sequence
 if nargin==4 && strcmpi(pos,'pre')
