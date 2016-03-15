@@ -48,18 +48,16 @@ for i = 1:nObj
    temp = copy(self(i));
    
    x = zeros(len,nF*n);
-   %labels = [];
    for j = 1:nF
       temp.filter(f(j),filtPar);
       ind = (1:n)+(j-1)*n;
       x(:,ind) = temp.values{1};
-      %labels = [labels , copy(temp.labels)];
       temp.reset();
    end
-   
+
    out(i) = SampledProcess(x,...
       'Fs',self(i).Fs,...
-      'labels',copy(repmat(self(i).labels,1,n*nF)),...
+      'labels',copy(repmat(self(i).labels,1,nF)),...
       'tStart',self(i).relWindow(1),...
       'tEnd',self(i).relWindow(2)...
       );
