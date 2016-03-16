@@ -48,6 +48,10 @@ addRequired(p,'f',@(x) isnumeric(x) ...
 parse(p,f,varargin{:});
 par = p.Results;
 
+if isnumeric(f) && isvector(f)
+   f = dfilt.dffir(f);
+end
+
 for i = 1:numel(self)
    %------- Add to function queue ----------
    if isQueueable(self(i))
