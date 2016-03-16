@@ -91,7 +91,7 @@ classdef CFC < hgsetget & matlab.mixin.Copyable
       
       function self = designFilterBank(self)
          [self.hPhase,self.hAmp] = sig.designFilterBankPAC(self.fCentersPhase,...
-            self.fCentersAmp,self.input.Fs,self.filterBankType);
+            self.fCentersAmp,self.input.Fs,'type',self.filterBankType);
          disp('Filter bank computed');
       end
       
@@ -141,12 +141,14 @@ classdef CFC < hgsetget & matlab.mixin.Copyable
             n = max(n,max(self.hAmp(:).impzlength));
             
             window = self.filteredAmp.window;
-%             self.filteredAmp.window = [window(1)+1 window(2)-1];
-%             self.filteredPhase.window = [window(1)+1 window(2)-1];
             self.filteredAmp.window = [window(1)+n/Fs window(2)-n/Fs];
             self.filteredPhase.window = [window(1)+n/Fs window(2)-n/Fs];
          end
          disp('Done filtering');
+      end
+      
+      function bool = isRunnable(self)
+         bool = ~isempty(self.input) && ~isempty(self.filteredPhase);
       end
       
       function self = run(self)
@@ -195,7 +197,7 @@ classdef CFC < hgsetget & matlab.mixin.Copyable
                   phaseval = phaseValuesk(:,j);
                   
                   switch self.metric
-                     case {'direct'}
+                     case {'direct' 'ozkurt'}
                         N = length(ampval);
                         z = ampval.*exp(1i*phaseval(index));
                         comodulogram(i,j,k) = (1/sqrt(N)) * abs(mean(z))/sqrt(mean(ampval.^2));

@@ -92,6 +92,7 @@ p.KeepUnmatched = true;
 p.FunctionName = 'S-transform';
 p.addRequired('x',@(x) isnumeric(x));
 p.addParameter('Fs',1,@(x) isnumeric(x));
+p.addParameter('fres',[],@(x) isnumeric(x));
 p.addParameter('fpass',[],@(x) isnumeric(x));
 p.addParameter('params',[1 1 0 0],@(x) isnumeric(x));
 p.addParameter('sejdic',false,@islogical);
@@ -148,15 +149,19 @@ f = [0:N2 -N2+1-j:-1]/N;
 % Frequencies (cycles/second)
 ff = par.Fs*f;
 
-% Determine which frequencies to estimate
+% Determine which frequencies to keep
 if isempty(par.fpass)
    fpass = [max(min(ff),0) max(ff)];
 else
    fpass = [min(par.fpass) max(par.fpass)];
 end
 ind = find((ff>=min(fpass)) & (ff<=max(fpass)));
+
 if (par.decimate > 1) && (par.decimate < N2)
    dec = max(1,fix(par.decimate));
+   ind = ind(1:dec:end);
+elseif ~isempty(par.fres)
+   dec = max(1,ceil(par.fres/(mean(diff(ff(ind))))));
    ind = ind(1:dec:end);
 end
 
@@ -173,7 +178,7 @@ S = zeros(numel(ind),N,M);
 for i = ind
    Xs = circshift(X,-(i-1),2);
    W = gwin(f,ff(i),params);
-   for k = 1:M
+   for k = 1:M % for each channel
       S(count+dc,:,k) = ifft(Xs(k,:).*W,nfft,2);
    end
    count = count + 1;

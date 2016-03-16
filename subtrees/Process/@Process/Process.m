@@ -308,6 +308,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
 
       chop(self,varargin)
       self = subset(self,varargin)
+      %self = unsubset(self,varargin)
 
       bool = isQueueable(self)
       self = clearQueue(self)

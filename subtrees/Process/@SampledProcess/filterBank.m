@@ -41,6 +41,9 @@ filtPar = p.Unmatched;
 
 nObj = numel(self);
 
+% Check all FIR/linearPhase, switch to filtfilt if necessary
+usefiltfilt = false;
+
 for i = 1:nObj
    n = self(i).n;
    len = self(i).dim{1}(1);
@@ -49,8 +52,11 @@ for i = 1:nObj
    
    x = zeros(len,nF*n);
    for j = 1:nF
-      %temp.filtfilt(f(j),filtPar);
-      temp.filter(f(j),filtPar);
+      if usefiltfilt
+         temp.filtfilt(f(j),filtPar);
+      else
+         temp.filter(f(j),filtPar);
+      end
       ind = (1:n)+(j-1)*n;
       x(:,ind) = temp.values{1};
       temp.reset();
