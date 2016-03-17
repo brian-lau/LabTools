@@ -89,6 +89,14 @@ classdef CFC < hgsetget & matlab.mixin.Copyable
          self.metric = lower(metric);
       end
       
+      function set.filterBankType(self,type)
+         self.hPhase = [];
+         self.hAmp = [];
+         self.filteredPhase = [];
+         self.filteredAmp = [];
+         self.filterBankType = lower(type);
+      end
+      
       function self = designFilterBank(self)
          [self.hPhase,self.hAmp] = sig.designFilterBankPAC(self.fCentersPhase,...
             self.fCentersAmp,self.input.Fs,'type',self.filterBankType);
@@ -233,7 +241,8 @@ classdef CFC < hgsetget & matlab.mixin.Copyable
          for i = 1:self.input.n
             %h = imagesc(self.fCentersPhase,self.fCentersAmp,self.comodulogram(:,:,i));
             %set(gca,'ydir','normal')
-            g = subplot(n,2,i,'Parent',h);
+%             g = subplot(n,2,i,'Parent',h);
+            g = subplot(n,1,i,'Parent',h);
             surf(self.fCentersPhase,self.fCentersAmp,self.comodulogram(:,:,i),'edgecolor','none','Parent',g);
             view(g,0,90);
             colorbar
