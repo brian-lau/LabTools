@@ -1,19 +1,4 @@
-% clear all
-% fs = 1000; % sampling frequency
-% T = 10000;
-% 
-% f1 = 20 / fs;
-% f2 = 250 / fs;
-% e1 = cos(2 * pi * f1 * (1:T) + 0.1 * cumsum(randn(1, T)));
-% e2 = exp(-2*e1) .* cos(2 * pi * f2 * (1:T)) / 4;
-% x = e1 + e2;
-% x = x(:);
-% 
-% s = SampledProcess(x,'Fs',fs);
-% c = CFC;
-% c.input = s;
-% c.nBoot = 100;
-% c.run.plot;
+% see demoCFC for example
 
 % TODO
 % o better shuffling
@@ -31,7 +16,7 @@ classdef CFC < hgsetget & matlab.mixin.Copyable
       input
       fCentersPhase
       fCentersAmp
-      filterBankType % uniform eeglab adapt, mechanism for parameter passing
+      filterBankType % uniform eeglab adapt
       metric
       nBoot
       alpha
@@ -46,9 +31,9 @@ classdef CFC < hgsetget & matlab.mixin.Copyable
       filteredAmp
       comodulogram
       comodulogramBoot
-      phaseDistributions
+      %phaseDistributions
    end
-   properties%(Dependent)
+   properties
       permIndex
    end
    
@@ -81,7 +66,6 @@ classdef CFC < hgsetget & matlab.mixin.Copyable
       function set.nBoot(self,nBoot)
          assert(nBoot>=0,'nBoot must be >= 0');
          self.nBoot = nBoot;
-         self.permIndex = self.getPermIndex();
       end
       
       function set.metric(self,metric)
@@ -156,22 +140,26 @@ classdef CFC < hgsetget & matlab.mixin.Copyable
       end
       
       function bool = isRunnable(self)
-         bool = ~isempty(self.input) && ~isempty(self.filteredPhase);
+         bool = ~isempty(self.input);
       end
       
       function self = run(self)
-         % isRunnable
-         self.filter;
-         self.comodulogram = estimate(self,1:self.filteredPhase.dim{1}(1));
-         
-         if self.nBoot > 0 %&& isempty(self.comodulogramBoot)
-            if isempty(self.permIndex)
-               self.getPermIndex();
+         if self.isRunnable
+            self.filter;
+            self.comodulogram = estimate(self,1:self.filteredPhase.dim{1}(1));
+            
+            if self.nBoot > 0 
+               self.permIndex = self.getPermIndex();
+               if isempty(self.permIndex)
+                  self.getPermIndex();
+               end
+               self.comodulogramBoot = zeros(numel(self.fCentersAmp),numel(self.fCentersPhase),self.input.n,self.nBoot);
+               for i = 1:self.nBoot
+                  self.comodulogramBoot(:,:,:,i) = estimate(self,self.permIndex(:,i));
+               end
             end
-            self.comodulogramBoot = zeros(numel(self.fCentersAmp),numel(self.fCentersPhase),self.input.n,self.nBoot);
-            for i = 1:self.nBoot
-               self.comodulogramBoot(:,:,:,i) = estimate(self,self.permIndex(:,i));
-            end
+         else
+            warning('Not enough information to run');
          end
       end
       
@@ -241,8 +229,8 @@ classdef CFC < hgsetget & matlab.mixin.Copyable
          for i = 1:self.input.n
             %h = imagesc(self.fCentersPhase,self.fCentersAmp,self.comodulogram(:,:,i));
             %set(gca,'ydir','normal')
-%             g = subplot(n,2,i,'Parent',h);
-            g = subplot(n,1,i,'Parent',h);
+            g = subplot(n,2,i,'Parent',h);
+            %g = subplot(n,1,i,'Parent',h);
             surf(self.fCentersPhase,self.fCentersAmp,self.comodulogram(:,:,i),'edgecolor','none','Parent',g);
             view(g,0,90);
             colorbar

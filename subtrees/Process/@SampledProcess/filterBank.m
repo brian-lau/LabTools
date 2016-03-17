@@ -41,7 +41,7 @@ filtPar = p.Unmatched;
 
 nObj = numel(self);
 
-% Check all FIR/linearPhase, switch to filtfilt if necessary
+% TODO: Check all FIR/linearPhase, switch to filtfilt if necessary
 usefiltfilt = false;
 
 for i = 1:nObj
