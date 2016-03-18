@@ -2,10 +2,10 @@
 
 % TODO
 % o better shuffling
-% o better filter banks
-% o trimming for edge artifacts
-% o get/set for relevant stuff
-% o move in all estimators, setters to clear everything
+% x better filter banks
+% x trimming for edge artifacts
+% x get/set for relevant stuff
+% x move in all estimators, setters to clear everything
 % o kramer glm estimator
 % o saving, lots of stuff should be transient, may need info to store names
 % o make sure it can work when input is a SampledProcess array
@@ -273,6 +273,7 @@ function MI = estimateCFC_EAA_Tort2008(phiLow,aHigh,nBin)
       bIdx = phiLow >= phaseBins(kBin) & phiLow < phaseBins(kBin+1);
       %aacpd(kBin,:) = mean(aHigh(bIdx));
       aacpd(kBin,:) = sum(aHigh(bIdx))/sum(bIdx);
+      % https://xcorr.net/2013/12/23/fast-1d-and-2d-data-binning-in-matlab/
    end
    
    % normalize to make it a distribution
