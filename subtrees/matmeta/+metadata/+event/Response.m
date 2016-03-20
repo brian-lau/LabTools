@@ -21,9 +21,9 @@ classdef Response < metadata.Event
          % Default color
          if ~any(strcmp(varargin,'color'))
             if isa(self.name,'metadata.Label')
-               self.name.color = [55 126 184]/255;
-            else
-               %warning('no color set');
+               if all(self.name.color == [0.2 0.2 0.2])
+                  self.name.color = [55 126 184]/255;
+               end
             end
          end
       end

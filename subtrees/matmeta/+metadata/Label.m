@@ -4,7 +4,7 @@ classdef Label < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyable
       description
       comment
       grouping
-      color = [0.2 0.2 0.2]
+      color
    end
    
    methods

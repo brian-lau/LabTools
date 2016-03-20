@@ -21,9 +21,9 @@ classdef Stimulus < metadata.Event
          % Default color
          if ~any(strcmp(varargin,'color'))
             if isa(self.name,'metadata.Label')
-               self.name.color = [77 175 74]/255;
-            else
-               %warning('no color set');
+               if all(self.name.color == [0.2 0.2 0.2])
+                  self.name.color = [77 175 74]/255;
+               end
             end
          end
       end
