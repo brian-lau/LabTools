@@ -85,7 +85,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties(SetAccess = immutable)
       serializeOnSave = false 
-      version = '0.9.0'   % Version string
+      version = '0.9.1'   % Version string
    end
    events
       runImmediately      % trigger queue evaluation
@@ -116,6 +116,9 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
       applySubset(self)
       applyWindow(self)
       applyOffset(self,offset)
+
+      times_ = getTimes_(self)
+      values_ = getValues_(self)
    end
    
    methods(Abstract)
@@ -174,8 +177,8 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
                end
             else % Different windows are ambiguous, start from original
                % Reset the process
-               self.times = self.times_;
-               self.values = self.values_;
+               self.times = self.getTimes_();
+               self.values = self.getValues_();
                
                self.cumulOffset = zeros(nWindow,1);
                applyWindow(self);

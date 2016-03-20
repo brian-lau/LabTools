@@ -297,6 +297,9 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       applySubset(self,subsetOriginal)
       applyWindow(self)
       applyOffset(self,offset)
+      
+      times_ = getTimes_(self)
+      values_ = getValues_(self)
    end
 
    methods(Static)
