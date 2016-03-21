@@ -75,7 +75,7 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       end
       
       function bool = get.isValidEvent(self)
-         % start/end time of events fall within windows?
+         % start AND end time of events fall within windows?
          if isempty(self.times)
             bool = false;
          else
@@ -84,22 +84,11 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
          end
       end
       
-      function updateEventTimes(self,varargin)
-         % Adjust times stored in Events
-         for i = 1:size(self.times,1) % channels
-            for j = 1:size(self.times,2) % windows
-               temp = self.values{i,j};
-               times = self.times{i,j};
-               for k = 1:numel(temp)
-                  temp(k).tStart = times(k,1);
-                  temp(k).tEnd = times(k,2);
-               end
-               self.values{i,j} = temp;
-            end
-         end
-      end
+      updateEventTimes(self,varargin)
       
       [ev,selection] = find(self,varargin)
+      
+      window = getWindow(self,varargin)
       
       % add event
       self = insert(self,ev,labels)
@@ -122,6 +111,10 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
             warning('on','MATLAB:structOnObject');
          end
       end
+   end
+   
+   methods(Access = protected)
+      applyWindow(self)
    end
    
    methods(Static)

@@ -30,7 +30,8 @@ for i = 1:nWindowReq
    for j = 1:nTimes
       x = self.times{idx,j};
       y = self.values{idx,j};
-      ind = (x(:,1)>=window(i,1)) & (x(:,1)<=window(i,2));
+      % Events in window if either edge inside
+      ind = (x(:,2)>=window(i,1)) & (x(:,1)<=window(i,2));
       if sum(ind) ~= numel(ind)
          windowedTimes{i,j} = x(ind,:);
          windowedValues{i,j} = y(ind);

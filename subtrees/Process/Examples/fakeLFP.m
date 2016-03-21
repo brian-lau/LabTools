@@ -94,4 +94,4 @@ for i = 1:params(1)
 end
 
 s = SampledProcess([xclean,x],'Fs',Fs,'labels',{'clean' 'dirty'});
-artifacts = EventProcess('events',e);
+artifacts = EventProcess('events',e,'tStart',s.tStart,'tEnd',s.tEnd);
