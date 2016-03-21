@@ -29,7 +29,8 @@
 %     policy  - string, optional, default = 'first'
 %               One of {'first' 'last' 'all'} indicating that the first,
 %               last or all events matching criteria will be returned. In
-%               the case of 'all', events are returned in cell array.
+%               the case of 'all', events are returned in cell array, one cell
+%               for each EventProcess.
 %     nansequal - boolean, optional, default = True
 %               True indicates that NaNs should be treated as equal
 %     strictHandleEq - boolean, optional, default = False
@@ -109,7 +110,8 @@ if isempty(events)
 end
 
 if ~isempty(par.eventType)
-   eventTypeInd = strcmpi(arrayfun(@(x) class(x),events,'uni',0),par.eventType);
+   temp = strfind(arrayfun(@(x) lower(class(x)),events,'uni',0),lower(par.eventType));
+   eventTypeInd = cellfun(@(x) ~isempty(x),temp);
 else
    eventTypeInd = false(nev,1);
 end
