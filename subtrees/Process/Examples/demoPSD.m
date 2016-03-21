@@ -17,6 +17,12 @@ plot(f,10*log10(Sx));
 subplot(212); hold on
 plot(f,10*log10(Sx));
 
+plot(p,'log',false);
+subplot(211); hold on
+plot(f,Sx);
+subplot(212); hold on
+plot(f,Sx);
+
 p = s.reset().psd('f',f,'hbw',2.5,'hbw',2);
 p.plot();
 subplot(211); hold on
@@ -24,9 +30,21 @@ plot(f,10*log10(Sx));
 subplot(212); hold on
 plot(f,10*log10(Sx));
 
+plot(p,'log',false);
+subplot(211); hold on
+plot(f,Sx);
+subplot(212); hold on
+plot(f,Sx);
+
 p = s.reset().psd('f',f,'method','welch','window',fix(step*s.Fs));
 p.plot();
 subplot(211); hold on
 plot(f,10*log10(Sx));
 subplot(212); hold on
 plot(f,10*log10(Sx));
+
+plot(p,'log',false);
+subplot(211); hold on
+plot(f,Sx);
+subplot(212); hold on
+plot(f,Sx);

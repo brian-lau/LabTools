@@ -69,8 +69,9 @@
 %     https://github.com/brian-lau/Process
 
 % TODO
-% link SampledProcess handle?
-% confidence intervals
+%  o confidence intervals
+%  o quadratic bias
+%  o circular welch
 function obj = psd(self,varargin)
 
 p = inputParser;
