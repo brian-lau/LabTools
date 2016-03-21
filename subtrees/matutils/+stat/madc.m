@@ -35,7 +35,7 @@ elseif n==1
 end
 bn=fcorfac(x); %calculating finite sample correction
 t_0=median(x);
-result=median(abs(x - repmat(median(x),n,1)))*1.4826*bn; 
+result=median(abs(x - repmat(t_0,n,1)))*1.4826*bn; 
 if ~all(result)
     result(result==0)=t_0(result==0);
 end
