@@ -219,8 +219,14 @@ function refreshPlot(obj,h,id)
       end
       % Distribute label colors, masking for quality=0
       q0 = obj(ind1).quality == 0;
-      [lh(~q0).Color] = deal(obj(ind1).labels(~q0).color);
-      [lh(q0).Color] = deal([.7 .7 .7 .4]);
+      if any(q0)
+         [lh(~q0).Color] = deal(obj(ind1).labels(~q0).color);
+         [lh(q0).Color] = deal([.7 .7 .7 .4]);
+      elseif all(q0)
+         [lh(q0).Color] = deal([.7 .7 .7 .4]);
+      else
+         [lh(~q0).Color] = deal(obj(ind1).labels(~q0).color);
+      end
    else
       % Ensure that line handles are ordered like data
       lh = lh(ind);

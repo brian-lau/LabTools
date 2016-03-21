@@ -6,8 +6,10 @@ if isempty(labels)
       l = metadata.Label;
       l(1) = [];
    else
-      l = arrayfun(@(x) metadata.Label('name',['id' num2str(x)]),1:n,'uni',0);
-      l = cat(2,l{:});
+      c = fig.distinguishable_colors(n);
+      for i = 1:n
+         l(i) = metadata.Label('name',['id' num2str(i)],'color',c(i,:));
+      end
    end
 elseif iscell(labels)
    assert(numel(labels)==n,'Process:labels:InputFormat',...
