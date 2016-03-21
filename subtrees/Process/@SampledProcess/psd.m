@@ -72,10 +72,12 @@
 %  o confidence intervals
 %  o quadratic bias
 %  o circular welch
+%  o when section-averaging, do not recalculate tapers, this may requires
+%    sorting the windows
 function obj = psd(self,varargin)
 
 p = inputParser;
-p.KeepUnmatched= true;
+p.KeepUnmatched = true;
 p.FunctionName = 'SampledProcess psd method';
 p.addParameter('method','mtm',@(x) any(strcmp(x,...
    {'multitaper' 'mtm' 'welch'})));

@@ -47,3 +47,20 @@ for i = 1:50
    
    events(i) = EventProcess('events',e);
 end
+
+%%
+fix = metadata.Label('name','fix');
+cue = metadata.Label('name','cue');
+artifact = metadata.Label('name','artifact');
+button = metadata.Label('name','button');
+
+e(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1,'name',fix);
+e(2) = metadata.event.Artifact('tStart',1,'tEnd',1.5,'name',artifact);
+e(3) = metadata.event.Stimulus('tStart',2,'tEnd',3,'name',cue);
+e(4) = metadata.event.Artifact('tStart',3,'tEnd',4,'name',artifact);
+e(5) = metadata.event.Artifact('tStart',5,'tEnd',8,'name',artifact);
+e(6) = metadata.event.Response('tStart',5,'tEnd',6,'name',button,'experiment',metadata.Experiment);
+
+events = EventProcess('events',e,'tStart',0,'tEnd',10);
+
+window = events.getWindow('eventType','Artifact')
