@@ -1,15 +1,34 @@
-%     f      - fmin:df:fmax, optional, default = linspace(0,nyquist,100)
-%              Vector of frequencies for calculating PSD
+% MTSPECTRUM - Estimate multitaper power spectral density
 %
+%     [output,params] = mtspectrum(x,varargin)
+%
+%     All inputs are passed in using name/value pairs. The name is a string
+%     followed by the value (described below).
+%     The order of the pairs does not matter, nor does the case.
+%
+% INPUTS
+%     x       - [samples x channels] matrix or cell array of such matrices
+%               Required input, must be real
+%               If cell array, number of channels must match
 % OPTIONAL
-%     If method = 'multitaper'
 %     hbw     - scalar (Hz), optional, default = thbw/T
 %               Half-bandwidth, spectral concentration [-hbw hbw]
 %     thbw    - scalar (Hz), optional, default = 4
 %               Time-half-bandwidth product. If hbw is set, this will be
 %               determined automatically.
-%     K       - scalar, optional, default = 2*thbw - 1
-%               # of tapers to average. There are less than 2*nw-1 tapers 
+%     f       - fmin:df:fmax, optional, default = linspace(0,nyquist,100)
+%               Vector of frequencies for calculating PSD
+%     Fs      - scalar sampling frequency, optional, default = 2pi
+%     nfft    - scalar, optional
+%               Determines the size of FFT. If f is defined, nfft =
+%               numel(f), otherwise nfft = 2^nextpow2(length(x))
+%     V       - nsamples x k matrix, optional
+%               Matrix of tapers (eg., from dpss). If given, lambda must
+%               also be supplied
+%     lambda  - k x 1, optional
+%               Eigenvalues of tapers V. If given, V must also be supplied.
+%     k       - scalar, optional, default = 2*thbw - 1
+%               # of tapers to average. There are less than 2*thbw-1 tapers 
 %               with good concentration in the band [-hbw hbw]. Frequently,
 %               people use 2*thbw-1, although this is an upper bound, 
 %               in some cases K should be << 2*thbw-1.
@@ -18,15 +37,55 @@
 %               'adapt'  - Thomson's adaptive non-linear combination 
 %               'unity'  - linear combination with unity weights
 %               'eigen'  - linear combination with eigenvalue weights
-%     robust  - string, optional, default = 'huber'
-%               This applies only when SampledProcess has more than one
-%               window, in which case it specifies how the estimates in
-%               each window should be combined:
+%     quadratic - boolean, optional, default = false
+%               True will reduce the local bias of the multitaper PSD using
+%               the method outlined in Prieto et al. (2007)
+%     dropLastTaper - boolean, optional, default = true
+%               When V, lambda not supplied, 2*thbw tapers are calculated.
+%               True drops the last, which is usually less concentrated.
+%     robust  - string, optional, default = 'mean'
+%               This applies only when x is a cell array, in which case it 
+%               specifies how the estimates should be combined:
 %               'mean'     - simple arithmetic mean, NaN's excluded
 %               'median'   - median, NaN's excluded
 %               'huber'    - robust location using Huber weights
 %               'logistic' - robust location using logistic weights
+%     alpha   - scalar in [0,1], optional, default = 0.95
+%               When set, causes confidence intervals to be returned
+%     confMethod - string, optional, default = 'asymp'
+%               'asymp' returns 
+%
+% OUTPUTS
+%     output  - Structure that always contains the fields:
+%               f - frequencies
+%               P - PSDs
+%               May contain the following depending on input parameters
+%               CI - confidence intervals
+%               dP - first derivative of spectrum
+%               ddP - second derivative of spectrum
+%     params  - Structure containing parameters
+%
+% REFERENCES
+%     Percival DB & Walden AT (1993). Spectral Analysis for Physical
+%       Applications. Cambridge University Press.
+%     Prieto GA et al (2007). Reducing the bias of multitaper spectrum
+%       estimates. Geophys J Int 171: 1269-1281.
+%     Thompson DJ (2007). Jackknifing multitaper spectrum estimates. IEEE
+%       Sig Proc Mag 24: 20-30.
+%
+% EXAMPLES
+%
+% SEE ALSO
+%     sig.mtspectrum
 
+%     $ Copyright (C) 2016 Brian Lau <brian.lau@upmc.fr> $
+%     Released under the BSD license. The license and most recent version
+%     of the code can be found on GitHub:
+%     https://github.com/brian-lau/Process
+
+% TODO
+% o confidence intervals
+% o for section-averaging, avoid recalculating tapers if possible
 function [output,params] = mtspectrum(x,varargin)
 
 p = inputParser;
@@ -40,6 +99,7 @@ p.addParameter('Fs',2*pi,@(x) isscalar(x));
 p.addParameter('f',[],@(x) isnumeric(x));
 p.addParameter('nfft',[],@(x) isnumeric(x));
 p.addParameter('V',[],@(x) ismatrix(x));
+p.addParameter('alpha',[],@(x) isnumeric(x));
 p.addParameter('lambda',[],@(x) isnumeric(x));
 p.addParameter('lambdaThresh',0.9,@(x) isnumeric(x) && isscalar(x));
 p.addParameter('weights','adapt',@(x) any(strcmp(x,{'adapt' 'eigen' 'unity'})));
@@ -134,8 +194,12 @@ Pxx = S./par.Fs;
 
 output.f = f;
 output.P = Pxx;
-if 0
-   output.CI = CI;
+if ~isempty(par.alpha)
+%    %Chi-squared 95% confidence interval
+%    %approximation from Chamber's et al 1983; see Percival and Walden p.256, 1993
+%    ci(:,1)=1./(1-2./(9*dof)-1.96*sqrt(2./(9*dof))).^3;
+%    ci(:,2)=1./(1-2./(9*dof)+1.96*sqrt(2./(9*dof))).^3;
+%   output.CI = CI;
 end
 if ~isempty(dS)
    output.dP = dS;
@@ -308,12 +372,15 @@ for chan=1:Nchan
    if isempty(params.f)
       Xx = fft(xin,nfft);
    else
+      % Ref: Martin GD (2005). Chirp Z-transform spectral zoom optimization
+      %      with Matlab. Sandia Report SAND 2005-7084.
+      % Above discusses some optimizations that may be worth implementing.
       % Initial complex weight
-      Winit = exp(2i*pi*params.fstart/Fs);
+      a = exp(2i*pi*params.fstart/Fs);
       % Relative complex weight
-      Wdelta = exp(2i*pi*(params.fstart-params.fstop)/((params.npts-1)*Fs));
+      w = exp(2i*pi*(params.fstart-params.fstop)/((params.npts-1)*Fs));
       % Chirp-z transform
-      Xx = czt(xin, params.npts, Wdelta, Winit);
+      Xx = czt(xin,params.npts,w,a);
    end
    
    Sk = abs(Xx).^2;
@@ -341,8 +408,11 @@ for chan=1:Nchan
                S1=S1';
                Stemp=S1; S1=Schan; Schan=Stemp;  % swap S and S1
             end
+            % Equivalent degrees of freedom, see p. 370 of Percival and Walden 1993.
+            %dof = (2*sum((b.^2).*(ones(nfft,1)*V'),2).^2) ./ sum((b.^4).*(ones(nfft,1)*V.^2'),2);
          else
             %TODO Single taper estimate
+            %dof = 2*ones(nfft,1);
          end
       case {'unity','eigen'}
          % Compute the averaged estimate: simple arithmetic averaging is used.

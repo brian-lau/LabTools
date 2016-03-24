@@ -46,6 +46,8 @@
 %               'huber'    - robust location using Huber weights
 %               'logistic' - robust location using logistic weights
 %
+%     See sig.mtspectrum for more options.
+%
 %     If method = 'welch'
 %     window  - scalar, optional, default = 8 segments with overlap samples
 %     overlap - scalar, optional, default = 50% overlap between segments
@@ -60,7 +62,7 @@
 %     plot(p)
 %
 % SEE ALSO
-%     sig.pmtm, pwelch
+%     sig.mtspectrum, pwelch
 
 %     $ Copyright (C) 2016 Brian Lau <brian.lau@upmc.fr> $
 %     Released under the BSD license. The license and most recent version
