@@ -20,7 +20,7 @@ x = arsim(0,A,sigma,T*Fs);
 t = (1/Fs)*(0:numel(x)-1)';
 
 % True (uncontaminated) spectrum
-f = 0:1:Fs/2;
+f = 0:.5:Fs/2;
 den = zeros(size(f));
 for i = 1:numel(A)
    den = den + A(i)*exp(-1j*2*pi*i*f/Fs);

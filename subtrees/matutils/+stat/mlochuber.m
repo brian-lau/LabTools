@@ -90,7 +90,7 @@ if nargin>1
 end
 
 if n==1 & p==1
-   out=x;     %when X is a one by one matrix, all location estimators must be equal to that matrix
+   result=x;     %when X is a one by one matrix, all location estimators must be equal to that matrix
    return
 elseif n==1
    x=x';      %we only want to work with column vectors
@@ -99,11 +99,13 @@ elseif n==1
 end
 
 if n==2  % all location estimators must equal the average for n=2
-   out=mean(x,1);
+   result=mean(x,1);
    return
 end
 
 alfa=0.866385597462284; %2*normcdf(1.5,0,1)-1; constant denumenator
+out = zeros(1,p);
+y = zeros(n,1);
 for i=1:p
    X=x(:,i);
    t_0=feval(options.loc,X);
@@ -115,10 +117,10 @@ for i=1:p
       j=1;
       while j<=options.k
          z=(X-tstep)/s_0;
-         y(abs(z)<=1.5)=z(abs(z)<=1.5);
-         y(abs(z)>1.5)=1.5*sign(z(abs(z)>1.5));
+         ind = abs(z)<=1.5;
+         y(ind)=z(ind);
+         y(~ind)=1.5*sign(z(~ind));
          tstep=tstep+s_0*(sum(y)/(n*alfa)); %updating location estimate
-         y=[];  %clear helpvector
          j=j+1;
       end
       out(i)=tstep;

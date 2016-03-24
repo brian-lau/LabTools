@@ -89,7 +89,7 @@ if nargin>1
 end
 
 if n==1 & p==1
-    out=x;     %when X is a one by one matrix, all location estimators must be equal to that matrix
+    result=x;     %when X is a one by one matrix, all location estimators must be equal to that matrix
     return
 elseif n==1
     x=x';      %we only want to work with column vectors
@@ -98,11 +98,12 @@ elseif n==1
 end
 
 if n==2  % all location estimators must equal the average for n=2
-    out=mean(x,1);
+    result=mean(x,1);
     return
 end
 
 alpha=0.413241928283814; %quadl('1/2.*sech(x/2).^2.*normpdf(x,0,1)',-10,10,1.e-15)
+out = zeros(1,p);
 for i=1:p  
     X=x(:,i);
     t_0=feval(options.loc,X);
