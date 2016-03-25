@@ -372,15 +372,14 @@ for chan=1:Nchan
    if isempty(params.f)
       Xx = fft(xin,nfft);
    else
-      % Ref: Martin GD (2005). Chirp Z-transform spectral zoom optimization
-      %      with Matlab. Sandia Report SAND 2005-7084.
-      % Above discusses some optimizations that may be worth implementing.
       % Initial complex weight
       a = exp(2i*pi*params.fstart/Fs);
       % Relative complex weight
       w = exp(2i*pi*(params.fstart-params.fstop)/((params.npts-1)*Fs));
       % Chirp-z transform
       Xx = czt(xin,params.npts,w,a);
+      
+      %Xx = spectralZoom(xin,Fs,params.fstart,params.fstop,params.npts);
    end
    
    Sk = abs(Xx).^2;
@@ -459,4 +458,36 @@ for chan=1:Nchan
       ddS(:,chan) = quad;
    end
 end
+end
+
+% Ref: Martin GD (2005). Chirp Z-transform spectral zoom optimization
+%      with Matlab. Sandia Report SAND 2005-7084.
+function z = spectralZoom(h,fs,f1,f2,m)
+[k, n] = size(h); oldk = k;
+if k == 1, h = h(:); [k, n] = size(h); end
+
+%------- Length for power-of-two fft
+nfft = power(2,nextpow2(k+m-1));
+
+%------- Premultiply data
+kk = transpose((-k+1):max(m-1,k-1));
+kk2 = (kk .^ 2) ./ 2;%kk2 = times(kk,kk)./2;
+wPow = times(-1i*2*pi*(f2-f1)/((m-1)*fs) , kk2);
+ww = exp(wPow);
+nn = (0:(k-1))';%nn = transpose(0:(k-1));
+aPow = times(-1i*2*pi*f1/fs, nn );
+aa = exp(aPow);
+aa = aa.*ww(k+nn);%aa = times(aa , ww(k+nn));
+y = h .* aa(:,ones(1,n));%y = times(h , aa(:,ones(1,n)));
+
+%------- Fast convolution via FFT
+fy = fft(y,nfft);
+fv = fft(1 ./ ww(1:(m-1+k)),nfft);
+fy = fy .* fv(:,ones(1, n));
+z  = ifft(fy);
+
+%------- Final multiply
+z = times(z(k:(k+m-1),:),ww(k:(k+m-1),ones(1, n)));
+
+if oldk == 1, z = transpose(z); end
 end
