@@ -225,7 +225,11 @@ function refreshPlot(obj,h,id)
       elseif all(q0)
          [lh(q0).Color] = deal([.7 .7 .7 .4]);
       else
-         [lh(~q0).Color] = deal(obj(ind1).labels(~q0).color);
+         try
+            [lh(~q0).Color] = deal(obj(ind1).labels(~q0).color);
+         catch
+            [lh(~q0).Color] = deal([0.2 0.2 0.2]);
+         end
       end
    else
       % Ensure that line handles are ordered like data
@@ -264,9 +268,15 @@ function refreshPlot(obj,h,id)
    if newdraw
       delete(findobj(h,'Tag',id,'-and','Type','Text'));
       for i = 1:n
-         text(t(end),sf(i),lh(i).UserData.name,'VerticalAlignment','middle',...
-            'FontAngle','italic','Color',lh(i).UserData.color,...
-            'UserData',lh(i).UserData,'Tag',id,'Parent',h);
+         if isempty(lh(i).UserData.color)
+            text(t(end),sf(i),lh(i).UserData.name,'VerticalAlignment','middle',...
+               'FontAngle','italic','Color',[.2 .2 .2],...
+               'UserData',lh(i).UserData,'Tag',id,'Parent',h);
+         else
+            text(t(end),sf(i),lh(i).UserData.name,'VerticalAlignment','middle',...
+               'FontAngle','italic','Color',lh(i).UserData.color,...
+               'UserData',lh(i).UserData,'Tag',id,'Parent',h);
+         end
       end
    else
       th = findobj(h,'Tag',id,'-and','Type','Text');
