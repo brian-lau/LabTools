@@ -105,7 +105,7 @@ p.addParameter('lambdaThresh',0.9,@(x) isnumeric(x) && isscalar(x));
 p.addParameter('weights','adapt',@(x) any(strcmp(x,{'adapt' 'eigen' 'unity'})));
 p.addParameter('dropLastTaper',true,@(x) islogical(x) || isscalar(x));
 p.addParameter('quadratic',false,@(x) islogical(x) || isscalar(x));
-p.addParameter('robust','huber',@ischar);
+p.addParameter('robust','mean',@ischar);
 p.parse(x,varargin{:});
 par = p.Results;
 
@@ -467,27 +467,27 @@ function z = spectralZoom(h,fs,f1,f2,m)
 if k == 1, h = h(:); [k, n] = size(h); end
 
 %------- Length for power-of-two fft
-nfft = power(2,nextpow2(k+m-1));
+nfft = 2^nextpow2(k+m-1);
 
 %------- Premultiply data
-kk = transpose((-k+1):max(m-1,k-1));
-kk2 = (kk .^ 2) ./ 2;%kk2 = times(kk,kk)./2;
-wPow = times(-1i*2*pi*(f2-f1)/((m-1)*fs) , kk2);
+kk = ((-k+1):max(m-1,k-1)).';
+kk2 = (kk.^2)./2;
+wPow = times( -1i*2*pi*(f2-f1)/((m-1)*fs) , kk2 );
 ww = exp(wPow);
-nn = (0:(k-1))';%nn = transpose(0:(k-1));
-aPow = times(-1i*2*pi*f1/fs, nn );
+nn = (0:(k-1))';
+aPow = times( -1i*2*pi*f1/fs , nn );
 aa = exp(aPow);
-aa = aa.*ww(k+nn);%aa = times(aa , ww(k+nn));
-y = h .* aa(:,ones(1,n));%y = times(h , aa(:,ones(1,n)));
+aa = aa.*ww(k+nn);
+y = h.*aa(:,ones(1,n));
 
 %------- Fast convolution via FFT
 fy = fft(y,nfft);
-fv = fft(1 ./ ww(1:(m-1+k)),nfft);
-fy = fy .* fv(:,ones(1, n));
+fv = fft(1./ww(1:(m-1+k)),nfft);
+fy = fy.*fv(:,ones(1, n));
 z  = ifft(fy);
 
 %------- Final multiply
-z = times(z(k:(k+m-1),:),ww(k:(k+m-1),ones(1, n)));
+z = z(k:(k+m-1),:) .* ww(k:(k+m-1),ones(1, n));
 
 if oldk == 1, z = transpose(z); end
 end
