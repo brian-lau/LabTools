@@ -67,8 +67,13 @@ function varargout = plot(self,varargin)
    end
    hold(h,'on');
    set(h,'tickdir','out','ticklength',[0.005 0.025],'Visible','off');
-      
-   gui.id = char(java.util.UUID.randomUUID().toString());
+   
+   % Unique ID to tag objects from this call
+   gui.id = char(java.util.UUID.randomUUID.toString);
+   gui.lineScaleSliderDiv = 12; % Slider stops per SD
+   gui.lineScaleSliderNSD = 9; % # of signal SDs to cover
+   sd = nanstd(self(1).values{1}(:));
+   gui.lineScaleSliderSD = sd;
    
    if numel(self) > 1
       ah = findobj(h.Parent,'Tag','ArraySlider');
@@ -93,39 +98,38 @@ function varargout = plot(self,varargin)
 
    sh = findobj(h.Parent,'Tag','LineScaleSlider');
    if isempty(sh)
-      % Set up slider parameters
       sep_min = 0;
-      sd = nanstd(self(1).values{1}(:));
-      sep_max = 9*sd*10;
+      sep_max = gui.lineScaleSliderDiv*gui.lineScaleSliderNSD;
       if par.stack
-         sep_init = par.sep*sd*10;
+         sep_init = par.sep*gui.lineScaleSliderDiv;
       else
          sep_init = 0;
       end
-      
       % Create the slider controlling separation between lines
-      sepSlider = javax.swing.JSlider(javax.swing.JSlider.VERTICAL,sep_min,sep_max,sep_init);
+      sepSlider = javax.swing.JSlider(javax.swing.JSlider.VERTICAL,...
+         sep_min,sep_max,sep_init);
       [jsepSlider,hsepSlider] = javacomponent(sepSlider,[0 0 1 1],[]);
       set(hsepSlider,'UserData',jsepSlider,'Tag','LineScaleSlider',...
          'Units','norm','Position',[0 .25 .04 .5],'Parent',h.Parent);
+      % Use cellfun in the callback to allow adding multiple callbacks later
       jsepSlider.StateChangedCallback = ...
          {@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self h gui.id}} };
    else
+      % Adding event plot to existing axis that has slider controls
+      % Attach callbacks to existing list, to be evaluated in sequence
       f = {@refreshPlot self h gui.id};
       sh.UserData.StateChangedCallback{2}{end+1} = f;
    end
    
+   % Set up slider to control time range
    % This slider will be present if handle comes from SampledProcess.plot.
-   % If so, let the originating process control the time range, otherwise
-   % add control
+   % If so, let the originating process control the time range, otherwise add
    rh = findobj(h.Parent,'Tag','RangeSlider');
    if isempty(rh)
-      %win = cat(1,self.relWindow);
-      %gui.minmaxwin = [min(win(:,1)) max(win(:,2))];
-      rangeSlider = com.jidesoft.swing.RangeSlider(0,100,0,100);  % min,max,low,high
+      rangeSlider = com.jidesoft.swing.RangeSlider(0,150,0,150);  % min,max,low,high
       [rangeSlider,hrangeSlider] = javacomponent(rangeSlider,[0 0 1 1],[]);
       set(hrangeSlider,'UserData',rangeSlider,'Tag','RangeSlider',...
-         'Units','norm','Position',[.5 .005 .425 .05],'Parent',h.Parent);
+         'Units','norm','Position',[.4 .005 .525 .05],'Parent',h.Parent);
       set(rangeSlider,'Enabled',false,'StateChangedCallback',{@setx self h gui.id});
    end
    
@@ -145,6 +149,7 @@ function varargout = plot(self,varargin)
    end
 end
 
+%%
 function setx(e,~,obj,h,id)
    % Extract specific parameters for this ID
    gui = linq(h.UserData).where(@(x) strcmp(x.id,id)).select(@(x) x).toArray;
@@ -157,9 +162,18 @@ function setx(e,~,obj,h,id)
    
    minmaxwin = obj(ind1).relWindow;
    d = minmaxwin(2) - minmaxwin(1);  
-%    d = gui.minmaxwin(2) - gui.minmaxwin(1);
-   h.XLim(1) = minmaxwin(1) + e.getLowValue*d/100;
-   h.XLim(2) = minmaxwin(1) + e.getHighValue*d/100 + 100*eps(h.XLim(1));
+
+   lo = minmaxwin(1) + e.getLowValue*d/150;
+   hi = minmaxwin(1) + e.getHighValue*d/150 + 100*eps(h.XLim(1));
+   try
+      h.XLim = [lo hi];
+   catch err
+      if strcmp('MATLAB:hg:shaped_arrays:LimitsWithInfsPredicate',err.identifier)
+         h.XLim = [hi lo];
+      else
+         rethrow(err);
+      end
+   end
 
    th = findobj(h,'Tag',id,'-and','Type','Text');
    for i = 1:numel(th)
@@ -186,10 +200,10 @@ function refreshPlot(obj,h,id)
    t = obj(ind1).times{1};
    
    hsepSlider = findobj(h.Parent,'tag','LineScaleSlider');
-   sep = hsepSlider.UserData.getValue()/10;
+   % Convert slider step to data scale
+   sep = hsepSlider.UserData.Value*gui.lineScaleSliderSD/gui.lineScaleSliderDiv;
 
    n = size(values,2);
-   sd = nanstd(obj(ind1).values{1}(:));
    %hsepSlider.UserData.setMaximum(9*sd*10); % THIS TRIGGERS CALLBACK
    
    sf = (0:n-1)*sep; % shift factor
@@ -288,7 +302,7 @@ function refreshPlot(obj,h,id)
    
    if isempty(h.Parent.KeyPressFcn) % Zoom is not active
       rh = findobj(h.Parent,'Tag','RangeSlider');
-      if ~rh.UserData.isEnabled
+      if ~rh.UserData.Enabled
          h.XLim(1) = t(1);
          h.XLim(2) = t(end);
          rh.UserData.Enabled = true;
@@ -299,6 +313,8 @@ function refreshPlot(obj,h,id)
    
    gui.arraySliderTxt.String = ['element ' num2str(ind1) '/' num2str(numel(obj))];
 
+   %sd = nanstd(obj(ind1).values{1}(:));
+   sd = gui.lineScaleSliderSD; % Use SD from first array element
    h.YTick = [0 1*sd 2*sd 3*sd];
    set(h,'yticklabel',{'0' sprintf('%1.2f (1 SD)',sd) sprintf('%1.2f (2 SD)',2*sd) ...
       sprintf('%1.2f (3 SD)',3*sd)});

@@ -42,9 +42,9 @@ h = plot(s);
 plot(s2,'handle',h);
 
 %%%%%%%%%%%%%%%%%%%%%%%
-s = SampledProcess(randn(10000,10));
+s = SampledProcess(randn(10000,50));
 l = s.labels;
 for i = 2:200
-   s(i) = SampledProcess(randn(10000,10),'labels',l);
+   s(i) = SampledProcess(randn(10000,50),'labels',l);
 end
 h = plot(s);

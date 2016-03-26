@@ -79,7 +79,9 @@ function varargout = plot(self,varargin)
    hold(h,'on');
    set(h,'tickdir','out','ticklength',[0.005 0.025],'Visible','off');
 
-   gui.id = char(java.util.UUID.randomUUID().toString());
+   % Unique ID to tag objects from this call
+   gui.id = char(java.util.UUID.randomUUID.toString);
+
    gui.alpha = par.alpha;   
    gui.bottom = par.bottom;
    gui.top = par.top;
@@ -341,6 +343,9 @@ function moveEvent(~,~,obj,h)
    label = ph.UserData;
    event = obj.values{1}(ind);
    textLabel = findobj(h,'UserData',ph.UserData,'-and','Type','Text');
+   % findobj matches structs, so we need to restrict to handle matches
+   ind2 = [textLabel.UserData] == label;
+   textLabel(~ind2) = [];
    
    setptr(gcf,'hand');
    fig.movepatch(ph,'x',@mouseupEvent);
