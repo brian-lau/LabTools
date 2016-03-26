@@ -2,6 +2,8 @@
 %
 %     [output,params] = mtspectrum(x,varargin)
 %
+%     Power spectral density estimates using Thompson's multitaper method.
+%
 %     All inputs are passed in using name/value pairs. The name is a string
 %     followed by the value (described below).
 %     The order of the pairs does not matter, nor does the case.
@@ -53,16 +55,17 @@
 %     alpha   - scalar in [0,1], optional, default = 0.95
 %               When set, causes confidence intervals to be returned
 %     confMethod - string, optional, default = 'asymp'
-%               'asymp' returns 
+%               'asymp' - asymptotic confidence intervals
+%               'jack'  - Jackknifed confidence intervals
 %
 % OUTPUTS
 %     output  - Structure that always contains the fields:
-%               f - frequencies
-%               P - PSDs
+%                f - frequencies
+%                P - PSDs
 %               May contain the following depending on input parameters
-%               CI - confidence intervals
-%               dP - first derivative of spectrum
-%               ddP - second derivative of spectrum
+%                CI - confidence intervals
+%                dP - first derivative of spectrum (for quadratic = true)
+%                ddP - second derivative of spectrum (for quadratic = true)
 %     params  - Structure containing parameters
 %
 % REFERENCES
@@ -74,6 +77,26 @@
 %       Sig Proc Mag 24: 20-30.
 %
 % EXAMPLES
+%     Fs = 1024;
+%     dt = 1/Fs;
+%     t = (0:5207)'*dt;
+%     x = cos(2*pi*250*t) + .5*cos(2*pi*50*t) + 1*randn(size(t));
+%     % MT spectrum with half-bandwidth of 1 Hz
+%     [out,params] = sig.mtspectrum(x,'hbw',1,'Fs',Fs);
+%     plot(out.f,10*log10(out.P));
+%     % The effective time-half-bandwidth product for this signal length is
+%     params.thbw
+%
+%     % Compare to Prieto et al's method for local bias reduction
+%     [out,params] = sig.mtspectrum(x,'hbw',1,'Fs',Fs,'quadratic',true);
+%     hold on;
+%     % Zoom on the peaks to see the differences
+%     plot(out.f,10*log10(out.P));
+%
+%     % Note with this latter method produces estimates of the PSD derivatives
+%     figure; subplot(211);
+%     plot(out.f,out.dP);
+%     subplot(212); plot(out.f,out.ddP);
 %
 % SEE ALSO
 %     sig.mtspectrum
@@ -384,7 +407,7 @@ for chan=1:Nchan
    
    Sk = abs(Xx).^2;
    
-   % Compute the MTM spectral estimates, compute the whole spectrum 0:nfft.
+   % Compute the MTM spectral estimates
    switch params.weights,
       case 'adapt'
          if k > 1
@@ -462,6 +485,9 @@ end
 
 % Ref: Martin GD (2005). Chirp Z-transform spectral zoom optimization
 %      with Matlab. Sandia Report SAND 2005-7084.
+% This is indeed slightly faster, but there are small differences between
+% this and the standard czt call, that grow with signal length. I can't
+% tell which is preferable for numerical stability...
 function z = spectralZoom(h,fs,f1,f2,m)
 [k, n] = size(h); oldk = k;
 if k == 1, h = h(:); [k, n] = size(h); end
