@@ -1,4 +1,4 @@
-[s,artifacts,f,Sx] = fakeLFP(2000,20,[2 2 2 2]);
+[s,artifacts,f,Sx] = fakeLFP(2000,10,[2 2 2 2]);
 
 h = plot(s);
 plot(artifacts,'handle',h,'overlap',.1,'stagger',true);
@@ -20,7 +20,8 @@ subplot(212); hold on
 plot(f,10*log10(Sx));
 
 X = s.values;
-tic;[out,par] = sig.mtspectrum(X,'hbw',hbw,'Fs',s.Fs,'quadratic',0,'f',f,'quadratic',1);toc
+tic;[out,par] = sig.mtspectrum(X,'hbw',hbw,'Fs',s.Fs,'f',f,...
+   'quadratic',1,'robust','huber');toc
 subplot(211)
 plot(out.f,10*log10(out.P(:,1)),'-')
 subplot(212)

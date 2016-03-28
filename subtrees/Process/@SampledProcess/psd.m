@@ -17,10 +17,11 @@
 %              One of following indicating type of transformation
 %              'multitaper' - Thompson's multitaper method
 %              'welch'      - Welch's averaged, modified periodogram
+%
+% OPTIONAL
 %     f      - fmin:df:fmax, optional, default = linspace(0,nyquist,100)
 %              Vector of frequencies for calculating PSD
 %
-% OPTIONAL
 %     If method = 'multitaper'
 %     hbw     - scalar (Hz), optional, default = thbw/T
 %               Half-bandwidth, spectral concentration [-hbw hbw]
@@ -82,7 +83,6 @@ p.KeepUnmatched = true;
 p.FunctionName = 'SampledProcess psd method';
 p.addParameter('method','mtm',@(x) any(strcmp(x,...
    {'multitaper' 'mtm' 'welch'})));
-p.addParameter('f',[],@(x) isnumeric(x) && isvector(x));
 p.addParameter('type','psd',@ischar);
 p.parse(varargin{:});
 params = p.Unmatched;
@@ -98,19 +98,15 @@ end
 function tfr = psdEach(obj,par,params)
 
 Fs = obj.Fs;
-if isempty(par.f)
-   f = linspace(0,Fs/2,100);
-else
-   f = par.f;
-end
 
 switch lower(par.method)
    case {'mtm' 'multitaper'}
       params.Fs = obj.Fs;
-      params.f = f;
+      %params.f = f;
       
       [out,par] = sig.mtspectrum(obj.values,params);
       p = out.P;
+      f = out.f;
       params = par;
 
       tBlock = max(obj.relWindow(:)) - min(obj.relWindow(:));
@@ -124,7 +120,10 @@ switch lower(par.method)
       if ~isfield(params,'overlap')
          params.overlap = [];
       end
-      p = pwelch(obj.values{1},params.window,params.overlap,f,Fs);
+      if ~isfield(params,'f')
+         params.f = linspace(0,Fs/2,100);
+      end
+      [p,f] = pwelch(obj.values{1},params.window,params.overlap,params.f,Fs);
 
       tBlock = max(obj.relWindow(:)) - min(obj.relWindow(:));
       tStep = tBlock;
