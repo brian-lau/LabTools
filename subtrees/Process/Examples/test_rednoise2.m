@@ -1,7 +1,7 @@
 Fs = 2000;
-T = 20;
+T = 10;
 
-for i = 1:100
+for i = 1:1
    i
    [s,f,Sx0] = fakeLFP2(Fs,T,1);
    S = Spectrum('input',s);
@@ -26,6 +26,12 @@ win = [s.tStart:step:s.tEnd]';
 win = [win,win+step];
 win(win>s.tEnd) = s.tEnd;
 s.window = win;
+
+
+S = Spectrum('input',s);
+S.psdParams.f = 0:.25:1000;
+S.psdParams.hbw = 1;
+S.run;
 
 hbw = 1;
 x = s.values;

@@ -11,7 +11,10 @@
 %     The order of the pairs does not matter, nor does the case.
 %
 % INPUTS
-%     func - function handle
+%     func - function handle, required
+%     B    - cell array, optional
+%            Additional input to cellfun, number of elements must match the
+%            number of windows
 %
 % OUTPUTS
 %     obj - Process
@@ -63,7 +66,12 @@ for i = 1:numel(self)
    end
    %----------------------------------------
 
-   values = cellfun(func,self(i).values,'uni',false);
+   if isfield(p.Unmatched,'B')
+      values = cellfun(func,self(i).values,p.Unmatched.B,'uni',false);
+   else
+      values = cellfun(func,self(i).values,'uni',false);
+   end
+   
    % Check dimensions
    match = cellfun(@(x,y) size(x) == size(y),self(i).values,values,'uni',false);
    if any(~cat(1,match{:}))
