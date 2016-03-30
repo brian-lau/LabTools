@@ -1,11 +1,14 @@
+% TODO: test with other background shapes
+
 clear all
+rng(23351);
 Fs = 2000;
 T = 30;
-step = 3;
-
+step = 4;
 p = [0.01 0.05 0.1];
+N = 200;
 
-for i = 1:250
+for i = 1:N
    i
    [s,f,Sx0] = fakeLFP2(Fs,T,1);
    
@@ -18,7 +21,8 @@ for i = 1:250
    
    S = Spectrum('input',s);
    S.psdParams.f = 0:.25:500;
-   S.psdParams.hbw = 0.5;
+   S.psdParams.quadratic = false;
+   S.psdParams.hbw = 1.5;
    S.run;
    
    psdRaw{i} = S.psd.values{1};
@@ -29,18 +33,20 @@ for i = 1:250
 end
 
 f = S.psdParams.f;
+nbins = 150;
 
 figure;
 subplot(421); hold on
 psdall = cat(1,psdRaw{:});
 plot(f,mean(psdall));
+set(gca,'yscale','log');
 
 subplot(422); hold on
 psdall = cat(1,psdWhite{:});
 plot(f,mean(psdall));
 
-edp = linspace(0,.15,100);
-edf = linspace(0,f(end),100);
+edp = linspace(0,.15,nbins);
+edf = linspace(0,f(end),nbins);
 bwf = mean(diff(edf));
 num = cellfun(@(x) numel(x),fa) ./ numel(f);
 
@@ -50,7 +56,9 @@ histogram(num(:,i),edp,'Normalization','count');
 plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,4); hold on
-histogram(cat(2,fa{:,i}),edf,'Normalization','countdensity');
+histogram(cat(2,fa{:,i}),edf,'Normalization','count');
+y = p(i)*numel(S.psdParams.f)*N/nbins;
+plot(get(gca,'xlim'),[y y],'--');
 
 i = 2;
 subplot(4,2,5); hold on
@@ -58,7 +66,9 @@ histogram(num(:,i),edp,'Normalization','count');
 plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,6); hold on
-histogram(cat(2,fa{:,i}),edf,'Normalization','countdensity');
+histogram(cat(2,fa{:,i}),edf,'Normalization','count');
+y = p(i)*numel(S.psdParams.f)*N/nbins;
+plot(get(gca,'xlim'),[y y],'--');
 
 i = 3;
 subplot(4,2,7); hold on
@@ -66,24 +76,26 @@ histogram(num(:,i),edp,'Normalization','count');
 plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,8); hold on
-histogram(cat(2,fa{:,i}),edf,'Normalization','countdensity');
+histogram(cat(2,fa{:,i}),edf,'Normalization','count');
+y = p(i)*numel(S.psdParams.f)*N/nbins;
+plot(get(gca,'xlim'),[y y],'--');
 
 
-%%%
-Fs = 2000;
-T = 30;
-[s,f,Sx0] = fakeLFP2(Fs,T,0);
-
-step = 3;
-win = [s.tStart:step:s.tEnd]';
-win = [win,win+step];
-win(win>s.tEnd) = s.tEnd;
-s.window = win;
-
-S = Spectrum('input',s);
-S.psdParams.f = 0:.25:1000;
-S.psdParams.hbw = 1;
-S.run;
+% %%%
+% Fs = 2000;
+% T = 30;
+% [s,f,Sx0] = fakeLFP2(Fs,T,0);
+% 
+% step = 3;
+% win = [s.tStart:step:s.tEnd]';
+% win = [win,win+step];
+% win(win>s.tEnd) = s.tEnd;
+% s.window = win;
+% 
+% S = Spectrum('input',s);
+% S.psdParams.f = 0:.25:1000;
+% S.psdParams.hbw = 1;
+% S.run;
 S.plotDiagnostics;
 S.plot
 

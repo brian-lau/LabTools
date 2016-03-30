@@ -1,3 +1,7 @@
+% TODO;
+%  o multichannel
+%  o expose baseline parameters
+%  o implement irasa
 classdef Spectrum < hgsetget & matlab.mixin.Copyable
    properties
       input
@@ -53,7 +57,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                self.psdWhite = self.resid.psd(self.psdParams);
                
                % Put in loop for multiple channels
-               bl = stat.baseline.arpls(self.psdWhite.values{1}',5e6);
+               lambda = 1e9;%5e6;
+               bl = stat.baseline.arpls(self.psdWhite.values{1}',lambda);
                self.psdWhite.map(@(x) x - bl' + mean(bl));
                
                nWindows = numel(self.input.values);
@@ -91,7 +96,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          % Fit MVAR for all data
          [what,Ahat,sigma] = arfit2(x,1,1);
          
-         %res = zeros(size(self.input.values{1}));
+         % Get residuals from MVAR fit
          for i = 1:nWin
             if iscell(values.values)
                [~,res{i}] = arres(what,Ahat,values.values{1,i},2);

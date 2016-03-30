@@ -33,9 +33,11 @@ if signal
    gp2 = gp2./max(gp2);
    gp3 = normpdf(ff,80,5);
    gp3 = gp3./max(gp3);
-   gp = gp1*1 + gp2*.75 + gp3*.25;
+   gp4 = normpdf(ff,250,20);
+   gp4 = gp4./max(gp4);
+   gp = gp1*1 + gp2*.75 + gp3*.25 + gp4*.25/4;
    x1 = sig.noise(gp);
-   
+
    % Sum together, with a line component for good measure
    x = x0 + 0.5*cos(2*pi*4*t) + 15*x1;
 else
