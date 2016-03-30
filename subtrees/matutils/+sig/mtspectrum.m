@@ -129,6 +129,7 @@ p.addParameter('weights','adapt',@(x) any(strcmp(x,{'adapt' 'eigen' 'unity'})));
 p.addParameter('dropLastTaper',true,@(x) islogical(x) || isscalar(x));
 p.addParameter('quadratic',false,@(x) islogical(x) || isscalar(x));
 p.addParameter('robust','mean',@ischar);
+p.addParameter('verbose',false,@(x) islogical(x) || isscalar(x));
 p.parse(x,varargin{:});
 par = p.Results;
 
@@ -293,9 +294,11 @@ end
          % Do tapers pass the eigenvalue threshold?
          ind = find(par.lambda < par.lambdaThresh);
          if ~isempty(ind)
-            fprintf(strcat('# of tapers reduced from %g to %g due to eigenvalues < %1.3f\n',...
-               'Decrease lambdaThresh if you do not want this behavior.\n'),...
-               par.k,par.k-numel(ind),par.lambdaThresh);
+            if par.verbose
+               fprintf(strcat('# of tapers reduced from %g to %g due to eigenvalues < %1.3f\n',...
+                  'Decrease lambdaThresh if you do not want this behavior.\n'),...
+                  par.k,par.k-numel(ind),par.lambdaThresh);
+            end
             par.k = max(1,ind(1)-1);
          end
       end
@@ -433,7 +436,7 @@ for chan=1:Nchan
             % Equivalent degrees of freedom, see p. 370 of Percival and Walden 1993.
             %dof = (2*sum((b.^2).*(ones(nfft,1)*V'),2).^2) ./ sum((b.^4).*(ones(nfft,1)*V.^2'),2);
          else
-            %TODO Single taper estimate
+            Schan = Sk;
             %dof = 2*ones(nfft,1);
          end
       case {'unity','eigen'}
