@@ -6,7 +6,7 @@ Fs = 2000;
 T = 30;
 step = 4;
 p = [0.01 0.05 0.1];
-N = 200;
+N = 50;
 
 for i = 1:N
    i
@@ -21,8 +21,8 @@ for i = 1:N
    
    S = Spectrum('input',s);
    S.psdParams.f = 0:.25:500;
-   S.psdParams.quadratic = false;
-   S.psdParams.hbw = 1.5;
+   S.psdParams.quadratic = false; % inflates type 1 error (dof inaccurate)
+   S.psdParams.hbw = .75;
    S.run;
    
    psdRaw{i} = S.psd.values{1};

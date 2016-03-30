@@ -2,6 +2,8 @@
 %  o multichannel
 %  o expose baseline parameters
 %  o implement irasa
+%  o during baseline estimation, consider extending edges to reduce edge
+%  effects
 classdef Spectrum < hgsetget & matlab.mixin.Copyable
    properties
       input
@@ -57,12 +59,19 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                self.psdWhite = self.resid.psd(self.psdParams);
                
                % Put in loop for multiple channels
-               lambda = 1e9;%5e6;
-               bl = stat.baseline.arpls(self.psdWhite.values{1}',lambda);
+               lambda = 1e8;%5e6;
+               p = self.psdWhite.values{1}';
+               bl = stat.baseline.arpls(p,lambda);
+               %bl = stat.baseline.arpls([repmat(median(p(1:10)),25,1);p],lambda);
+               %bl = bl(26:end);
+
                self.psdWhite.map(@(x) x - bl' + mean(bl));
                
+               % Approximate alpha for rescaling to unit variance white
+               % noise (Thomson refs)
                nWindows = numel(self.input.values);
                alpha = nWindows*mean(self.psdWhite.params.k);
+               
                Q = gaminv(0.05,alpha,1/alpha) ./ ...
                   (quantile(self.psdWhite.values{1},0.05));
                
@@ -72,9 +81,24 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                self.prewhitenParams.alpha = alpha;
                self.prewhitenParams.Q = Q;
             case 'fractal'
+               fitIRASA(self);
                
+               
+               % Approximate alpha for rescaling to unit variance white
+               % noise (Thomson refs)
+               nWindows = numel(self.input.values);
+               alpha = nWindows*mean(self.psdWhite.params.k);
+               
+               Q = gaminv(0.05,alpha,1/alpha) ./ ...
+                  (quantile(self.psdWhite.values{1},0.05));
+               
+               self.psdWhite.map(@(x) Q*x);
          end
-
+      end
+      
+      function fitIRASA(self)
+         
+         pmed = sig.irasa(x,f,q,Fs,2*nw);
       end
 
       function fitARModel(self)
@@ -95,13 +119,13 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          
          % Fit MVAR for all data
          [what,Ahat,sigma] = arfit2(x,1,1);
-         
+
          % Get residuals from MVAR fit
          for i = 1:nWin
             if iscell(values.values)
-               [~,res{i}] = arres(what,Ahat,values.values{1,i},2);
+               [~,res{i}] = arres(what,Ahat,values.values{1,i},5);
             else
-               [~,res{i}] = arres(what,Ahat,values.values,2);
+               [~,res{i}] = arres(what,Ahat,values.values,5);
             end
          end
          self.resid = copy(self.input);
