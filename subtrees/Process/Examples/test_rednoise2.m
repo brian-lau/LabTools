@@ -3,14 +3,14 @@
 clear all
 rng(23351);
 Fs = 2000;
-T = 30;
-step = 4;
+T = 4;
+step = 0;
 p = [0.01 0.05 0.1];
-N = 50;
+N = 250;
 
 for i = 1:N
    i
-   [s,f,Sx0] = fakeLFP2(Fs,T,1);
+   [s,f,Sx0] = fakeLFP2(Fs,T,0);
    
    if step > 0
       win = [s.tStart:step:s.tEnd]';
@@ -22,7 +22,7 @@ for i = 1:N
    S = Spectrum('input',s);
    S.psdParams.f = 0:.25:500;
    S.psdParams.quadratic = false; % inflates type 1 error (dof inaccurate)
-   S.psdParams.hbw = .75;
+   S.psdParams.hbw = 1.5;
    S.run;
    
    psdRaw{i} = S.psd.values{1};
@@ -44,6 +44,7 @@ set(gca,'yscale','log');
 subplot(422); hold on
 psdall = cat(1,psdWhite{:});
 plot(f,mean(psdall));
+grid on;
 
 edp = linspace(0,.15,nbins);
 edf = linspace(0,f(end),nbins);
@@ -56,9 +57,10 @@ histogram(num(:,i),edp,'Normalization','count');
 plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,4); hold on
-histogram(cat(2,fa{:,i}),edf,'Normalization','count');
-y = p(i)*numel(S.psdParams.f)*N/nbins;
+h = histogram(cat(2,fa{:,i}),edf,'Normalization','count');
+y = p(i)*numel(S.psdParams.f)*N/h.NumBins;
 plot(get(gca,'xlim'),[y y],'--');
+plot(get(gca,'xlim'),[mean(h.Values) mean(h.Values)],'-');
 
 i = 2;
 subplot(4,2,5); hold on
@@ -66,9 +68,10 @@ histogram(num(:,i),edp,'Normalization','count');
 plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,6); hold on
-histogram(cat(2,fa{:,i}),edf,'Normalization','count');
-y = p(i)*numel(S.psdParams.f)*N/nbins;
+h = histogram(cat(2,fa{:,i}),edf,'Normalization','count');
+y = p(i)*numel(S.psdParams.f)*N/h.NumBins;
 plot(get(gca,'xlim'),[y y],'--');
+plot(get(gca,'xlim'),[mean(h.Values) mean(h.Values)],'-');
 
 i = 3;
 subplot(4,2,7); hold on
@@ -76,9 +79,10 @@ histogram(num(:,i),edp,'Normalization','count');
 plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,8); hold on
-histogram(cat(2,fa{:,i}),edf,'Normalization','count');
-y = p(i)*numel(S.psdParams.f)*N/nbins;
+h = histogram(cat(2,fa{:,i}),edf,'Normalization','count');
+y = p(i)*numel(S.psdParams.f)*N/h.NumBins;
 plot(get(gca,'xlim'),[y y],'--');
+plot(get(gca,'xlim'),[mean(h.Values) mean(h.Values)],'-');
 
 
 % %%%
