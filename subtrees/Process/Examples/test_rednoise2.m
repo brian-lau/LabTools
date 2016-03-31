@@ -3,14 +3,14 @@
 clear all
 rng(23351);
 Fs = 2000;
-T = 4;
-step = 0;
+T = 32;
+step = 2;
 p = [0.01 0.05 0.1];
-N = 250;
+N = 10;
 
 for i = 1:N
    i
-   [s,f,Sx0] = fakeLFP2(Fs,T,0);
+   [s,f,Sx0] = fakeLFP2(Fs,T,2);
    
    if step > 0
       win = [s.tStart:step:s.tEnd]';
@@ -22,7 +22,7 @@ for i = 1:N
    S = Spectrum('input',s);
    S.psdParams.f = 0:.25:500;
    S.psdParams.quadratic = false; % inflates type 1 error (dof inaccurate)
-   S.psdParams.hbw = 1.5;
+   S.psdParams.hbw = .75;
    S.run;
    
    psdRaw{i} = S.psd.values{1};

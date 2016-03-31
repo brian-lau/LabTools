@@ -59,7 +59,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                self.psdWhite = self.resid.psd(self.psdParams);
                
                % Put in loop for multiple channels
-               lambda = 1e8;%5e6;
+               lambda = 1e9;%5e6;
                p = self.psdWhite.values{1}';
                bl = stat.baseline.arpls(p,lambda);
                %bl = stat.baseline.arpls([repmat(median(p(1:10)),25,1);p],lambda);
@@ -102,7 +102,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       end
 
       function fitARModel(self)
-         self.input.detrend();
+         %self.input.detrend();
          % TODO VERIFY LABEL MATCHING (SHOULD BE DONE ON INPUT)
          [values,labels] = extract(self.input);
          if iscell(values.values)
@@ -118,7 +118,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
          
          % Fit MVAR for all data
-         [what,Ahat,sigma] = arfit2(x,1,1);
+         [what,Ahat,sigma] = arfit2(x,2,2);
 
          % Get residuals from MVAR fit
          for i = 1:nWin
@@ -129,7 +129,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             end
          end
          self.resid = copy(self.input);
-         self.resid.map(@(x,y) [zeros(1,self.input.n);y],'B',res');
+         self.resid.map(@(x,y) [repmat(nanmean(y),1,self.input.n);y],'B',res');
+         %self.resid.map(@(x,y) [zeros(1,self.input.n);y],'B',res');
 
          self.prewhitenParams.Ahat = Ahat;
          self.prewhitenParams.what = what;
