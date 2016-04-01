@@ -6,7 +6,7 @@ if isempty(labels)
       l = metadata.Label;
       l(1) = [];
    else
-      c = fig.distinguishable_colors(n);
+      c = parula(n);
       for i = 1:n
          l(i) = metadata.Label('name',['id' num2str(i)],'color',c(i,:));
       end
