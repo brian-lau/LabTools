@@ -20,15 +20,16 @@ for i = 1:nh
    % Fractionally downsampled
    xh = resample(x,p,q);
    ph = sig.mtspectrum(xh,'thbw',nw,'f',f,'Fs',Fs,'quadratic',quad);
-   %ph = sig.mtspectrum(xh,'V',params.V,'lambda',params.lambda,'quadratic',quad);
+   %ph = pwelch(xh,[],[],f,Fs);
    
    % Fractionally upsampled
    x1h = resample(x,q,p);
    p1h = sig.mtspectrum(x1h,'thbw',nw,'f',f,'Fs',Fs,'quadratic',quad);
-   %p1h = sig.mtspectrum(xh,'V',params.V,'lambda',params.lambda,'quadratic',quad);
-   
+   %p1h = pwelch(xh,[],[],f,Fs);
+
    % Geometric mean
    pg(:,i) = sqrt(ph.P.*p1h.P);
+   %pg(:,i) = sqrt(ph.*p1h);
 end
 
 pfractal = median(pg,2);

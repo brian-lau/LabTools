@@ -20,8 +20,11 @@ x = e1 + e2;
 x2 = x(:);
 
 % Put both into one SampledProcess
-s = SampledProcess([x1 , x2],'Fs',fs);
+s = SampledProcess([x1],'Fs',fs);
 c = CFC('input',s,'metric','mi');
+c.fCentersPhase = (4:2:40);
+c.fCentersAmp = (150:10:350);
+
 c.run.plot;
 
 % Try a different metric
@@ -38,6 +41,8 @@ c.run.plot;
 % examine filters
 fvtool(c.hAmp)
 
+c.fCentersPhase = (4:2:40);
+c.fCentersAmp = (150:4:350);
 c.filterBankType = 'uniform';
 c.run.plot;
 
@@ -74,3 +79,15 @@ sa.window = [2 8];
 
 plot(sp);
 plot(sa);
+
+%%
+% Filters like connolly
+% 
+% pas=1
+% t=1:pas:18
+% out=sqrt(2).^(t)
+% 
+% w = [out(1:end-1)',out(2:end)']
+% bw = diff(w,1,2)
+% 
+% [w,bw]

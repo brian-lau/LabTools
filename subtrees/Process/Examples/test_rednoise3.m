@@ -4,7 +4,7 @@ h = 1.1:.05:1.9;
 x = s.values{1};%Da;%
 f = 0:.25:250;
 q = 0;
-Fs = 1000;
+Fs = 2000;
 nw = 4;
 
 [px,params] = sig.mtspectrum(x,'thbw',nw,'f',f,'Fs',Fs,'quadratic',q);

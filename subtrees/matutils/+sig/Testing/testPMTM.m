@@ -1,7 +1,7 @@
 clear all;
 Fs = 1024;
 dt = 1/Fs;
-t = (0:12047)'*dt;
+t = (0:92047)'*dt;
 
 x = cos(2*pi*250*t) + .5*cos(2*pi*50*t) + 8*randn(size(t));
 
@@ -22,8 +22,8 @@ subplot(313);
 plot(out.f,spec(1:numel(out.f),:)-out.P)
 
 %% Check that we can reproduce pmtm output when f = requested vector
-tic;[spec,freq] = pmtm(x,nw,0:.0625:Fs/2,Fs);toc
-tic;out = sig.mtspectrum(x,'thbw',nw,'f',0:.0625:Fs/4,'Fs',Fs,'quadratic',false);toc
+tic;[spec,freq] = pmtm(x,nw,0:.0125:Fs/2,Fs);toc
+tic;out = sig.mtspectrum(x,'thbw',nw,'f',0:.0125:Fs/2,'Fs',Fs,'quadratic',false);toc
 
 figure;
 subplot(311); hold on

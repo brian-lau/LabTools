@@ -229,7 +229,7 @@ classdef CFC < hgsetget & matlab.mixin.Copyable
          for i = 1:self.input.n
             %h = imagesc(self.fCentersPhase,self.fCentersAmp,self.comodulogram(:,:,i));
             %set(gca,'ydir','normal')
-            g = subplot(n,2,i,'Parent',h);
+            g = subplot(1,1,1,'Parent',h);
             %g = subplot(n,1,i,'Parent',h);
             surf(self.fCentersPhase,self.fCentersAmp,self.comodulogram(:,:,i),'edgecolor','none','Parent',g);
             view(g,0,90);
