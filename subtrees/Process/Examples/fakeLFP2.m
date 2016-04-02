@@ -39,8 +39,8 @@ if signal == 1
    x1 = sig.noise(gp);
 
    % Sum together, with a line component for good measure
-   x = x0 + 0.5*cos(2*pi*4*t) + 15*x1;
-elseif signal == 2
+   x = x0 + 1*cos(2*pi*4*t) + 15*x1;
+elseif signal == 2 % 1/f background
    %% Some gaussian bumps in frequency
    ff = linspace(0,Fs/2,n/2 + 1);
    gp1 = normpdf(ff,12,2);
@@ -51,11 +51,11 @@ elseif signal == 2
    gp3 = gp3./max(gp3);
    gp4 = normpdf(ff,250,20);
    gp4 = gp4./max(gp4);
-   gp = gp1*1 + gp2*.75 + gp3*.25 + gp4*.25/4;
+   gp = gp1*1 + gp2*.75 + gp3*.25 + gp4*.25/2;
    x1 = sig.noise(gp);
 
    % Sum together, with a line component for good measure
-   x = 0.5*cos(2*pi*4*t) + 15*x1 + sig.pinknoise(numel(x1))';
+   x = 1.5*cos(2*pi*4*t) + 15*x1 + 4*sig.pinknoise(numel(x1))';
 else
    x = x0;
 end
