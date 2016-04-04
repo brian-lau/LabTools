@@ -16,6 +16,9 @@
 clear all
 close all
 
+import spk.*
+import fig.*
+
 % Fake spike times
 spk = cell(50,3);
 shift = [0 -1.5 1.5];
@@ -95,6 +98,10 @@ ind(1:10:end,3) = false;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all;
 close all;
+
+import spk.*
+import fig.*
+
 % Frequently, we have spks from a single neuron that we want to plot 
 % separately for different groupings of trials
 
@@ -141,6 +148,10 @@ boundedline(t,r(:,1),r_sem(:,1),'b',...
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all;
 close all;
+
+import spk.*
+import fig.*
+
 % Another frequent scenario is where trial lengths are unequal, or we want
 % to only include data up to some event that may be trial specific (eg
 % reaction time).
