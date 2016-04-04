@@ -7,12 +7,11 @@
 classdef Spectrum < hgsetget & matlab.mixin.Copyable
    properties
       input
-      resid
-      prewhitenParams
+      whitenParams
       psd
       psdWhite
       psdParams
-      %alpha
+      verbose
    end
    
    methods
@@ -21,23 +20,28 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p.KeepUnmatched= false;
          p.FunctionName = 'Spectrum constructor';
          p.addParameter('input',[],@(x) isa(x,'SampledProcess'));
-         p.addParameter('prewhitenParams',[],@isstruct);
-         p.addParameter('psdParams',[],@isstruct);
+         p.addParameter('whitenParams',struct('method','power'),@isstruct);
+         p.addParameter('psdParams',struct('hbw',0.5),@isstruct);
+         p.addParameter('verbose',false,@(x) isscalar(x) && islogical(x));
          p.parse(varargin{:});
          par = p.Results;
          
          self.input = par.input;
-         if isempty(par.prewhitenParams)
-            self.prewhitenParams = struct('method','ar+');
-         end
-         if isempty(par.psdParams)
-            self.psdParams = struct('hbw',0.5);
-         end
+         self.whitenParams = par.whitenParams;
+         self.psdParams = par.psdParams;
+         self.verbose = par.verbose;
+      end
+      
+      function set.input(self,input)
+         % TODO VERIFY LABEL MATCHING for SampledProcess array
+         self.input = input;
+         self.psd = [];
+         self.psdWhite = [];
       end
       
       function [c,f] = threshold(self,alpha)
          P = self.psdWhite.values{1};
-         c = gaminv(1-alpha,self.prewhitenParams.alpha,1/self.prewhitenParams.alpha);
+         c = gaminv(1-alpha,self.whitenParams.alpha,1/self.whitenParams.alpha);
          if nargout == 2
             f = self.psdWhite.f(P>=c);
          end
@@ -48,63 +52,106 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       end
 
       function run(self)
+         if ~self.isRunnable
+            error('No input signal');
+         end
          
-         switch self.prewhitenParams.method
-            case {'ar' 'ar+'}
-               fitARModel(self);
+         % PSD of raw signal
+         % TODO handle SampledProcess array
+         % TODO detrend option
+         %self.input.detrend();
+         self.psd = self.input.psd(self.psdParams);
+         
+         switch self.whitenParams.method
+            case {'power'}
+               import stat.baseline.*
+
+               f = self.psd.f(:);
+               p = squeeze(self.psd.values{1});
+               if isrow(p)
+                  p = p(:);
+               end
                
-               % PSD of raw signal
-               self.psd = self.input.psd(self.psdParams);
+               % Don't fit DC component
+               ind = f~=0;
+               fnz = f(ind);
+               pnz = p(ind,:);
+               % TODO, mask line noise
+               
+               b = zeros(5,self.input.n);
+               bl = zeros(size(p));
+               bls = zeros(size(p));
+               % Estimate whitening transformation for each channel
+               for i = 1:self.input.n
+                  % Fit smoothly broken power-law using asymmetric error
+                  fun = @(b) sum( asymwt(log(smbrokenpl(b,fnz)),log(pnz(:,i))) );
+                  b0 = [1 1 0.5 1 30];        % initial conditions
+                  lb = [0 0 0 0 0];           % lower bounds
+                  ub = [inf 10 5 5 f(end)/2]; % upper bounds
+                  opts = optimoptions('fmincon','MaxFunEvals',15000);
+                  [b(:,i),~,exitflag(i)] = fmincon(fun,b0,[],[],[],[],lb,ub,[],opts);
+                  
+                  % Smoothly broken power-law fit
+                  bl(:,i) = smbrokenpl(b(:,i),f);
+                  
+                  % Robustly smooth residuals
+                  z = p(:,i)./bl(:,i);
+                  bls(:,i) = smooth(z,numel(f)/2,'rlowess');
+               end
+               % Combine power-law fit with smoother for overall whitening transform
+               bl2 = bl.*bls;
+               
+               self.psdWhite = copy(self.psd);
+               temp = reshape(bl2,[1 numel(f) self.input.n]);
+               self.psdWhite.map(@(x) x./temp);
+               
+               self.whitenParams.beta = b;
+               self.whitenParams.exitflag = exitflag;
+               self.whitenParams.baseline1 = bl;
+               self.whitenParams.baseline2 = bls;
+            case {'ar'}
+               resid = fitARModel(self);
+               
                % PSD of AR(1) whitened signal
-               self.psdWhite = self.resid.psd(self.psdParams);
+               self.psdWhite = resid.psd(self.psdParams);
                
                % Put in loop for multiple channels
                lambda = 1e9;%5e6;
                p = self.psdWhite.values{1}';
+               
+               % Asymmetric iterated least-squares smoother
                bl = stat.baseline.arpls(p,lambda);
-               %bl = stat.baseline.arpls([repmat(median(p(1:10)),25,1);p],lambda);
-               %bl = bl(26:end);
 
                self.psdWhite.map(@(x) x - bl' + mean(bl));
-               
-               % Approximate alpha for rescaling to unit variance white
-               % noise (Thomson refs)
-               nWindows = numel(self.input.values);
-               alpha = nWindows*mean(self.psdWhite.params.k);
-               
-               Q = gaminv(0.05,alpha,1/alpha) ./ ...
-                  (quantile(self.psdWhite.values{1},0.05));
-               
-               self.psdWhite.map(@(x) Q*x);
-               
-               self.prewhitenParams.baseline = bl;
-               self.prewhitenParams.alpha = alpha;
-               self.prewhitenParams.Q = Q;
-            case 'fractal'
-               fitIRASA(self);
-               
-               
-               % Approximate alpha for rescaling to unit variance white
-               % noise (Thomson refs)
-               nWindows = numel(self.input.values);
-               alpha = nWindows*mean(self.psdWhite.params.k);
-               
-               Q = gaminv(0.05,alpha,1/alpha) ./ ...
-                  (quantile(self.psdWhite.values{1},0.05));
-               
-               self.psdWhite.map(@(x) Q*x);
+                              
+               self.whitenParams.baseline = bl;
          end
-      end
-      
-      function fitIRASA(self)
          
-         pmed = sig.irasa(x,f,q,Fs,2*nw);
+         % Rescale whitened spectrum to unit variance white noise (Thomson refs)
+         % Approx alpha (Thomson refs)
+         % TODO handle SampledProcess array
+         nWindows = numel(self.input.values);
+         alpha = nWindows*mean(self.psdWhite.params.k);
+         
+         pw = squeeze(self.psdWhite.values{1});
+         if self.input.n == 1
+            pw = pw';
+         end
+         % Match to lower 5% quantile of expected distribution for white noise
+         for i = 1:self.input.n
+            Q(i) = gaminv(0.05,alpha,1/alpha) ./ (quantile(pw(:,i),0.05));
+         end
+         if self.input.n > 1
+            self.psdWhite.map(@(x) x.*reshape(repmat(Q,numel(f),1),[1 numel(f) 2]));
+         else
+            self.psdWhite.map(@(x) Q*x);
+         end
+         self.whitenParams.alpha = alpha;
+         self.whitenParams.Q = Q;
       end
 
-      function fitARModel(self)
-         %self.input.detrend();
-         % TODO VERIFY LABEL MATCHING (SHOULD BE DONE ON INPUT)
-         [values,labels] = extract(self.input);
+      function resid = fitARModel(self)
+         values = extract(self.input);
          if iscell(values.values)
             nWin = numel(values.values);
             values.values = values.values';
@@ -118,7 +165,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
          
          % Fit MVAR for all data
-         [what,Ahat,sigma] = arfit2(x,2,2);
+         [what,Ahat,sigma] = arfit2(x,1,1);
 
          % Get residuals from MVAR fit
          for i = 1:nWin
@@ -128,49 +175,89 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                [~,res{i}] = arres(what,Ahat,values.values,5);
             end
          end
-         self.resid = copy(self.input);
-         self.resid.map(@(x,y) [repmat(nanmean(y),1,self.input.n);y],'B',res');
-         %self.resid.map(@(x,y) [zeros(1,self.input.n);y],'B',res');
+         resid = copy(self.input);
+         % Extend to original length using mean
+         resid.map(@(x,y) [repmat(nanmean(y),1,self.input.n);y],'B',res');
 
-         self.prewhitenParams.Ahat = Ahat;
-         self.prewhitenParams.what = what;
-         self.prewhitenParams.sigma = sigma;
+         self.whitenParams.Ahat = Ahat;
+         self.whitenParams.what = what;
+         self.whitenParams.sigma = sigma;
       end
       
       function h = plotDiagnostics(self)
          f = self.psd.f;
-         P = self.psd.values{1};
-         Pstan = self.psdWhite.values{1};
-         bl = self.prewhitenParams.baseline;
-         Q = self.prewhitenParams.Q;
-         Par1 = stat.arspectrum(self.prewhitenParams.Ahat,...
-            self.prewhitenParams.sigma,self.input.Fs,f);
-         
-         figure;
-         h = subplot(321); hold on
-         plot(f,P);
-         plot(f,Par1);
-         subplot(322); hold on
-         plot(f,10*log10(P));
-         plot(f,10*log10(Par1));
-         set(gca,'xscale','log'); axis tight;
-         
-         subplot(323); hold on
-         Par1res = Pstan./Q + bl' - mean(bl);
-         plot(f,Par1res);
-         plot(f,bl);
-         subplot(324); hold on
-         plot(f,10*log10(Par1res));
-         plot(f,10*log10(bl));
-         set(gca,'xscale','log'); axis tight;
-         
-         Par1resbl = Pstan./Q;
-         subplot(325); hold on
-         plot(f,Par1resbl);
-         axis tight; grid on
-         subplot(326); hold on
-         plot(f,Par1resbl);
-         set(gca,'xscale','log'); axis tight; grid on
+         P = squeeze(self.psd.values{1});
+         Pstan = squeeze(self.psdWhite.values{1});
+         if self.input.n == 1
+            P = P';
+            Pstan = Pstan';
+         end
+         Q = self.whitenParams.Q;
+         for i = 1:self.input.n
+            switch self.whitenParams.method
+               case {'power'}
+                  bl1 = self.whitenParams.baseline1(:,i);
+                  bl2 = self.whitenParams.baseline2(:,i);
+                  
+                  figure;
+                  h = subplot(321); hold on
+                  plot(f,P(:,i));
+                  plot(f,bl1);
+                  plot(f,bl1.*bl2);
+                  subplot(322); hold on
+                  plot(f,10*log10(P(:,i)));
+                  plot(f,10*log10(bl1));
+                  plot(f,10*log10(bl1.*bl2));
+                  set(gca,'xscale','log'); axis tight;
+                  
+                  subplot(323); hold on
+                  P2 = P(:,i)./bl1;
+                  plot(f,P2);
+                  plot(f,bl2);
+                  subplot(324); hold on
+                  plot(f,10*log10(P2));
+                  plot(f,10*log10(bl2));
+                  set(gca,'xscale','log'); axis tight;
+                  
+                  P3 = Pstan(:,i)./Q(i);
+                  subplot(325); hold on
+                  plot(f,P3);
+                  axis tight; grid on
+                  subplot(326); hold on
+                  plot(f,P3);
+                  set(gca,'xscale','log'); axis tight; grid on
+               case {'ar' 'ar+'}
+                  bl = self.whitenParams.baseline;
+                  Par1 = stat.arspectrum(self.whitenParams.Ahat,...
+                     self.whitenParams.sigma,self.input.Fs,f);
+                  
+                  figure;
+                  h = subplot(321); hold on
+                  plot(f,P);
+                  plot(f,Par1);
+                  subplot(322); hold on
+                  plot(f,10*log10(P));
+                  plot(f,10*log10(Par1));
+                  set(gca,'xscale','log'); axis tight;
+                  
+                  subplot(323); hold on
+                  Par1res = Pstan./Q + bl' - mean(bl);
+                  plot(f,Par1res);
+                  plot(f,bl);
+                  subplot(324); hold on
+                  plot(f,10*log10(Par1res));
+                  plot(f,10*log10(bl));
+                  set(gca,'xscale','log'); axis tight;
+                  
+                  Par1resbl = Pstan./Q;
+                  subplot(325); hold on
+                  plot(f,Par1resbl);
+                  axis tight; grid on
+                  subplot(326); hold on
+                  plot(f,Par1resbl);
+                  set(gca,'xscale','log'); axis tight; grid on
+            end
+         end
       end
       
       function h = plot(self)
@@ -179,7 +266,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          hold on;
          plot(self.psdWhite,'log',0,'handle',h);
          p = [.05 .5 .95 .99 .999 .9999];
-         alpha = self.prewhitenParams.alpha;
+         alpha = self.whitenParams.alpha;
          for i = 1:numel(p)
             c = gaminv(p(i),alpha,1/alpha);
             plot([f(2) f(end)],[c c],'-','Color',[1 0 0 0.25]);

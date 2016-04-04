@@ -1,6 +1,6 @@
 Fs = 1000;
 T = 20;
-s = fakeLFP2(Fs,T,2);
+s = fakeLFP2(Fs,T,1);
 
 f = 0:.25:500;
 q = 0;

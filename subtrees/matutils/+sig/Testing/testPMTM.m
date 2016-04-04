@@ -35,7 +35,7 @@ plot(out.f,10*log10(out.P));
 subplot(313);
 plot(out.f,spec(1:numel(out.f))'-out.P)
 
-%% Compare standard multitaper with Prieto's own implementation of quadratic debiasing
+%% Compare standard multitaper with Prieto's implementation of quadratic debiasing
 %% some minor differences expected due to slightly different convergence algorithm
 %% for Thompson's adaptive weights
 tic;[spec,freq] = pmtm(x,nw,numel(x),Fs);toc

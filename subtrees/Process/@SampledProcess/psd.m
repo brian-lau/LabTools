@@ -38,7 +38,7 @@
 %               'adapt'  - Thomson's adaptive non-linear combination 
 %               'unity'  - linear combination with unity weights
 %               'eigen'  - linear combination with eigenvalue weights
-%     robust  - string, optional, default = 'huber'
+%     robust  - string, optional, default = 'mean'
 %               This applies only when SampledProcess has more than one
 %               window, in which case it specifies how the estimates in
 %               each window should be combined:
@@ -102,7 +102,6 @@ Fs = obj.Fs;
 switch lower(par.method)
    case {'mtm' 'multitaper'}
       params.Fs = obj.Fs;
-      %params.f = f;
       
       [out,par] = sig.mtspectrum(obj.values,params);
       p = out.P;
