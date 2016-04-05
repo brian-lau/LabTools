@@ -113,7 +113,7 @@ if par.Results.Fpass
       toc
    catch
       fprintf('\tBuilding filter anew\n');
-      beep; keyboard
+      %beep; keyboard
       tic;
       [~,h,d] = highpass(s,'Fpass',par.Results.Fpass,'Fstop',par.Results.Fstop);
       toc
