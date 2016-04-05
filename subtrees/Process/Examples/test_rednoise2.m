@@ -10,7 +10,7 @@ N = 10;
 
 for i = 1:N
    i
-   [s,f,Sx0] = fakeLFP2(Fs,T,2);
+   [s,f,Sx0] = fakeLFP2(Fs,T,0);
    
    if step > 0
       win = [s.tStart:step:s.tEnd]';
@@ -23,7 +23,7 @@ for i = 1:N
    S.psdParams.f = 0:.25:500;
    S.psdParams.quadratic = false; % inflates type 1 error (dof inaccurate)
    S.psdParams.hbw = .75;
-   S.prewhitenParams.method = 'power';
+   S.whitenParams.method = 'power';
    S.run;
    
    psdRaw{i} = S.psd.values{1};

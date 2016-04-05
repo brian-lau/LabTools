@@ -34,6 +34,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       
       function set.input(self,input)
          % TODO VERIFY LABEL MATCHING for SampledProcess array
+         % TODO check window sizes
          self.input = input;
          self.psd = [];
          self.psdWhite = [];
@@ -72,7 +73,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                   p = p(:);
                end
                
-               % Don't fit DC component
+               % Don't fit DC component TODO : nor nyquist?
                ind = f~=0;
                fnz = f(ind);
                pnz = p(ind,:);
@@ -98,8 +99,11 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                   z = p(:,i)./bl(:,i);
                   bls(:,i) = smooth(z,numel(f)/2,'rlowess');
                end
+               
                % Combine power-law fit with smoother for overall whitening transform
                bl2 = bl.*bls;
+               
+               %TODO adjust DC and nyquist?
                
                self.psdWhite = copy(self.psd);
                temp = reshape(bl2,[1 numel(f) self.input.n]);
@@ -128,7 +132,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
          
          % Rescale whitened spectrum to unit variance white noise (Thomson refs)
-         % Approx alpha (Thomson refs)
+         % Approx alpha (Thomson refs), this is not correct when window
+         % sizes are different
          % TODO handle SampledProcess array
          nWindows = numel(self.input.values);
          alpha = nWindows*mean(self.psdWhite.params.k);
@@ -262,18 +267,22 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       
       function h = plot(self)
          f = self.psdParams.f;
-         h = figure;
-         hold on;
-         plot(self.psdWhite,'log',0,'handle',h);
-         p = [.05 .5 .95 .99 .999 .9999];
+         Pstan = squeeze(self.psdWhite.values{1});
          alpha = self.whitenParams.alpha;
-         for i = 1:numel(p)
-            c = gaminv(p(i),alpha,1/alpha);
-            plot([f(2) f(end)],[c c],'-','Color',[1 0 0 0.25]);
-            text(f(end),c,sprintf('%1.4f',p(i)));
+         for i = 1:self.input.n
+            h = figure;
+            hold on;
+            %plot(self.psdWhite,'log',0,'handle',h);
+            plot(f,Pstan(:,i));
+            p = [.05 .5 .95 .99 .999 .9999];
+            for j = 1:numel(p)
+               c = gaminv(p(j),alpha,1/alpha);
+               plot([f(2) f(end)],[c c],'-','Color',[1 0 0 0.25]);
+               text(f(end),c,sprintf('%1.4f',p(j)));
+            end
+            %Pstan = self.psdWhite.values{1};
+            plot([f(1) f(end)],[median(Pstan(:,i)) median(Pstan(:,i))],'-')
          end
-         Pstan = self.psdWhite.values{1};
-         plot([f(1) f(end)],[median(Pstan) median(Pstan)],'-')
       end
    end
    
