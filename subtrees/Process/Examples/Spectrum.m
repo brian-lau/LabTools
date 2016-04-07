@@ -268,6 +268,9 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       function h = plot(self)
          f = self.psdParams.f;
          Pstan = squeeze(self.psdWhite.values{1});
+         if isrow(Pstan)
+            Pstan = Pstan';
+         end
          alpha = self.whitenParams.alpha;
          for i = 1:self.input.n
             h = figure;

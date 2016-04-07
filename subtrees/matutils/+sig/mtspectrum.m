@@ -52,6 +52,8 @@
 %               'median'   - median, NaN's excluded
 %               'huber'    - robust location using Huber weights
 %               'logistic' - robust location using logistic weights
+%     Ftest   - boolean, optional, default = true
+%               Thomson's harmonic F-test
 %     alpha   - scalar in [0,1], optional, default = 0.95
 %               When set, causes confidence intervals to be returned
 %     confMethod - string, optional, default = 'asymp'
@@ -63,6 +65,8 @@
 %                f - frequencies
 %                P - PSDs
 %               May contain the following depending on input parameters
+%                Fval - F-values associated with Thomson's F-test
+%                p  - p-values associated with Thomson's F-test
 %                CI - confidence intervals
 %                dP - first derivative of spectrum (for quadratic = true)
 %                ddP - second derivative of spectrum (for quadratic = true)
@@ -123,6 +127,7 @@ p.addParameter('f',[],@(x) isnumeric(x));
 p.addParameter('nfft',[],@(x) isnumeric(x));
 p.addParameter('V',[],@(x) ismatrix(x));
 p.addParameter('alpha',[],@(x) isnumeric(x));
+p.addParameter('Ftest',true,@(x) islogical(x) || isscalar(x));
 p.addParameter('lambda',[],@(x) isnumeric(x));
 p.addParameter('lambdaThresh',0.9,@(x) isnumeric(x) && isscalar(x));
 p.addParameter('weights','adapt',@(x) any(strcmp(x,{'adapt' 'eigen' 'unity'})));
@@ -190,7 +195,7 @@ end
 
 %% Start processing for individual sections
 % Estimate two-sided spectrum
-[S,dS,ddS] = mtm_spectrum(par);
+[S,dS,ddS,Fval] = mtm_spectrum(par);
 
 if isempty(par.f)
    nfft = par.nfft;
@@ -228,6 +233,17 @@ end
 if ~isempty(dS)
    output.dP = dS;
    output.ddP = ddS;
+end
+
+if par.Ftest
+   if exist('select','var')
+      output.Fval = Fval(select,:);
+   else
+      output.Fval = Fval;
+   end
+   output.v1 = 2;
+   output.v2 = 2*par.k-2;
+   output.p = 1 - fcdf(output.Fval,output.v1,output.v2); % F-distribution based 1-p% point
 end
 
 if nargout == 2
@@ -331,7 +347,7 @@ end % END pmtm
 % Local bias reduction using the method developed by Prieto et al. (2007).
 % Follows Prieto's implementation (http://www.mit.edu/~gprieto/software.html),
 % vectorizing whenever possible.
-function [S,dS,ddS] = mtm_spectrum(params)
+function [S,dS,ddS,Fval] = mtm_spectrum(params)
 x = params.x;
 nfft = params.nfft;
 V  = params.V;
@@ -339,8 +355,14 @@ lambda  = params.lambda;
 Fs = params.Fs;
 
 N = size(x,1);
-Nchan = size(x,2);
+Nchan = params.Nchan;%size(x,2);
 k = length(lambda);
+
+if params.Ftest
+   Fval = zeros(nfft,Nchan);
+else
+   Fval = [];
+end
 
 % Precompute quantities that only depend on tapers
 if params.quadratic
@@ -392,26 +414,38 @@ end
 %% Loop over channels
 S = zeros(nfft, Nchan);
 for chan=1:Nchan
-   
+   % Tapered signal
    xin = bsxfun(@times,V(:,1:k),x(:,chan));
+   
    % Compute the windowed DFTs
    if isempty(params.f)
-      Xx = fft(xin,nfft);
+      J = fft(xin,nfft);
    else
       % Initial complex weight
       a = exp(2i*pi*params.fstart/Fs);
       % Relative complex weight
       w = exp(2i*pi*(params.fstart-params.fstop)/((params.npts-1)*Fs));
       % Chirp-z transform
-      Xx = czt(xin,params.npts,w,a);
-      
-      %Xx = spectralZoom(xin,Fs,params.fstart,params.fstop,params.npts);
+      J = czt(xin,params.npts,w,a);      
+      %J = spectralZoom(xin,Fs,params.fstart,params.fstop,params.npts);
    end
    
-   Sk = abs(Xx).^2;
-   
+   Sk = abs(J).^2;
+
+   if params.Ftest
+      Jp = J(:,1:2:k);
+      H0 = sum(V(:,1:2:k));
+      H0sq = sum(H0.^2);
+      JpH0 = sum(bsxfun(@times,Jp,H0),2);
+      A = bsxfun(@rdivide,JpH0,H0sq);
+      Jhat = bsxfun(@times,A,H0);
+      num = (k-1).*(abs(A).^2).*H0sq;
+      den = sum(abs(Jp-Jhat).^2,2) + sum(abs(J(:,2:2:k)).^2,2);
+      Fval(:,chan) = num./den;
+   end
+
    % Compute the MTM spectral estimates
-   switch params.weights,
+   switch params.weights
       case 'adapt'
          if k > 1
             % The algorithm converges so fast that results are
@@ -457,7 +491,7 @@ for chan=1:Nchan
       dS = [];
       ddS = [];
    else % TODO: ASSUMES ADAPTIVE WEIGHTS NOW
-      xk = wk.*Xx; % tapered signal weighted by final weights
+      xk = wk.*J; % tapered signal weighted by final weights
 
       m = 0;
       C = zeros(L,nfft);
