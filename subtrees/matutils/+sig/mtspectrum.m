@@ -84,20 +84,32 @@
 %     Fs = 1024;
 %     dt = 1/Fs;
 %     t = (0:5207)'*dt;
-%     x = cos(2*pi*250*t) + .5*cos(2*pi*50*t) + 1*randn(size(t));
-%     % MT spectrum with half-bandwidth of 1 Hz
-%     [out,params] = sig.mtspectrum(x,'hbw',1,'Fs',Fs);
-%     plot(out.f,10*log10(out.P));
+%     x = .2*cos(2*pi*250*t) + .2*cos(2*pi*50*t) + 1*randn(size(t));
+%     figure; subplot(311);
+%     plot(t,x); axis tight; box off;
+%     ylabel('Amplitude'); xlabel('time');
+%     % MT spectrum with half-bandwidth of 0.5 Hz
+%     [out,params] = sig.mtspectrum(x,'hbw',0.5,'Fs',Fs,'Ftest',true);
+%     subplot(312);
+%     plot(out.f,10*log10(out.P)); axis tight; box off;
+%     ylabel('Power'); xlabel('frequency');
+%     subplot(313);
+%     ax = plotyy(out.f,out.Fval,out.f,log10(out.pval));
+%     ax(1).YLabel.String = 'F-statistic';
+%     ax(1).XLim = [0 max(out.f)];
+%     ax(2).YLabel.String = 'log10 p-value';
+%     ax(2).XLim = [0 max(out.f)];
 %     % The effective time-half-bandwidth product for this signal length is
 %     params.thbw
 %
 %     % Compare to Prieto et al's method for local bias reduction
-%     [out,params] = sig.mtspectrum(x,'hbw',1,'Fs',Fs,'quadratic',true);
+%     clf; plot(out.f,10*log10(out.P));
+%     [out,params] = sig.mtspectrum(x,'hbw',0.5,'Fs',Fs,'quadratic',true);
 %     hold on;
 %     % Zoom on the peaks to see the differences
 %     plot(out.f,10*log10(out.P));
 %
-%     % Note with this latter method produces estimates of the PSD derivatives
+%     % This latter method produces estimates of the PSD derivatives
 %     figure; subplot(211);
 %     plot(out.f,out.dP);
 %     subplot(212); plot(out.f,out.ddP);
@@ -127,7 +139,7 @@ p.addParameter('f',[],@(x) isnumeric(x));
 p.addParameter('nfft',[],@(x) isnumeric(x));
 p.addParameter('V',[],@(x) ismatrix(x));
 p.addParameter('alpha',[],@(x) isnumeric(x));
-p.addParameter('Ftest',true,@(x) islogical(x) || isscalar(x));
+p.addParameter('Ftest',false,@(x) islogical(x) || isscalar(x));
 p.addParameter('lambda',[],@(x) isnumeric(x));
 p.addParameter('lambdaThresh',0.9,@(x) isnumeric(x) && isscalar(x));
 p.addParameter('weights','adapt',@(x) any(strcmp(x,{'adapt' 'eigen' 'unity'})));
@@ -196,7 +208,7 @@ end
 
 %% Start processing for individual sections
 % Estimate two-sided spectrum
-[S,dS,ddS,Fval] = mtm_spectrum(par);
+[S,dS,ddS,Fval,dof] = mtm_spectrum(par);
 
 if isempty(par.f)
    nfft = par.nfft;
@@ -225,11 +237,17 @@ Pxx = S./par.Fs;
 output.f = f;
 output.P = Pxx;
 if ~isempty(par.alpha)
-%    %Chi-squared 95% confidence interval
-%    %approximation from Chamber's et al 1983; see Percival and Walden p.256, 1993
-%    ci(:,1)=1./(1-2./(9*dof)-1.96*sqrt(2./(9*dof))).^3;
-%    ci(:,2)=1./(1-2./(9*dof)+1.96*sqrt(2./(9*dof))).^3;
-%   output.CI = CI;
+   % Chi-squared 95% confidence interval
+   % Approximation from Chamber's et al 1983; see Percival and Walden p.256
+%    if exist('select','var')
+%       dof = dof(select,:);
+%    else
+%       dof = dof;
+%    end
+%    
+%    CI(:,1)=1./(1-2./(9*dof)-1.96*sqrt(2./(9*dof))).^3;
+%    CI(:,2)=1./(1-2./(9*dof)+1.96*sqrt(2./(9*dof))).^3;
+%    output.CI = CI;
 end
 if ~isempty(dS)
    output.dP = dS;
@@ -243,7 +261,7 @@ if par.Ftest
       output.Fval = Fval;
    end
    output.v1 = 2;
-   output.v2 = 2*par.k-2;
+   output.v2 = 2*par.k - 2;
    output.pval = 1 - fcdf(output.Fval,output.v1,output.v2);
 end
 
@@ -348,7 +366,7 @@ end % END pmtm
 % Local bias reduction using the method developed by Prieto et al. (2007).
 % Follows Prieto's implementation (http://www.mit.edu/~gprieto/software.html),
 % vectorizing whenever possible.
-function [S,dS,ddS,Fval] = mtm_spectrum(params)
+function [S,dS,ddS,Fval,dof] = mtm_spectrum(params)
 x = params.x;
 nfft = params.nfft;
 V  = params.V;
@@ -356,8 +374,9 @@ lambda  = params.lambda;
 Fs = params.Fs;
 
 N = size(x,1);
-Nchan = params.Nchan;%size(x,2);
+Nchan = params.Nchan;
 k = length(lambda);
+dof = zeros(nfft,Nchan);
 
 if params.Ftest
    Fval = zeros(nfft,Nchan);
@@ -471,10 +490,11 @@ for chan=1:Nchan
                Stemp = S1; S1 = Schan; Schan = Stemp;  % swap S and S1
             end
             % Equivalent degrees of freedom, see p. 370 of Percival and Walden 1993.
-            %dof(:,chan) = (2*sum((b.^2).*(ones(nfft,1)*V'),2).^2) ./ sum((b.^4).*(ones(nfft,1)*V.^2'),2);
+            dof(:,chan) = ( 2*sum(bsxfun(@times,b.^2,lambda'),2).^2 ) ...
+                          ./ sum(bsxfun(@times,b.^4,lambda'.^2),2);
          else
             Schan = Sk;
-            %dof(:,chan) = 2*ones(nfft,1);
+            dof(:,chan) = 2*ones(nfft,1);
          end
       case {'unity','eigen'}
          % Compute the averaged estimate: simple arithmetic averaging is used.
