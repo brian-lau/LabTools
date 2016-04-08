@@ -15,7 +15,7 @@
 % INPUTS
 %     method - string, optional, default = 'multitaper'
 %              One of following indicating type of transformation
-%              'multitaper' - Thompson's multitaper method
+%              'multitaper' - Thomson's multitaper method
 %              'welch'      - Welch's averaged, modified periodogram
 %
 % OPTIONAL
@@ -47,6 +47,7 @@
 %               'huber'    - robust location using Huber weights
 %               'logistic' - robust location using logistic weights
 %
+%     All remaining name/value pairs are passed down to sig.mtspectrum.
 %     See sig.mtspectrum for more options.
 %
 %     If method = 'welch'
@@ -71,8 +72,7 @@
 %     https://github.com/brian-lau/Process
 
 % TODO
-%  o confidence intervals
-%  o quadratic bias
+%  o confidence intervals, f-tests, how to return
 %  o circular welch
 %  o when section-averaging, do not recalculate tapers, this may requires
 %    sorting the windows
@@ -95,7 +95,7 @@ for i = 1:nObj
 end
 
 %%
-function tfr = psdEach(obj,par,params)
+function ps = psdEach(obj,par,params)
 
 Fs = obj.Fs;
 
@@ -131,9 +131,9 @@ switch lower(par.method)
 end
 
 P = zeros([1 size(p)]);
-P(1,:,:) = p;
+P(1,:,:) = p; % format for SpectralProcess
 
-tfr = SpectralProcess(P,...
+ps = SpectralProcess(P,...
    'f',f,...
    'params',params,...
    'tBlock',tBlock,...

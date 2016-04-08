@@ -2,7 +2,7 @@
 %
 %     [output,params] = mtspectrum(x,varargin)
 %
-%     Power spectral density estimates using Thompson's multitaper method.
+%     Power spectral density estimates using Thomson's multitaper method.
 %
 %     All inputs are passed in using name/value pairs. The name is a string
 %     followed by the value (described below).
@@ -53,9 +53,11 @@
 %               'huber'    - robust location using Huber weights
 %               'logistic' - robust location using logistic weights
 %     Ftest   - boolean, optional, default = true
-%               Thomson's harmonic F-test
-%     alpha   - scalar in [0,1], optional, default = 0.95
-%               When set, causes confidence intervals to be returned
+%               Thomson's harmonic F-test is applied to all frequencies in f
+%     alpha   - scalar in [0,1], optional, default = []
+%               When set, causes (1-alpha)% confidence intervals to be
+%               estimated using confMethod (eg., if 95% conf intervals are
+%               desired, alpha = 0.05).
 %     confMethod - string, optional, default = 'asymp'
 %               'asymp' - asymptotic confidence intervals
 %               'jack'  - Jackknifed confidence intervals
@@ -65,8 +67,10 @@
 %                f - frequencies
 %                P - PSDs
 %               May contain the following depending on input parameters
-%                Fval - F-values associated with Thomson's F-test
-%                p  - p-values associated with Thomson's F-test
+%                Fval - F-values associated with Thomson's harmonic F-test
+%                v1   - dof for Thomson's harmonic F-test
+%                v2   - dof for Thomson's harmonic F-test
+%                pval - p-values associated with Thomson's harmonic F-test
 %                CI - confidence intervals
 %                dP - first derivative of spectrum (for quadratic = true)
 %                ddP - second derivative of spectrum (for quadratic = true)
@@ -77,13 +81,13 @@
 %       Applications. Cambridge University Press.
 %     Prieto GA et al (2007). Reducing the bias of multitaper spectrum
 %       estimates. Geophys J Int 171: 1269-1281.
-%     Thompson DJ (2007). Jackknifing multitaper spectrum estimates. IEEE
+%     Thomson DJ (1982). Spectrum estimation and harmonic analysis. Proc of
+%       the IEEE 70: 1055-1096.
+%     Thomson DJ (2007). Jackknifing multitaper spectrum estimates. IEEE
 %       Sig Proc Mag 24: 20-30.
 %
 % EXAMPLES
-%     Fs = 1024;
-%     dt = 1/Fs;
-%     t = (0:5207)'*dt;
+%     Fs = 1024; dt = 1/Fs; t = (0:5207)'*dt;
 %     x = .2*cos(2*pi*250*t) + .2*cos(2*pi*50*t) + 1*randn(size(t));
 %     figure; subplot(311);
 %     plot(t,x); axis tight; box off;
@@ -109,7 +113,7 @@
 %     % Zoom on the peaks to see the differences
 %     plot(out.f,10*log10(out.P));
 %
-%     % This latter method produces estimates of the PSD derivatives
+%     % Prieto's method also produces estimates of the PSD derivatives
 %     figure; subplot(211);
 %     plot(out.f,out.dP);
 %     subplot(212); plot(out.f,out.ddP);
@@ -138,8 +142,9 @@ p.addParameter('Fs',2*pi,@(x) isscalar(x));
 p.addParameter('f',[],@(x) isnumeric(x));
 p.addParameter('nfft',[],@(x) isnumeric(x));
 p.addParameter('V',[],@(x) ismatrix(x));
-p.addParameter('alpha',[],@(x) isnumeric(x));
 p.addParameter('Ftest',false,@(x) islogical(x) || isscalar(x));
+p.addParameter('alpha',[],@(x) isnumeric(x));
+p.addParameter('confMethod','asymp',@ischar);
 p.addParameter('lambda',[],@(x) isnumeric(x));
 p.addParameter('lambdaThresh',0.9,@(x) isnumeric(x) && isscalar(x));
 p.addParameter('weights','adapt',@(x) any(strcmp(x,{'adapt' 'eigen' 'unity'})));
@@ -237,17 +242,22 @@ Pxx = S./par.Fs;
 output.f = f;
 output.P = Pxx;
 if ~isempty(par.alpha)
-   % Chi-squared 95% confidence interval
-   % Approximation from Chamber's et al 1983; see Percival and Walden p.256
-%    if exist('select','var')
-%       dof = dof(select,:);
-%    else
-%       dof = dof;
-%    end
-%    
-%    CI(:,1)=1./(1-2./(9*dof)-1.96*sqrt(2./(9*dof))).^3;
-%    CI(:,2)=1./(1-2./(9*dof)+1.96*sqrt(2./(9*dof))).^3;
-%    output.CI = CI;
+   if exist('select','var')
+      dof = dof(select,:);
+   end
+   
+   switch par.confMethod
+      case 'asymp'
+         % Asymptotic chi-squared 95% confidence interval, Percival and Walden p.255-6
+         Ql = chi2inv(1 - par.alpha/2,dof);
+         Qu = chi2inv(par.alpha/2,dof);
+         CI = [dof.*Pxx./Ql , dof.*Pxx./Qu];
+         % TODO, FORMATTING FOR MULTICHANNEL
+      case 'jack'
+         
+   end
+   
+   output.CI = CI;
 end
 if ~isempty(dS)
    output.dP = dS;
@@ -270,8 +280,8 @@ if nargout == 2
    params = rmfield(params,'x');
 end
 
-%% Verify consistency of parameters
-   function checkInputs()
+%% Verify consistency of parameters (nested)
+   function checkInputs() 
       if iscell(par.x)
          N = sum(cellfun(@(x) size(x,1),par.x));
          T = sum(cellfun(@(x) size(x,1)/par.Fs,par.x));
@@ -363,9 +373,6 @@ end
 end % END pmtm
 
 %%
-% Local bias reduction using the method developed by Prieto et al. (2007).
-% Follows Prieto's implementation (http://www.mit.edu/~gprieto/software.html),
-% vectorizing whenever possible.
 function [S,dS,ddS,Fval,dof] = mtm_spectrum(params)
 x = params.x;
 nfft = params.nfft;
@@ -433,7 +440,7 @@ end
 
 %% Loop over channels
 S = zeros(nfft, Nchan);
-for chan=1:Nchan
+for chan = 1:Nchan
    % Tapered signal
    xvk = bsxfun(@times,V(:,1:k),x(:,chan));
    
@@ -514,6 +521,9 @@ for chan=1:Nchan
       dS = [];
       ddS = [];
    else % TODO: ASSUMES ADAPTIVE WEIGHTS NOW
+      % Local bias reduction using the method developed by Prieto et al. (2007).
+      % Follows Prieto's implementation (http://www.mit.edu/~gprieto/software.html),
+      % vectorizing whenever possible.
       xk = dk.*yk; % tapered signal weighted by final weights
 
       m = 0;
