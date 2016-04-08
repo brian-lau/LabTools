@@ -189,6 +189,7 @@ if iscell(x)
       params = rmfield(params,'x');
       output.f = it.f;
       output.P = p;
+      % TODO HOW TO RETURN F-TEST IN THIS CASE?
    end
    return;
 end
@@ -243,7 +244,7 @@ if par.Ftest
    end
    output.v1 = 2;
    output.v2 = 2*par.k-2;
-   output.p = 1 - fcdf(output.Fval,output.v1,output.v2); % F-distribution based 1-p% point
+   output.pval = 1 - fcdf(output.Fval,output.v1,output.v2);
 end
 
 if nargout == 2
@@ -415,63 +416,65 @@ end
 S = zeros(nfft, Nchan);
 for chan=1:Nchan
    % Tapered signal
-   xin = bsxfun(@times,V(:,1:k),x(:,chan));
+   xvk = bsxfun(@times,V(:,1:k),x(:,chan));
    
-   % Compute the windowed DFTs
+   % Fourier transform of tapered signal (eigencoefficients)
    if isempty(params.f)
-      J = fft(xin,nfft);
+      yk = fft(xvk,nfft);
    else
+      % Compute at specified grid using chirp-z transform
       % Initial complex weight
       a = exp(2i*pi*params.fstart/Fs);
       % Relative complex weight
       w = exp(2i*pi*(params.fstart-params.fstop)/((params.npts-1)*Fs));
-      % Chirp-z transform
-      J = czt(xin,params.npts,w,a);      
-      %J = spectralZoom(xin,Fs,params.fstart,params.fstop,params.npts);
+      yk = czt(xvk,params.npts,w,a);      
+      %yk = spectralZoom(xvk,Fs,params.fstart,params.fstop,params.npts);
    end
    
-   Sk = abs(J).^2;
+   % Spectral estimate for each taper
+   Sk = abs(yk).^2;
 
    if params.Ftest
-      Jp = J(:,1:2:k);
-      H0 = sum(V(:,1:2:k));
-      H0sq = sum(H0.^2);
-      JpH0 = sum(bsxfun(@times,Jp,H0),2);
-      A = bsxfun(@rdivide,JpH0,H0sq);
-      Jhat = bsxfun(@times,A,H0);
-      num = (k-1).*(abs(A).^2).*H0sq;
-      den = sum(abs(Jp-Jhat).^2,2) + sum(abs(J(:,2:2:k)).^2,2);
+      % Thomson's (1982) harmonic F-test (eq. 13.10)
+      Uk0 = sum(V);
+      Uk0sq = sum(Uk0.^2);
+      ykUk0 = sum(bsxfun(@times,yk,Uk0),2);
+      u = bsxfun(@rdivide,ykUk0,Uk0sq);
+      ykhat = bsxfun(@times,u,Uk0);
+      
+      num = (k-1)*(abs(u).^2)*Uk0sq;
+      den = sum( abs(yk-ykhat).^2 ,2);
       Fval(:,chan) = num./den;
    end
 
-   % Compute the MTM spectral estimates
+   % Combined tapered spectral estimates
    switch params.weights
       case 'adapt'
          if k > 1
             % The algorithm converges so fast that results are
             % usually 'indistinguishable' after about three iterations.
             % This version uses the equations from [2] (P&W pp 368-370).
-            sig2=x(:,chan)'*x(:,chan)/N;  % Power
-            Schan=(Sk(:,1)+Sk(:,2))/2;    % Initial spectrum estimate
-            S1=zeros(nfft,1);
+            sig2 = x(:,chan)'*x(:,chan)/N;  % Power
+            Schan = (Sk(:,1)+Sk(:,2))/2;    % Initial spectrum estimate
+            S1 = zeros(nfft,1);
             
             % Set tolerance for acceptance of spectral estimate:
-            tol=.0005*sig2/nfft;
-            a=bsxfun(@times,sig2,(1-lambda));
+            tol = 0.0005*sig2/nfft;
+            a = bsxfun(@times,sig2,(1-lambda));
             while sum(abs(Schan-S1)/nfft)>tol
                % calculate weights
-               b=(Schan*ones(1,k))./(Schan*lambda'+ones(nfft,1)*a');
+               b = (Schan*ones(1,k))./(Schan*lambda'+ones(nfft,1)*a');
+               dk = (b.^2).*(ones(nfft,1)*lambda');
                % calculate new spectral estimate
-               wk=(b.^2).*(ones(nfft,1)*lambda');
-               S1=sum(wk'.*Sk')./ sum(wk,2)';
-               S1=S1';
-               Stemp=S1; S1=Schan; Schan=Stemp;  % swap S and S1
+               S1 = sum(dk'.*Sk')./ sum(dk,2)';
+               S1 = S1';
+               Stemp = S1; S1 = Schan; Schan = Stemp;  % swap S and S1
             end
             % Equivalent degrees of freedom, see p. 370 of Percival and Walden 1993.
-            %dof = (2*sum((b.^2).*(ones(nfft,1)*V'),2).^2) ./ sum((b.^4).*(ones(nfft,1)*V.^2'),2);
+            %dof(:,chan) = (2*sum((b.^2).*(ones(nfft,1)*V'),2).^2) ./ sum((b.^4).*(ones(nfft,1)*V.^2'),2);
          else
             Schan = Sk;
-            %dof = 2*ones(nfft,1);
+            %dof(:,chan) = 2*ones(nfft,1);
          end
       case {'unity','eigen'}
          % Compute the averaged estimate: simple arithmetic averaging is used.
@@ -491,7 +494,7 @@ for chan=1:Nchan
       dS = [];
       ddS = [];
    else % TODO: ASSUMES ADAPTIVE WEIGHTS NOW
-      xk = wk.*J; % tapered signal weighted by final weights
+      xk = dk.*yk; % tapered signal weighted by final weights
 
       m = 0;
       C = zeros(L,nfft);
