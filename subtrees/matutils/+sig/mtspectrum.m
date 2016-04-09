@@ -499,6 +499,10 @@ for chan = 1:Nchan
             % Equivalent degrees of freedom, see p. 370 of Percival and Walden 1993.
             dof(:,chan) = ( 2*sum(bsxfun(@times,b.^2,lambda'),2).^2 ) ...
                           ./ sum(bsxfun(@times,b.^4,lambda'.^2),2);
+            % DOF estimate from Thomson (eq. 5.5) can yield dof > 2k, due
+            % to dk being greater than 1? Problem in algorithm convergence?
+            %dof(:,chan) = 2*sum(dk,2);
+            %keyboard
          else
             Schan = Sk;
             dof(:,chan) = 2*ones(nfft,1);
