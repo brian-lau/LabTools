@@ -251,6 +251,7 @@ function refreshPlot(obj,h,id)
       % Refresh data for each line
       data = bsxfun(@plus,values,sf);
       for i = 1:n
+         lh(i).XData = t;
          lh(i).YData = data(:,i);
       end
    end
