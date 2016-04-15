@@ -372,7 +372,7 @@ end
 
 end % END pmtm
 
-%%
+%% Estimate MTM spectrum
 function [S,dS,ddS,Fval,dof] = mtm_spectrum(params)
 x = params.x;
 nfft = params.nfft;
@@ -436,6 +436,9 @@ if params.quadratic
    
    dS = zeros(nfft, Nchan);
    ddS = zeros(nfft, Nchan);
+else
+   dS = [];
+   ddS = [];
 end
 
 %% Loop over channels
@@ -522,8 +525,6 @@ for chan = 1:Nchan
    
    if ~params.quadratic
       S(:,chan) = Schan;
-      dS = [];
-      ddS = [];
    else % TODO: ASSUMES ADAPTIVE WEIGHTS NOW
       % Local bias reduction using the method developed by Prieto et al. (2007).
       % Follows Prieto's implementation (http://www.mit.edu/~gprieto/software.html),
