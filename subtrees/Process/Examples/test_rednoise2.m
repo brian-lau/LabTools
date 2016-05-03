@@ -10,9 +10,9 @@ N = 10;
 
 for i = 1:N
    i
-   [s,f,Sx0] = fakeLFP2(Fs,T,0);
+   [s,f,Sx0] = fakeLFP2(Fs,T,1);
    
-   if step > 0
+   if step > 0 % section the data
       win = [s.tStart:step:s.tEnd]';
       win = [win,win+step];
       win(win>s.tEnd) = s.tEnd;
@@ -21,8 +21,8 @@ for i = 1:N
    
    S = Spectrum('input',s);
    S.psdParams.f = 0:.25:500;
-   S.psdParams.quadratic = false; % inflates type 1 error (dof inaccurate)
-   S.psdParams.hbw = .75;
+   S.psdParams.quadratic = false; % true inflates type 1 error (dof inaccurate)
+   S.psdParams.hbw = 0.75;
    S.whitenParams.method = 'power';
    S.run;
    

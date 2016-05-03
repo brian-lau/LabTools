@@ -1,17 +1,18 @@
 Fs = 2000;
 T = 20;
 
-[s,f,Sx0] = fakeLFP2(Fs,T);
+[s,f,Sx0] = fakeLFP2(Fs,T,true);
 
 [west, Aest, Cest, SBC, FPE, th] = arfit(s.values{1},1,1);
 [siglev,x_] = arres(west,Aest,s.values{1},2);
 
-%nw = 4;
-hbw = .25;
+hbw = 0.25;
 % Raw PSD
-tic;px = sig.mtspectrum(s.values{1},'hbw',hbw,'f',f,'Fs',Fs);toc
+px = sig.mtspectrum(s.values{1},'hbw',hbw,'f',f,'Fs',Fs);
 % PSD of AR(1) whitened signal
-tic;[px_,params] = sig.mtspectrum(x_,'hbw',hbw,'f',f,'Fs',Fs,'quadratic',0);toc
+[px_,params] = sig.mtspectrum(x_,'hbw',hbw,'f',f,'Fs',Fs,'quadratic',0);
+
+% Estimate baseline
 bl = stat.baseline.arpls(px_.P,1e7);
 
 px_bl = px_.P - bl + mean(bl);

@@ -207,7 +207,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                text(f(end),c,sprintf('%1.4f',p(j)));
             end
             plot([f(2) f(end)],[median(Pstan(:,i)) median(Pstan(:,i))],'-')
-            set(gca,'xscale','log');
+            %set(gca,'xscale','log');
          end
       end
    end
