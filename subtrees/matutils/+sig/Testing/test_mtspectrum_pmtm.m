@@ -39,17 +39,17 @@ plot(out.f,spec(1:numel(out.f))'-out.P)
 %% some minor differences expected due to slightly different convergence algorithm
 %% for Thompson's adaptive weights
 tic;[spec,freq] = pmtm(x,nw,numel(x),Fs);toc
-tic;[freq1,spec1] = mtspec(dt,x,nw,2*nw-1,1);toc
+%tic;[freq1,spec1] = mtspec(dt,x,nw,2*nw-1,1);toc
 tic;out = sig.mtspectrum(x,'thbw',nw,'nfft',numel(x),'Fs',Fs,'quadratic',true);toc
 
 figure;
 subplot(211); hold on
 plot(freq,spec);
-plot(freq1,spec1);
+%plot(freq1,spec1);
 plot(out.f,out.P);
 subplot(212); hold on
 plot(freq,10*log10(spec));
-plot(freq1,10*log10(spec1));
+%plot(freq1,10*log10(spec1));
 plot(out.f,10*log10(out.P));
  
 %% Same as above for some more structured signals
@@ -60,17 +60,17 @@ dt = 1/Fs;
 x = s.values{1}(:,1);
 
 tic;[spec,freq] = pmtm(x,nw,[],Fs);toc
-tic;[freq1,spec1] = mtspec(dt,x,nw,2*nw-1,1);toc
+%tic;[freq1,spec1] = mtspec(dt,x,nw,2*nw-1,1);toc
 tic;out = sig.mtspectrum(x,'thbw',nw,'Fs',Fs,'quadratic',true);toc
 
 figure;
 subplot(211); hold on
 plot(freq,spec);
-plot(freq1,spec1);
+%plot(freq1,spec1);
 plot(out.f,out.P);
 subplot(212); hold on
 plot(freq,10*log10(spec));
-plot(freq1,10*log10(spec1));
+%plot(freq1,10*log10(spec1));
 plot(out.f,10*log10(out.P));
  
 
