@@ -2,8 +2,9 @@
 %  o multichannel
 %  o expose baseline parameters
 %  o implement irasa
-%  o during baseline estimation, consider extending edges to reduce edge
-%  effects
+%  o during baseline estimation, consider extending edges to reduce edge effects
+%  o remove line noise
+%  o spike spectrum
 classdef Spectrum < hgsetget & matlab.mixin.Copyable
    properties
       input
@@ -60,8 +61,9 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          % PSD of raw signal
          % TODO handle SampledProcess array
          % TODO detrend option
-         %self.input.detrend();
+         self.input.detrend();
          self.psd = self.input.psd(self.psdParams);
+         self.psdParams = self.psd.params;
          
          switch self.whitenParams.method
             case {'power'}
@@ -74,10 +76,11 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                end
                
                % Don't fit DC component TODO : nor nyquist?
-               ind = f~=0;
+               % TODO, implement cutoff frequency or range to restrict fit
+               %ind = f~=0;
+               ind = f>=1;
                fnz = f(ind);
                pnz = p(ind,:);
-               % TODO, mask line noise
                
                b = zeros(5,self.input.n);
                bl = zeros(size(p));
@@ -113,22 +116,6 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                self.whitenParams.exitflag = exitflag;
                self.whitenParams.baseline1 = bl;
                self.whitenParams.baseline2 = bls;
-            case {'ar'}
-               resid = fitARModel(self);
-               
-               % PSD of AR(1) whitened signal
-               self.psdWhite = resid.psd(self.psdParams);
-               
-               % Put in loop for multiple channels
-               lambda = 1e9;%5e6;
-               p = self.psdWhite.values{1}';
-               
-               % Asymmetric iterated least-squares smoother
-               bl = stat.baseline.arpls(p,lambda);
-
-               self.psdWhite.map(@(x) x - bl' + mean(bl));
-                              
-               self.whitenParams.baseline = bl;
          end
          
          % Rescale whitened spectrum to unit variance white noise (Thomson refs)
@@ -147,46 +134,12 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             Q(i) = gaminv(0.05,alpha,1/alpha) ./ (quantile(pw(:,i),0.05));
          end
          if self.input.n > 1
-            self.psdWhite.map(@(x) x.*reshape(repmat(Q,numel(f),1),[1 numel(f) 2]));
+            self.psdWhite.map(@(x) x.*reshape(repmat(Q,numel(f),1),[1 numel(f) self.input.n]));
          else
             self.psdWhite.map(@(x) Q*x);
          end
          self.whitenParams.alpha = alpha;
          self.whitenParams.Q = Q;
-      end
-
-      function resid = fitARModel(self)
-         values = extract(self.input);
-         if iscell(values.values)
-            nWin = numel(values.values);
-            values.values = values.values';
-            for i = 1:nWin
-               values.values{2,i} = NaN;
-            end
-            x = cat(1,values.values{:});
-         else
-            nWin = 1;
-            x = values.values;
-         end
-         
-         % Fit MVAR for all data
-         [what,Ahat,sigma] = arfit2(x,1,1);
-
-         % Get residuals from MVAR fit
-         for i = 1:nWin
-            if iscell(values.values)
-               [~,res{i}] = arres(what,Ahat,values.values{1,i},5);
-            else
-               [~,res{i}] = arres(what,Ahat,values.values,5);
-            end
-         end
-         resid = copy(self.input);
-         % Extend to original length using mean
-         resid.map(@(x,y) [repmat(nanmean(y),1,self.input.n);y],'B',res');
-
-         self.whitenParams.Ahat = Ahat;
-         self.whitenParams.what = what;
-         self.whitenParams.sigma = sigma;
       end
       
       function h = plotDiagnostics(self)
@@ -231,36 +184,6 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                   subplot(326); hold on
                   plot(f,P3);
                   set(gca,'xscale','log'); axis tight; grid on
-               case {'ar' 'ar+'}
-                  bl = self.whitenParams.baseline;
-                  Par1 = stat.arspectrum(self.whitenParams.Ahat,...
-                     self.whitenParams.sigma,self.input.Fs,f);
-                  
-                  figure;
-                  h = subplot(321); hold on
-                  plot(f,P);
-                  plot(f,Par1);
-                  subplot(322); hold on
-                  plot(f,10*log10(P));
-                  plot(f,10*log10(Par1));
-                  set(gca,'xscale','log'); axis tight;
-                  
-                  subplot(323); hold on
-                  Par1res = Pstan./Q + bl' - mean(bl);
-                  plot(f,Par1res);
-                  plot(f,bl);
-                  subplot(324); hold on
-                  plot(f,10*log10(Par1res));
-                  plot(f,10*log10(bl));
-                  set(gca,'xscale','log'); axis tight;
-                  
-                  Par1resbl = Pstan./Q;
-                  subplot(325); hold on
-                  plot(f,Par1resbl);
-                  axis tight; grid on
-                  subplot(326); hold on
-                  plot(f,Par1resbl);
-                  set(gca,'xscale','log'); axis tight; grid on
             end
          end
       end
@@ -283,8 +206,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                plot([f(2) f(end)],[c c],'-','Color',[1 0 0 0.25]);
                text(f(end),c,sprintf('%1.4f',p(j)));
             end
-            %Pstan = self.psdWhite.values{1};
-            plot([f(1) f(end)],[median(Pstan(:,i)) median(Pstan(:,i))],'-')
+            plot([f(2) f(end)],[median(Pstan(:,i)) median(Pstan(:,i))],'-')
+            set(gca,'xscale','log');
          end
       end
    end
