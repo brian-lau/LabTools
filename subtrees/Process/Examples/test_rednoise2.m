@@ -10,7 +10,7 @@ N = 10;
 
 for i = 1:N
    i
-   [s,f,Sx0] = fakeLFP2(Fs,T,1);
+   [s,f,Sx0] = fakeLFP2(Fs,T,0);
    
    if step > 0 % section the data
       win = [s.tStart:step:s.tEnd]';

@@ -63,7 +63,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          % TODO detrend option
          self.input.detrend();
          self.psd = self.input.psd(self.psdParams);
-         self.psdParams = self.psd.params;
+         %self.psdParams = self.psd.params;
          
          switch self.whitenParams.method
             case {'power'}
@@ -78,7 +78,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                % Don't fit DC component TODO : nor nyquist?
                % TODO, implement cutoff frequency or range to restrict fit
                %ind = f~=0;
-               ind = f>=1;
+               ind = f>=0.01;
                fnz = f(ind);
                pnz = p(ind,:);
                
@@ -88,19 +88,32 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                % Estimate whitening transformation for each channel
                for i = 1:self.input.n
                   % Fit smoothly broken power-law using asymmetric error
-                  fun = @(b) sum( asymwt(log(smbrokenpl(b,fnz)),log(pnz(:,i))) );
-                  b0 = [1 1 0.5 1 30];        % initial conditions
-                  lb = [0 0 0 0 0];           % lower bounds
-                  ub = [inf 10 5 5 f(end)/2]; % upper bounds
+                  fun = @(b) sum( asymwt(log(smbrokenpl3(b,fnz)),log(pnz(:,i))) );
+                  b0 = [1 1 0.5 1 30];   % initial conditions
+                  lb = [0 -10 -5 -5 0];    % lower bounds
+                  ub = [inf 10 5 5 100];  % upper bounds
                   opts = optimoptions('fmincon','MaxFunEvals',15000);
                   [b(:,i),~,exitflag(i)] = fmincon(fun,b0,[],[],[],[],lb,ub,[],opts);
                   
                   % Smoothly broken power-law fit
-                  bl(:,i) = smbrokenpl(b(:,i),f);
-                  
+                  bl(:,i) = smbrokenpl3(b(:,i),f);
+%                   
+%                   % Fit smoothly broken power-law using asymmetric error
+%                   fun = @(b) sum( asymwt(log(smbrokenpl(b,fnz)),log(pnz(:,i))) );
+%                   b0 = [1 1 0.5 1 30];        % initial conditions
+%                   lb = [0 0 0 0 0];           % lower bounds
+%                   ub = [inf 10 5 5 f(end)/2]; % upper bounds
+%                   opts = optimoptions('fmincon','MaxFunEvals',15000);
+%                   [b(:,i),~,exitflag(i)] = fmincon(fun,b0,[],[],[],[],lb,ub,[],opts);
+%                   
+%                   % Smoothly broken power-law fit
+%                   bl(:,i) = smbrokenpl(b(:,i),f);
+
                   % Robustly smooth residuals
                   z = p(:,i)./bl(:,i);
-                  bls(:,i) = smooth(z,numel(f)/2,'rlowess');
+                  %bls(:,i) = smooth(z,numel(f)/2,'rlowess');
+                  %bls(:,i) = smooth(z,numel(f)/2,'moving');
+                  bls(:,i) = medfilt1(z,floor(numel(f)/2),'truncate');
                end
                
                % Combine power-law fit with smoother for overall whitening transform

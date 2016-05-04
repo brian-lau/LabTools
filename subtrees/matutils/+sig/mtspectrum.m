@@ -174,7 +174,9 @@ if iscell(x)
          % Adjust thbw & k to maintain desired hbw given the section length
          params.thbw(i) = Twin(i)*par.hbw;
          params.k(i) = max(2,min(round(2*params.thbw(i)),size(x{i},1)) - 1);
-         [V,lambda] = dpss(size(x{i},1),params.thbw(i),params.k(i));
+         if (i==1) || (Twin(i)~=Twin(i-1))
+            [V,lambda] = dpss(size(x{i},1),params.thbw(i),params.k(i));
+         end
          par.thbw = params.thbw(i);
          par.k = params.k(i);
          par.V = V;
@@ -182,6 +184,10 @@ if iscell(x)
          try
             par = rmfield(par,'x');
          end
+         i
+%          if i == 11
+%             keyboard;
+%          end
          it = sig.mtspectrum(x{i},par);
          temp(:,:,i) = it.P;
       end
@@ -490,6 +496,7 @@ for chan = 1:Nchan
             % Set tolerance for acceptance of spectral estimate:
             tol = 0.0005*sig2/nfft;
             a = bsxfun(@times,sig2,(1-lambda));
+            loop = 0;
             while sum(abs(Schan-S1)/nfft)>tol
                % calculate weights
                b = (Schan*ones(1,k))./(Schan*lambda'+ones(nfft,1)*a');
@@ -498,6 +505,10 @@ for chan = 1:Nchan
                S1 = sum(dk'.*Sk')./ sum(dk,2)';
                S1 = S1';
                Stemp = S1; S1 = Schan; Schan = Stemp;  % swap S and S1
+               loop = loop + 1;
+               if loop > 100
+                  break;
+               end
             end
             % Equivalent degrees of freedom, see p. 370 of Percival and Walden 1993.
             dof(:,chan) = ( 2*sum(bsxfun(@times,b.^2,lambda'),2).^2 ) ...
