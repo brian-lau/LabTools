@@ -11,3 +11,5 @@ alpha2 = b(4);
 xb = b(5);
 
 y = c * ( (x./xb).^(alpha1*n) + (x./xb).^(alpha2*n) ).^(-1/n);
+
+%y = c * xb.^(-alpha1) .* ( (x./xb).^(alpha1*n) + (x./xb).^(alpha2*n) ).^(-1/n);
