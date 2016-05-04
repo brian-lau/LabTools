@@ -184,10 +184,6 @@ if iscell(x)
          try
             par = rmfield(par,'x');
          end
-         i
-%          if i == 11
-%             keyboard;
-%          end
          it = sig.mtspectrum(x{i},par);
          temp(:,:,i) = it.P;
       end
@@ -506,7 +502,7 @@ for chan = 1:Nchan
                S1 = S1';
                Stemp = S1; S1 = Schan; Schan = Stemp;  % swap S and S1
                loop = loop + 1;
-               if loop > 100
+               if loop > 100 % TODO, problem with convergence compared to PMTM?
                   break;
                end
             end
