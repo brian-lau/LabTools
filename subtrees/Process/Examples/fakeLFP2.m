@@ -56,6 +56,8 @@ elseif signal == 2 % 1/f background
 
    % Sum together, with a line component for good measure
    x = 1.5*cos(2*pi*4*t) + 15*x1 + 4*sig.pinknoise(numel(x1))';
+elseif signal == 3
+   keyboard
 else
    x = x0;
 end

@@ -1,7 +1,7 @@
 % TODO;
-%  o multichannel
+%  x multichannel
 %  o expose baseline parameters
-%  o implement irasa
+%  x implement irasa, not great
 %  o during baseline estimation, consider extending edges to reduce edge effects
 %  o remove line noise
 %  o spike spectrum
@@ -61,7 +61,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          % PSD of raw signal
          % TODO handle SampledProcess array
          % TODO detrend option
-         self.input.detrend();
+         %self.input.detrend();
          self.psd = self.input.psd(self.psdParams);
          %self.psdParams = self.psd.params;
          
@@ -77,8 +77,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                
                % Don't fit DC component TODO : nor nyquist?
                % TODO, implement cutoff frequency or range to restrict fit
-               %ind = f~=0;
-               ind = f>=0.01;
+               ind = f~=0; %f>=0.01;
                fnz = f(ind);
                pnz = p(ind,:);
                
@@ -88,36 +87,25 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                % Estimate whitening transformation for each channel
                for i = 1:self.input.n
                   % Fit smoothly broken power-law using asymmetric error
-                  fun = @(b) sum( asymwt(log(smbrokenpl3(b,fnz)),log(pnz(:,i))) );
-                  b0 = [1 1 0.5 1 30];   % initial conditions
+                  fun = @(b) sum( asymwt(log(smbrokenpl(b,fnz)),log(pnz(:,i))) );
+                  b0 = [1 2 0.5 1 30];   % initial conditions
                   lb = [0 -10 -5 -5 0];    % lower bounds
-                  ub = [inf 10 5 5 100];  % upper bounds
-                  opts = optimoptions('fmincon','MaxFunEvals',15000);
+                  ub = [inf -1 5 5 100];  % upper bounds
+                  opts = optimoptions('fmincon','MaxFunEvals',5000,'Algorithm','sqp');
                   [b(:,i),~,exitflag(i)] = fmincon(fun,b0,[],[],[],[],lb,ub,[],opts);
                   
                   % Smoothly broken power-law fit
-                  bl(:,i) = smbrokenpl3(b(:,i),f);
-%                   
-%                   % Fit smoothly broken power-law using asymmetric error
-%                   fun = @(b) sum( asymwt(log(smbrokenpl(b,fnz)),log(pnz(:,i))) );
-%                   b0 = [1 1 0.5 1 30];        % initial conditions
-%                   lb = [0 0 0 0 0];           % lower bounds
-%                   ub = [inf 10 5 5 f(end)/2]; % upper bounds
-%                   opts = optimoptions('fmincon','MaxFunEvals',15000);
-%                   [b(:,i),~,exitflag(i)] = fmincon(fun,b0,[],[],[],[],lb,ub,[],opts);
-%                   
-%                   % Smoothly broken power-law fit
-%                   bl(:,i) = smbrokenpl(b(:,i),f);
+                  bl(:,i) = smbrokenpl(b(:,i),f);
 
                   % Robustly smooth residuals
                   z = p(:,i)./bl(:,i);
                   %bls(:,i) = smooth(z,numel(f)/2,'rlowess');
                   %bls(:,i) = smooth(z,numel(f)/2,'moving');
-                  bls(:,i) = medfilt1(z,floor(numel(f)/2),'truncate');
+                  bls(:,i) = medfilt1(z,floor(numel(f)/4),'truncate');
                end
                
                % Combine power-law fit with smoother for overall whitening transform
-               bl2 = bl.*bls;
+               bl2 = bl;%.*bls;
                
                %TODO adjust DC and nyquist?
                
@@ -175,6 +163,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                   plot(f,P(:,i));
                   plot(f,bl1);
                   plot(f,bl1.*bl2);
+                  set(gca,'yscale','log');
                   subplot(322); hold on
                   plot(f,10*log10(P(:,i)));
                   plot(f,10*log10(bl1));
@@ -220,7 +209,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                text(f(end),c,sprintf('%1.4f',p(j)));
             end
             plot([f(2) f(end)],[median(Pstan(:,i)) median(Pstan(:,i))],'-')
-            %set(gca,'xscale','log');
+            set(gca,'xscale','log');
          end
       end
    end
