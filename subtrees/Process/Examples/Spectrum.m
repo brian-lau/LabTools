@@ -5,6 +5,7 @@
 %  o during baseline estimation, consider extending edges to reduce edge effects
 %  o remove line noise
 %  o spike spectrum
+         % TODO handle SampledProcess array
 classdef Spectrum < hgsetget & matlab.mixin.Copyable
    properties
       input
@@ -61,7 +62,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          % PSD of raw signal
          % TODO handle SampledProcess array
          % TODO detrend option
-         %self.input.detrend();
+         self.input.detrend();
          self.psd = self.input.psd(self.psdParams);
          %self.psdParams = self.psd.params;
          
@@ -88,24 +89,28 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                for i = 1:self.input.n
                   % Fit smoothly broken power-law using asymmetric error
                   fun = @(b) sum( asymwt(log(smbrokenpl(b,fnz)),log(pnz(:,i))) );
-                  b0 = [1 2 0.5 1 30];   % initial conditions
-                  lb = [0 -10 -5 -5 0];    % lower bounds
-                  ub = [inf -1 5 5 100];  % upper bounds
+                  b0 = [1   1  0.5 1 30];   % initial conditions
+                  lb = [0  -5 0 0 0];    % lower bounds
+                  ub = [inf 5  5  5 100];  % upper bounds
                   opts = optimoptions('fmincon','MaxFunEvals',5000,'Algorithm','sqp');
-                  [b(:,i),~,exitflag(i)] = fmincon(fun,b0,[],[],[],[],lb,ub,[],opts);
-                  
+                  [b(:,i),~,exitflag(i),output] = fmincon(fun,b0,[],[],[],[],...
+                     lb,ub,@smbrokenpl_constraint,opts);
+                  %output
                   % Smoothly broken power-law fit
                   bl(:,i) = smbrokenpl(b(:,i),f);
 
                   % Robustly smooth residuals
                   z = p(:,i)./bl(:,i);
-                  %bls(:,i) = smooth(z,numel(f)/2,'rlowess');
+                  z(isinf(z)) = median(z);
+                  %keyboard
+                  bls(:,i) = smooth(z,numel(f)/2,'rlowess');
+                  %bls(:,i) = arpls(z,1e5);
                   %bls(:,i) = smooth(z,numel(f)/2,'moving');
-                  bls(:,i) = medfilt1(z,floor(numel(f)/4),'truncate');
+                  %bls(:,i) = medfilt1(z,floor(numel(f)/4),'truncate');
                end
                
                % Combine power-law fit with smoother for overall whitening transform
-               bl2 = bl;%.*bls;
+               bl2 = bl.*bls;
                
                %TODO adjust DC and nyquist?
                
@@ -122,10 +127,9 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          % Rescale whitened spectrum to unit variance white noise (Thomson refs)
          % Approx alpha (Thomson refs), this is not correct when window
          % sizes are different
-         % TODO handle SampledProcess array
          nWindows = numel(self.input.values);
          alpha = nWindows*mean(self.psdWhite.params.k);
-         
+
          pw = squeeze(self.psdWhite.values{1});
          if self.input.n == 1
             pw = pw';

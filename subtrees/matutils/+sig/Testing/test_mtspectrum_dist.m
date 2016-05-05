@@ -14,12 +14,33 @@ for i = 1:numel(f)
    x = x + (.35/numel(f))*cos(2*pi*f(i)*t);
 end
 
+step = 5000; % samples
+if step > 0
+   temp = {};
+   count = 1;
+   ind = (1:step);
+   while 1
+      if step > length(x)
+         break;
+      end
+      temp{count} = x(ind);
+      x(ind) = [];
+      count = count + 1;
+   end
+   x = temp;
+end
+
 % Estimate spectrum
 thbw = 4;
-[out,params] = sig.mtspectrum(x,'thbw',thbw,'nfft',numel(x),'Fs',Fs);
+[out,params] = sig.mtspectrum(x,'hbw',.5,'f',0:.25:Fs/2,'Fs',Fs);
 
 % DOF is approximately 2xalpha
-alpha = params.k;
+if step > 0
+   alpha = numel(x)*params.k(1);
+else
+   alpha = params.k;
+end
+
 
 figure;
 xx = 0:.1:50;

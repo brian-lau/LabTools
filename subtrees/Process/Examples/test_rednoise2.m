@@ -3,14 +3,14 @@
 clear all
 rng(23351);
 Fs = 2000;
-T = 32;
-step = 2;
+T = 30;
+step = 5;
 p = [0.01 0.05 0.1];
 N = 10;
 
 for i = 1:N
    i
-   [s,f,Sx0] = fakeLFP2(Fs,T,0);
+   s = fakeLFP2(Fs,T,5);
    
    if step > 0 % section the data
       win = [s.tStart:step:s.tEnd]';
@@ -22,7 +22,7 @@ for i = 1:N
    S = Spectrum('input',s);
    S.psdParams.f = 0:.25:500;
    S.psdParams.quadratic = false; % true inflates type 1 error (dof inaccurate)
-   S.psdParams.hbw = 0.75;
+   S.psdParams.hbw = 1.5;
    S.whitenParams.method = 'power';
    S.run;
    
@@ -31,6 +31,7 @@ for i = 1:N
    for j = 1:numel(p)
       [~,fa{i,j}] = S.threshold(p(j));
    end
+   %plot(S);
 end
 
 f = S.psdParams.f;
