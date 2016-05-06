@@ -50,18 +50,6 @@ switch signal
       gp = sum(gp,2) + .5*bl;
       gp(isinf(gp)) = 0;
       x = sig.noise(gp);
-      
-%       gp1 = normpdf(ff,12,1);
-%       gp1 = gp1./max(gp1);
-%       gp2 = normpdf(ff,30,3);
-%       gp2 = gp2./max(gp2);
-%       gp3 = normpdf(ff,90,3);
-%       gp3 = gp3./max(gp3);
-%       gp4 = normpdf(ff,300,20);
-%       gp4 = gp4./max(gp4);
-%       gp = gp1/12 + gp2/30 + gp3/90 + gp4/300 + .5./ff;
-%       gp(isinf(gp)) = 0;
-%       x = sig.noise(gp);
    case 6 %% Some gaussian bumps in frequency
       f = [12 30 90 300];
       sd = [1 3 3 20];

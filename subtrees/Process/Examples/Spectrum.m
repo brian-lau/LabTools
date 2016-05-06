@@ -62,7 +62,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          % PSD of raw signal
          % TODO handle SampledProcess array
          % TODO detrend option
-         self.input.detrend();
+         self.input.detrend('linear');
          self.psd = self.input.psd(self.psdParams);
          %self.psdParams = self.psd.params;
          
