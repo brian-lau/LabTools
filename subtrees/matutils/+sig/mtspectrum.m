@@ -128,7 +128,8 @@
 
 % TODO
 % o confidence intervals
-% o for section-averaging, avoid recalculating tapers if possible
+% x for section-averaging, avoid recalculating tapers if possible
+% o multi-section F-test
 function [output,params] = mtspectrum(x,varargin)
 
 p = inputParser;
@@ -151,6 +152,7 @@ p.addParameter('weights','adapt',@(x) any(strcmp(x,{'adapt' 'eigen' 'unity'})));
 p.addParameter('dropLastTaper',true,@(x) islogical(x) || isscalar(x));
 p.addParameter('quadratic',false,@(x) islogical(x) || isscalar(x));
 p.addParameter('robust','mean',@ischar);
+p.addParameter('detrend','none');
 p.addParameter('verbose',false,@(x) islogical(x) || isscalar(x));
 p.parse(x,varargin{:});
 par = p.Results;
@@ -166,6 +168,7 @@ if iscell(x)
       par = rmfield(par,'x');
       [output,params] = sig.mtspectrum(x{1},par);
    else
+      % Duration of each section
       Twin = cellfun(@(x) size(x,1)/par.Fs,par.x);
       
       params = par;
@@ -174,6 +177,7 @@ if iscell(x)
          % Adjust thbw & k to maintain desired hbw given the section length
          params.thbw(i) = Twin(i)*par.hbw;
          params.k(i) = max(2,min(round(2*params.thbw(i)),size(x{i},1)) - 1);
+         % Form tapers if needed
          if (i==1) || (Twin(i)~=Twin(i-1))
             [V,lambda] = dpss(size(x{i},1),params.thbw(i),params.k(i));
          end
@@ -189,14 +193,14 @@ if iscell(x)
          temp(:,:,i) = it.P;
       end
       
+      % Section-average
       temp = permute(temp,[1 3 2]);
-      
       p = zeros(par.nf,par.Nchan);
       for i = 1:par.Nchan
          %TODO: should issue warning on NaNs?
          switch lower(params.robust)
             case {'median'}
-               p(:,i) = nanmedian(temp(:,:,i),2);
+               p(:,i) = median(temp(:,:,i),2);
             case {'huber'}
                p(:,i) = stat.mlochuber(temp(:,:,i)','k',5)';
             case {'logistic'}
@@ -220,13 +224,13 @@ end
 
 if isempty(par.f)
    nfft = par.nfft;
-   w = psdfreqvec('npts',nfft,'Fs',par.Fs); % TODO
-   if rem(nfft,2),
-      select = 1:(nfft+1)/2;  % ODD
+   w = psdfreqvec('npts',nfft,'Fs',par.Fs); % TODO replace dependency
+   if rem(nfft,2) % ODD
+      select = 1:(nfft+1)/2;
       S_unscaled = S(select,:); % Take only [0,pi] or [0,pi)
       S = [S_unscaled(1,:); 2*S_unscaled(2:end,:)];  % Only DC is a unique point and doesn't get doubled
-   else
-      select = 1:nfft/2+1;    % EVEN
+   else  % EVEN
+      select = 1:nfft/2+1;
       S_unscaled = S(select,:); % Take only [0,pi] or [0,pi)
       S = [S_unscaled(1,:); 2*S_unscaled(2:end-1,:); S_unscaled(end,:)]; % Don't double unique Nyquist point
    end
@@ -285,7 +289,7 @@ if nargout == 2
 end
 
 %% Verify consistency of parameters (nested)
-   function checkInputs() 
+   function checkInputs()
       if iscell(par.x)
          N = sum(cellfun(@(x) size(x,1),par.x));
          T = sum(cellfun(@(x) size(x,1)/par.Fs,par.x));
@@ -295,7 +299,7 @@ end
          [N,par.Nchan] = size(par.x);
          T = N/par.Fs;
          assert(isreal(par.x),'Signal must be real');
-     end
+      end
       
       if isempty(par.V)
          if ~isempty(par.hbw)
@@ -339,6 +343,10 @@ end
          end
       end
       
+      if ~any(strcmpi(par.detrend,{'none' 'constant' 'linear'}))
+         error('detrend options are ''none'', ''constant'' or ''linear''.');
+      end
+      
       if ~iscell(par.x)
          % Do tapers pass the eigenvalue threshold?
          ind = find(par.lambda < par.lambdaThresh);
@@ -378,7 +386,12 @@ end % END pmtm
 
 %% Estimate MTM spectrum
 function [S,dS,ddS,Fval,dof] = mtm_spectrum(params)
-x = params.x;
+
+if any(strcmpi(params.detrend,{'constant' 'linear'}))
+   x = detrend(params.x,params.detrend);
+else
+   x = params.x;
+end
 nfft = params.nfft;
 V  = params.V;
 lambda  = params.lambda;
@@ -514,7 +527,6 @@ for chan = 1:Nchan
             % DOF estimate from Thomson (eq. 5.5) can yield dof > 2k, due
             % to dk being greater than 1? Problem in algorithm convergence?
             %dof(:,chan) = 2*sum(dk,2);
-            %keyboard
          else
             Schan = Sk;
             dof(:,chan) = 2*ones(nfft,1);
