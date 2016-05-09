@@ -6,6 +6,8 @@
 %  o remove line noise
 %  o spike spectrum
          % TODO handle SampledProcess array
+         % TODO handle SampledProcess array
+         % TODO detrend option
 classdef Spectrum < hgsetget & matlab.mixin.Copyable
    properties
       input
@@ -55,21 +57,18 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       end
 
       function run(self)
+         import stat.baseline.*
+
          if ~self.isRunnable
             error('No input signal');
          end
          
          % PSD of raw signal
-         % TODO handle SampledProcess array
-         % TODO detrend option
          self.input.detrend('linear');
          self.psd = self.input.psd(self.psdParams);
-         %self.psdParams = self.psd.params;
          
          switch self.whitenParams.method
             case {'power'}
-               import stat.baseline.*
-
                f = self.psd.f(:);
                p = squeeze(self.psd.values{1});
                if isrow(p)
@@ -89,20 +88,19 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                for i = 1:self.input.n
                   % Fit smoothly broken power-law using asymmetric error
                   fun = @(b) sum( asymwt(log(smbrokenpl(b,fnz)),log(pnz(:,i))) );
-                  b0 = [1   1  0.5 1 30];   % initial conditions
-                  lb = [0  -5 0 0 0];    % lower bounds
-                  ub = [inf 5  5  5 100];  % upper bounds
+                  b0 = [1    1  0.5  1   30];   % initial conditions
+                  lb = [0   -5  0    0   0];    % lower bounds
+                  ub = [inf  5  5    5   100];  % upper bounds
                   opts = optimoptions('fmincon','MaxFunEvals',5000,'Algorithm','sqp');
-                  [b(:,i),~,exitflag(i),output] = fmincon(fun,b0,[],[],[],[],...
+                  [b(:,i),~,exitflag(i)] = fmincon(fun,b0,[],[],[],[],...
                      lb,ub,@smbrokenpl_constraint,opts);
-                  %output
                   % Smoothly broken power-law fit
                   bl(:,i) = smbrokenpl(b(:,i),f);
 
                   % Robustly smooth residuals
                   z = p(:,i)./bl(:,i);
                   z(isinf(z)) = median(z);
-                  %keyboard
+                  
                   bls(:,i) = smooth(z,numel(f)/2,'rlowess');
                   %bls(:,i) = arpls(z,1e5);
                   %bls(:,i) = smooth(z,numel(f)/2,'moving');
@@ -124,11 +122,12 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                self.whitenParams.baseline2 = bls;
          end
          
-         % Rescale whitened spectrum to unit variance white noise (Thomson refs)
+         % Rescale whitened spectrum to unit variance white noise
+         
          % Approx alpha (Thomson refs), this is not correct when window
          % sizes are different
-         nWindows = numel(self.input.values);
-         alpha = nWindows*mean(self.psdWhite.params.k);
+         nSections = numel(self.input.values);
+         alpha = nSections*mean(self.psdWhite.params.k);
 
          pw = squeeze(self.psdWhite.values{1});
          if self.input.n == 1

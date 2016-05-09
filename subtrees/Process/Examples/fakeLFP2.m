@@ -34,9 +34,9 @@ switch signal
       x = x + 1*cos(2*pi*4*t) + 1*cos(2*pi*10*t) + 1*cos(2*pi*30*t) + 1*cos(2*pi*90*t)...
           + 1*cos(2*pi*300*t);
    case 4
-      bl = stat.baseline.smbrokenpl([.1 2 .5 2.5 30],ff);
+      bl = stat.baseline.smbrokenpl([100 2 .5 2 30],ff);
       bl(isinf(bl)) = 0;
-      x = sig.noise(bl);
+      x = sig.noise(sqrt(bl));
    case 5 %% Some gaussian bumps in frequency
       f = [12 30 90 300];
       sd = [1 3 3 20];
@@ -49,12 +49,12 @@ switch signal
       end
       gp = sum(gp,2) + .5*bl;
       gp(isinf(gp)) = 0;
-      x = sig.noise(gp);
+      x = sig.noise(sqrt(gp));
    case 6 %% Some gaussian bumps in frequency
       f = [12 30 90 300];
       sd = [1 3 3 20];
       
-      bl = stat.baseline.smbrokenpl([.1 2 .5 2.5 30],ff);
+      bl = stat.baseline.smbrokenpl([1 2 .5 2 30],ff);
       for i = 1:numel(f)
          temp = normpdf(ff,f(i),sd(i));
          temp = temp./max(temp);
@@ -62,9 +62,9 @@ switch signal
          ind = ff==f(i);
          gp(:,i) = temp*bl(ind);
       end
-      gp = sum(gp,2) + .5*bl;
+      gp = 100*(sum(gp,2) + .5*bl);
       gp(isinf(gp)) = 0;
-      x = sig.noise(gp);
+      x = sig.noise(sqrt(gp));
 end
 
 % A = 0.9;

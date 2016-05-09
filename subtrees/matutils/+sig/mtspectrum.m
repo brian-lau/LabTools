@@ -184,7 +184,8 @@ if iscell(x)
          try
             par = rmfield(par,'x');
          end
-         it = sig.mtspectrum(x{i},par);
+         [it,partemp] = sig.mtspectrum(x{i},par);
+         params.dof{i} = partemp.dof;
          temp(:,:,i) = it.P;
       end
       
@@ -243,11 +244,12 @@ Pxx = S./par.Fs;
 
 output.f = f;
 output.P = Pxx;
-if ~isempty(par.alpha)
-   if exist('select','var')
-      dof = dof(select,:);
-   end
-   
+if exist('select','var')
+   dof = dof(select,:);
+end
+par.dof = dof;
+
+if ~isempty(par.alpha)   
    switch par.confMethod
       case 'asymp'
          % Asymptotic chi-squared 95% confidence interval, Percival and Walden p.255-6

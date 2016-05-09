@@ -10,7 +10,7 @@ N = 10;
 
 for i = 1:N
    i
-   s = fakeLFP2(Fs,T,4);
+   s = fakeLFP2(Fs,T,6);
    
    if step > 0 % section the data
       win = [s.tStart:step:s.tEnd]';
@@ -21,8 +21,9 @@ for i = 1:N
    
    S = Spectrum('input',s);
    S.psdParams.f = 0:.25:500;
+   %S.psdParams.robust = 'huber';
    S.psdParams.quadratic = false; % true inflates type 1 error (dof inaccurate)
-   S.psdParams.hbw = 1.5;
+   S.psdParams.hbw = 1;
    S.whitenParams.method = 'power';
    S.run;
    
@@ -31,7 +32,6 @@ for i = 1:N
    for j = 1:numel(p)
       [~,fa{i,j}] = S.threshold(p(j));
    end
-   %plot(S);
 end
 
 f = S.psdParams.f;
