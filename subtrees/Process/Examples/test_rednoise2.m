@@ -6,7 +6,7 @@ Fs = 2000;
 T = 30;
 step = 5;
 p = [0.01 0.05 0.1];
-N = 10;
+N = 2;
 
 for i = 1:N
    i
@@ -20,21 +20,19 @@ for i = 1:N
    end
    
    S = Spectrum('input',s);
-   S.psdParams.f = 0:.25:500;
-   %S.psdParams.robust = 'huber';
-   S.psdParams.quadratic = false; % true inflates type 1 error (dof inaccurate)
-   S.psdParams.hbw = 1;
-   S.whitenParams.method = 'power';
+   S.rawParams = struct('f',0:.25:500,'hbw',1,'detrend','linear');
+   S.baseParams = struct('method','broken-power','smoother','none');
+   
    S.run;
    
-   psdRaw{i} = S.psd.values{1};
-   psdWhite{i} = S.psdWhite.values{1};
+   psdRaw{i} = S.raw.values{1};
+   psdWhite{i} = S.detail.values{1};
    for j = 1:numel(p)
       [~,fa{i,j}] = S.threshold(p(j));
    end
 end
 
-f = S.psdParams.f;
+f = S.raw.f;
 nbins = 150;
 
 figure;
@@ -60,7 +58,7 @@ plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,4); hold on
 h = histogram(cat(2,fa{:,i}),edf,'Normalization','count');
-y = p(i)*numel(S.psdParams.f)*N/h.NumBins;
+y = p(i)*numel(S.rawParams.f)*N/h.NumBins;
 plot(get(gca,'xlim'),[y y],'--');
 plot(get(gca,'xlim'),[mean(h.Values) mean(h.Values)],'-');
 
@@ -71,7 +69,7 @@ plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,6); hold on
 h = histogram(cat(2,fa{:,i}),edf,'Normalization','count');
-y = p(i)*numel(S.psdParams.f)*N/h.NumBins;
+y = p(i)*numel(S.rawParams.f)*N/h.NumBins;
 plot(get(gca,'xlim'),[y y],'--');
 plot(get(gca,'xlim'),[mean(h.Values) mean(h.Values)],'-');
 
@@ -82,6 +80,6 @@ plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,8); hold on
 h = histogram(cat(2,fa{:,i}),edf,'Normalization','count');
-y = p(i)*numel(S.psdParams.f)*N/h.NumBins;
+y = p(i)*numel(S.rawParams.f)*N/h.NumBins;
 plot(get(gca,'xlim'),[y y],'--');
 plot(get(gca,'xlim'),[mean(h.Values) mean(h.Values)],'-');

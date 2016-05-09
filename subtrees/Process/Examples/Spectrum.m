@@ -10,11 +10,14 @@
          % TODO detrend option
 classdef Spectrum < hgsetget & matlab.mixin.Copyable
    properties
-      input
-      whitenParams
-      psd
-      psdWhite
-      psdParams
+      
+      input % SampledProcess
+      raw   % direct multitaper spectral estimate
+      rawParams % 
+      base  % estimate of base spectrum
+      baseParams
+      detail % estimate of detail spectrum (whitened & standardized)
+      
       verbose
    end
    
@@ -24,15 +27,15 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p.KeepUnmatched= false;
          p.FunctionName = 'Spectrum constructor';
          p.addParameter('input',[],@(x) isa(x,'SampledProcess'));
-         p.addParameter('whitenParams',struct('method','power'),@isstruct);
-         p.addParameter('psdParams',struct('hbw',0.5),@isstruct);
+         p.addParameter('baseParams',struct('method','broken-power'),@isstruct);
+         p.addParameter('rawParams',struct('hbw',0.5),@isstruct);
          p.addParameter('verbose',false,@(x) isscalar(x) && islogical(x));
          p.parse(varargin{:});
          par = p.Results;
          
          self.input = par.input;
-         self.whitenParams = par.whitenParams;
-         self.psdParams = par.psdParams;
+         self.baseParams = par.baseParams;
+         self.rawParams = par.rawParams;
          self.verbose = par.verbose;
       end
       
@@ -40,15 +43,30 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          % TODO VERIFY LABEL MATCHING for SampledProcess array
          % TODO check window sizes
          self.input = input;
-         self.psd = [];
-         self.psdWhite = [];
+         % Remove any previous estimates
+         self.raw = [];
+         self.base = [];
+      end
+      
+      function set.baseParams(self,baseParams)
+         if isfield(baseParams,'smoother')
+            
+         else
+            baseParams.smoother = 'rlowess';
+         end
+         if isfield(baseParams,'beta0')
+            
+         else
+            baseParams.beta0 = [];
+         end
+         self.baseParams = baseParams;
       end
       
       function [c,f] = threshold(self,alpha)
-         P = self.psdWhite.values{1};
-         c = gaminv(1-alpha,self.whitenParams.alpha,1/self.whitenParams.alpha);
+         P = self.detail.values{1};
+         c = gaminv(1-alpha,self.baseParams.alpha,1/self.baseParams.alpha);
          if nargout == 2
-            f = self.psdWhite.f(P>=c);
+            f = self.detail.f(P>=c);
          end
       end
       
@@ -63,73 +81,86 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             error('No input signal');
          end
          
-         % PSD of raw signal
-         self.input.detrend('linear');
-         self.psd = self.input.psd(self.psdParams);
+         % Raw spectrum
+         self.raw = self.input.psd(self.rawParams);
          
-         switch self.whitenParams.method
-            case {'power'}
-               f = self.psd.f(:);
-               p = squeeze(self.psd.values{1});
+         % Estimate base spectrum
+         switch self.baseParams.method
+            case {'broken-power'} % Smoothly broken power-law fit
+               f = self.raw.f(:);
+               p = squeeze(self.raw.values{1});
                if isrow(p)
                   p = p(:);
                end
                
                % Don't fit DC component TODO : nor nyquist?
                % TODO, implement cutoff frequency or range to restrict fit
-               ind = f~=0; %f>=0.01;
+               ind = f~=0;
                fnz = f(ind);
                pnz = p(ind,:);
                
-               b = zeros(5,self.input.n);
-               bl = zeros(size(p));
-               bls = zeros(size(p));
+               beta = zeros(5,self.input.n);
+               basefit = zeros(size(p));
+               basesmooth = ones(size(p));
                % Estimate whitening transformation for each channel
                for i = 1:self.input.n
                   % Fit smoothly broken power-law using asymmetric error
                   fun = @(b) sum( asymwt(log(smbrokenpl(b,fnz)),log(pnz(:,i))) );
-                  b0 = [1    1  0.5  1   30];   % initial conditions
-                  lb = [0   -5  0    0   0];    % lower bounds
-                  ub = [inf  5  5    5   100];  % upper bounds
-                  opts = optimoptions('fmincon','MaxFunEvals',5000,'Algorithm','sqp');
-                  [b(:,i),~,exitflag(i)] = fmincon(fun,b0,[],[],[],[],...
-                     lb,ub,@smbrokenpl_constraint,opts);
-                  % Smoothly broken power-law fit
-                  bl(:,i) = smbrokenpl(b(:,i),f);
-
-                  % Robustly smooth residuals
-                  z = p(:,i)./bl(:,i);
-                  z(isinf(z)) = median(z);
                   
-                  bls(:,i) = smooth(z,numel(f)/2,'rlowess');
-                  %bls(:,i) = arpls(z,1e5);
-                  %bls(:,i) = smooth(z,numel(f)/2,'moving');
-                  %bls(:,i) = medfilt1(z,floor(numel(f)/4),'truncate');
+                  if isempty(self.baseParams.beta0)
+                     b0 = [1   1  0.5  1   30];   % initial conditions
+                  else
+                     b0 = self.baseParams.beta0;
+                  end
+                  lb = [0   -5  0    0   0];      % lower bounds
+                  ub = [inf  5  5    5   100];    % upper bounds
+                  
+                  opts = optimoptions('fmincon','MaxFunEvals',5000,...
+                     'Algorithm','sqp','Display','none');
+                  [beta(:,i),~,exitflag(i),optout(i)] = fmincon(fun,b0,[],[],[],[],...
+                     lb,ub,@smbrokenpl_constraint,opts);
+                  
+                  % Final fit
+                  basefit(:,i) = smbrokenpl(beta(:,i),f);
+
+                  % Smooth residuals
+                  z = p(:,i)./basefit(:,i);
+                  z(isinf(z)) = median(z); % Trap divide by zeros
+                  switch self.baseParams.smoother
+                     case 'rlowess'
+                        basesmooth(:,i) = smooth(z,numel(f)/2,'rlowess');
+                     case 'moving'
+                        basesmooth(:,i) = smooth(z,numel(f)/2,'moving');
+                     case 'arpls'
+                        basesmooth(:,i) = arpls(z,1e5);
+                     case 'median'
+                        basesmooth(:,i) = medfilt1(z,floor(numel(f)/4),'truncate');
+                  end
                end
                
                % Combine power-law fit with smoother for overall whitening transform
-               bl2 = bl.*bls;
+               base = basefit.*basesmooth;
                
                %TODO adjust DC and nyquist?
                
-               self.psdWhite = copy(self.psd);
-               temp = reshape(bl2,[1 numel(f) self.input.n]);
-               self.psdWhite.map(@(x) x./temp);
+               % Estimate detail spectrum
+               self.detail = copy(self.raw);
+               temp = reshape(base,[1 numel(f) self.input.n]);
+               self.detail.map(@(x) x./temp);
                
-               self.whitenParams.beta = b;
-               self.whitenParams.exitflag = exitflag;
-               self.whitenParams.baseline1 = bl;
-               self.whitenParams.baseline2 = bls;
+               self.baseParams.beta = beta;
+               self.baseParams.exitflag = exitflag;
+               self.baseParams.optoutput = optout;
+               self.baseParams.basefit = basefit;
+               self.baseParams.basesmooth = basesmooth;
          end
          
-         % Rescale whitened spectrum to unit variance white noise
-         
-         % Approx alpha (Thomson refs), this is not correct when window
-         % sizes are different
+         % Rescale detail spectrum to unit variance white noise
+         % Approx alpha, this is not correct when window sizes differ
          nSections = numel(self.input.values);
-         alpha = nSections*mean(self.psdWhite.params.k);
+         alpha = nSections*mean(self.detail.params.k);
 
-         pw = squeeze(self.psdWhite.values{1});
+         pw = squeeze(self.detail.values{1});
          if self.input.n == 1
             pw = pw';
          end
@@ -138,28 +169,28 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             Q(i) = gaminv(0.05,alpha,1/alpha) ./ (quantile(pw(:,i),0.05));
          end
          if self.input.n > 1
-            self.psdWhite.map(@(x) x.*reshape(repmat(Q,numel(f),1),[1 numel(f) self.input.n]));
+            self.detail.map(@(x) x.*reshape(repmat(Q,numel(f),1),[1 numel(f) self.input.n]));
          else
-            self.psdWhite.map(@(x) Q*x);
+            self.detail.map(@(x) Q*x);
          end
-         self.whitenParams.alpha = alpha;
-         self.whitenParams.Q = Q;
+         self.baseParams.alpha = alpha;
+         self.baseParams.Q = Q;
       end
       
       function h = plotDiagnostics(self)
-         f = self.psd.f;
-         P = squeeze(self.psd.values{1});
-         Pstan = squeeze(self.psdWhite.values{1});
+         f = self.raw.f;
+         P = squeeze(self.raw.values{1});
+         Pstan = squeeze(self.detail.values{1});
          if self.input.n == 1
             P = P';
             Pstan = Pstan';
          end
-         Q = self.whitenParams.Q;
+         Q = self.baseParams.Q;
          for i = 1:self.input.n
-            switch self.whitenParams.method
-               case {'power'}
-                  bl1 = self.whitenParams.baseline1(:,i);
-                  bl2 = self.whitenParams.baseline2(:,i);
+            switch self.baseParams.method
+               case {'broken-power'}
+                  bl1 = self.baseParams.basefit(:,i);
+                  bl2 = self.baseParams.basesmooth(:,i);
                   
                   figure;
                   h = subplot(321); hold on
@@ -194,24 +225,24 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       end
       
       function h = plot(self)
-         f = self.psdParams.f;
-         Pstan = squeeze(self.psdWhite.values{1});
+         f = self.rawParams.f;
+         Pstan = squeeze(self.detail.values{1});
          if isrow(Pstan)
             Pstan = Pstan';
          end
-         alpha = self.whitenParams.alpha;
-         for i = 1:self.input.n
+         alpha = self.baseParams.alpha;
             h = figure;
-            hold on;
-            %plot(self.psdWhite,'log',0,'handle',h);
-            plot(f,Pstan(:,i));
-            p = [.05 .5 .95 .99 .999 .9999];
+            plot(self.detail,'log',0,'handle',h,'title',true);
+         for i = 1:self.input.n
+            %plot(f,Pstan(:,i));
+               subplot(self.input.n,1,i); hold on;
+            p = [.05 .5 .95 .9999];
             for j = 1:numel(p)
                c = gaminv(p(j),alpha,1/alpha);
                plot([f(2) f(end)],[c c],'-','Color',[1 0 0 0.25]);
                text(f(end),c,sprintf('%1.4f',p(j)));
             end
-            plot([f(2) f(end)],[median(Pstan(:,i)) median(Pstan(:,i))],'-')
+            %plot([f(2) f(end)],[median(Pstan(:,i)) median(Pstan(:,i))],'-')
             set(gca,'xscale','log');
          end
       end

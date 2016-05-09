@@ -37,7 +37,7 @@ switch signal
       bl = stat.baseline.smbrokenpl([100 2 .5 2 30],ff);
       bl(isinf(bl)) = 0;
       x = sig.noise(sqrt(bl));
-   case 5 %% Some gaussian bumps in frequency
+   case 5 % 1/f background with some gaussian bumps in frequency
       f = [12 30 90 300];
       sd = [1 3 3 20];
       
