@@ -74,8 +74,6 @@
 % TODO
 %  o confidence intervals, f-tests, how to return
 %  o circular welch
-%  o when section-averaging, do not recalculate tapers, this may requires
-%    sorting the windows
 function obj = psd(self,varargin)
 
 p = inputParser;

@@ -1,4 +1,5 @@
-% Subtract mean
+% Detrend
+% flag - 'constant', 'linear', or scalar integer for polynomial fit
 
 function self = detrend(self,flag)
 
