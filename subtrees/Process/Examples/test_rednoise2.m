@@ -6,20 +6,14 @@ Fs = 2000;
 T = 30;
 step = 5;
 p = [0.01 0.05 0.1];
-N = 2;
+N = 100;
 
 for i = 1:N
    i
-   s = fakeLFP2(Fs,T,6);
-   
-   if step > 0 % section the data
-      win = [s.tStart:step:s.tEnd]';
-      win = [win,win+step];
-      win(win>s.tEnd) = s.tEnd;
-      s.window = win;
-   end
-   
-   S = Spectrum('input',s);
+   s1 = fakeLFP2(Fs,T,4);
+   %s2 = fakeLFP2(Fs,T,6);
+
+   S = Spectrum('input',s1,'step',step);
    S.rawParams = struct('f',0:.25:500,'hbw',1,'detrend','linear');
    S.baseParams = struct('method','broken-power','smoother','none');
    

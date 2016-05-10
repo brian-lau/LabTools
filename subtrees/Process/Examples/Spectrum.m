@@ -12,6 +12,10 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
    properties
       
       input % SampledProcess
+      nChannels
+      step
+      nSections
+      
       raw   % direct multitaper spectral estimate
       rawParams % 
       base  % estimate of base spectrum
@@ -19,6 +23,9 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       detail % estimate of detail spectrum (whitened & standardized)
       
       verbose
+      
+      x_
+      labels_
    end
    
    methods
@@ -30,6 +37,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p.addParameter('baseParams',struct('method','broken-power'),@isstruct);
          p.addParameter('rawParams',struct('hbw',0.5),@isstruct);
          p.addParameter('verbose',false,@(x) isscalar(x) && islogical(x));
+         p.addParameter('step',0,@(x) isscalar(x));
          p.parse(varargin{:});
          par = p.Results;
          
@@ -37,12 +45,14 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.baseParams = par.baseParams;
          self.rawParams = par.rawParams;
          self.verbose = par.verbose;
+         self.step = par.step;
       end
       
       function set.input(self,input)
          % TODO VERIFY LABEL MATCHING for SampledProcess array
-         % TODO check window sizes
-         self.input = input;
+         % TODO Fs matches
+         self.input = copy(input);
+         self.nChannels = self.input(1).n;
          % Remove any previous estimates
          self.raw = [];
          self.base = [];
@@ -50,7 +60,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       
       function set.baseParams(self,baseParams)
          if isfield(baseParams,'smoother')
-            
+            % TODO: Check? or silently ignore?
          else
             baseParams.smoother = 'rlowess';
          end
@@ -60,6 +70,44 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             baseParams.beta0 = [];
          end
          self.baseParams = baseParams;
+      end
+      
+      function set.rawParams(self,params)
+         % TODO check that Fs and f make sense
+         if ~isfield(params,'Fs')
+            params.Fs = self.input.Fs;
+         else
+            %assert;
+         end
+         self.rawParams = params;
+      end
+      
+      function set.step(self,step)
+         self.step = step;
+         self.section();
+      end
+      
+      function section(self)
+         %keyboard
+         if self.step > 0 % section the data
+            for i = 1:numel(self.input)
+               win = [self.input(i).tStart:self.step:self.input(i).tEnd]';
+               win = [win,win+self.step];
+               win(win>self.input(i).tEnd) = self.input(i).tEnd;
+               duration = diff(win,1,2);
+               win(duration < self.step,:) = [];
+              self.input(i).window = win;
+            end
+         end
+         % TODO check window sizes
+         [s,labels] = extract(self.input);
+         self.x_ = cat(1,s.values);
+         self.labels_ = labels{1}; % THESE SHOULD ALREADY MATCH
+         self.nSections = numel(self.x_);
+      end
+      
+      function clean(self)
+         
       end
       
       function [c,f] = threshold(self,alpha)
@@ -82,12 +130,30 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
          
          % Raw spectrum
-         self.raw = self.input.psd(self.rawParams);
+         %keyboard
+         [out,par] = sig.mtspectrum(self.x_,self.rawParams);
+         p = out.P;
+         f = out.f;
+         params = par;
+         P = zeros([1 size(p)]);
+         P(1,:,:) = p; % format for SpectralProcess
+         
+         self.raw = SpectralProcess(P,...
+            'f',f,...
+            'params',params,...
+            'tBlock',1,...
+            'tStep',1,...
+            'labels',self.labels_,...
+            'tStart',0,...
+            'tEnd',1 ...
+            );
+         
+         %self.raw = self.input.psd(self.rawParams);
          
          % Estimate base spectrum
          switch self.baseParams.method
             case {'broken-power'} % Smoothly broken power-law fit
-               f = self.raw.f(:);
+               %f = self.raw.f(:);
                p = squeeze(self.raw.values{1});
                if isrow(p)
                   p = p(:);
@@ -99,11 +165,11 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                fnz = f(ind);
                pnz = p(ind,:);
                
-               beta = zeros(5,self.input.n);
+               beta = zeros(5,self.nChannels);
                basefit = zeros(size(p));
                basesmooth = ones(size(p));
                % Estimate whitening transformation for each channel
-               for i = 1:self.input.n
+               for i = 1:self.nChannels
                   % Fit smoothly broken power-law using asymmetric error
                   fun = @(b) sum( asymwt(log(smbrokenpl(b,fnz)),log(pnz(:,i))) );
                   
@@ -145,7 +211,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                
                % Estimate detail spectrum
                self.detail = copy(self.raw);
-               temp = reshape(base,[1 numel(f) self.input.n]);
+               temp = reshape(base,[1 numel(f) self.nChannels]);
                self.detail.map(@(x) x./temp);
                
                self.baseParams.beta = beta;
@@ -157,19 +223,19 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          
          % Rescale detail spectrum to unit variance white noise
          % Approx alpha, this is not correct when window sizes differ
-         nSections = numel(self.input.values);
-         alpha = nSections*mean(self.detail.params.k);
+         %nSections = numel(self.input.values);
+         alpha = self.nSections*mean(self.detail.params.k);
 
          pw = squeeze(self.detail.values{1});
-         if self.input.n == 1
+         if self.nChannels == 1
             pw = pw';
          end
          % Match to lower 5% quantile of expected distribution for white noise
-         for i = 1:self.input.n
+         for i = 1:self.nChannels
             Q(i) = gaminv(0.05,alpha,1/alpha) ./ (quantile(pw(:,i),0.05));
          end
-         if self.input.n > 1
-            self.detail.map(@(x) x.*reshape(repmat(Q,numel(f),1),[1 numel(f) self.input.n]));
+         if self.nChannels > 1
+            self.detail.map(@(x) x.*reshape(repmat(Q,numel(f),1),[1 numel(f) self.nChannels]));
          else
             self.detail.map(@(x) Q*x);
          end
@@ -181,12 +247,12 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          f = self.raw.f;
          P = squeeze(self.raw.values{1});
          Pstan = squeeze(self.detail.values{1});
-         if self.input.n == 1
+         if self.nChannels == 1
             P = P';
             Pstan = Pstan';
          end
          Q = self.baseParams.Q;
-         for i = 1:self.input.n
+         for i = 1:self.nChannels
             switch self.baseParams.method
                case {'broken-power'}
                   bl1 = self.baseParams.basefit(:,i);
@@ -233,9 +299,9 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          alpha = self.baseParams.alpha;
             h = figure;
             plot(self.detail,'log',0,'handle',h,'title',true);
-         for i = 1:self.input.n
+         for i = 1:self.nChannels
             %plot(f,Pstan(:,i));
-               subplot(self.input.n,1,i); hold on;
+               subplot(self.nChannels,1,i); hold on;
             p = [.05 .5 .95 .9999];
             for j = 1:numel(p)
                c = gaminv(p(j),alpha,1/alpha);
