@@ -158,6 +158,11 @@ function refreshPlot(obj,h,id)
       return;
    end
    
+   if obj(ind1).count == 0
+      delete(findobj(h,'Tag',id,'-and','Type','Patch'));
+      delete(findobj(h,'Tag',id,'-and','Type','Text'));
+      return;
+   end
    values = obj(ind1).values{1};
    n = numel(values);
    
@@ -325,6 +330,7 @@ function addEvent(~,~,obj,h,id,eventType)
       delete(d);
       g.WindowKeyPressFcn = orig;
    end
+
 end
 
 function editEvent(~,~,obj)
