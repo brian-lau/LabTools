@@ -379,6 +379,8 @@ end
          assert(maxerr < 3*eps(class(par.f)),'Need uniform f');
          par.nfft = numel(par.f);
          par.nf = numel(par.f);
+         
+         assert(max(par.f) <= par.Fs/2,'Frequencies must be less than Nyquist');
       end
    end % END checkInputs()
 
