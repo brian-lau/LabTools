@@ -231,27 +231,28 @@ function refreshPlot(obj,h,id)
       for i= 1:numel(lh)
          set(lh(i),'UserData',obj(ind1).labels(i),'Tag',id);
       end
-      % Distribute label colors, masking for quality=0
-      q0 = obj(ind1).quality == 0;
-      if any(q0)
-         [lh(~q0).Color] = deal(obj(ind1).labels(~q0).color);
-         [lh(q0).Color] = deal([.7 .7 .7 .4]);
-      elseif all(q0)
-         [lh(q0).Color] = deal([.7 .7 .7 .4]);
-      else
-         try
-            [lh(~q0).Color] = deal(obj(ind1).labels(~q0).color);
-         catch
-            [lh(~q0).Color] = deal([0.2 0.2 0.2]);
-         end
-      end
    else
       % Ensure that line handles are ordered like data
       lh = lh(ind);
       % Refresh data for each line
       data = bsxfun(@plus,values,sf);
       for i = 1:n
+         lh(i).XData = t;
          lh(i).YData = data(:,i);
+      end
+   end
+   % Distribute label colors, masking for quality=0
+   q0 = obj(ind1).quality == 0;
+   if any(q0)
+      [lh(~q0).Color] = deal(obj(ind1).labels(~q0).color);
+      [lh(q0).Color] = deal([.7 .7 .7 .4]);
+   elseif all(q0)
+      [lh(q0).Color] = deal([.7 .7 .7 .4]);
+   else
+      try
+         [lh(~q0).Color] = deal(obj(ind1).labels(~q0).color);
+      catch
+         [lh(~q0).Color] = deal([0.2 0.2 0.2]);
       end
    end
    
@@ -260,23 +261,21 @@ function refreshPlot(obj,h,id)
       temp = [sf; sf; nan(size(sf))]; % Draw as single line
       plot(repmat([t(1) t(end) NaN]',n,1),temp(:),...
          '--','color',[.7 .7 .7 .4],'Parent',h,'Tag',id);
-  else
-     blh = findobj(h,'Tag',id,'-and','LineStyle','--');
-     temp = [sf; sf; nan(size(sf))];
-     blh.YData = temp(:)';
-  end
+   else
+      blh = findobj(h,'Tag',id,'-and','LineStyle','--');
+      temp = [sf; sf; nan(size(sf))];
+      blh.YData = temp(:)';
+   end
    
    % Attach menus
-   if newdraw
-      delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
-      lineMenu = uicontextmenu();
-      uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj(ind1) 0});
-      uimenu(lineMenu,'Label','Edit quality','Callback',{@setQuality obj(ind1) NaN});
-      uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
-      uimenu(lineMenu,'Label','Edit label','Callback',{@editLabel obj(ind1) h});
-      set(lineMenu,'Tag',id);
-      set(lh,'uicontextmenu',lineMenu);
-   end
+   delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
+   lineMenu = uicontextmenu();
+   uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj(ind1) 0});
+   uimenu(lineMenu,'Label','Edit quality','Callback',{@setQuality obj(ind1) NaN});
+   uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
+   uimenu(lineMenu,'Label','Edit label','Callback',{@editLabel obj(ind1) h});
+   set(lineMenu,'Tag',id);
+   set(lh,'uicontextmenu',lineMenu);
    
    % Refresh labels
    if newdraw
