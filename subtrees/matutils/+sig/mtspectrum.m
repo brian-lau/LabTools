@@ -52,6 +52,8 @@
 %               'median'   - median, NaN's excluded
 %               'huber'    - robust location using Huber weights
 %               'logistic' - robust location using logistic weights
+%               'none'     - does not perform any averaging, returning
+%                            section estimates [nf x nSections x nChannels]
 %     Ftest   - boolean, optional, default = true
 %               Thomson's harmonic F-test is applied to all frequencies in f
 %     alpha   - scalar in [0,1], optional, default = []
@@ -195,18 +197,22 @@ if iscell(x)
       
       % Section-average
       temp = permute(temp,[1 3 2]);
-      p = zeros(par.nf,par.Nchan);
-      for i = 1:par.Nchan
-         %TODO: should issue warning on NaNs?
-         switch lower(params.robust)
-            case {'median'}
-               p(:,i) = median(temp(:,:,i),2);
-            case {'huber'}
-               p(:,i) = stat.mlochuber(temp(:,:,i)','k',5)';
-            case {'logistic'}
-               p(:,i) = stat.mloclogist(temp(:,:,i)','loc','nanmedian','k',5)';
-            otherwise
-               p(:,i) = mean(temp(:,:,i),2);
+      if strcmp(params.robust,'none')
+         p = temp;
+      else
+         p = zeros(par.nf,par.Nchan);
+         for i = 1:par.Nchan
+            %TODO: should issue warning on NaNs?
+            switch lower(params.robust)
+               case {'median'}
+                  p(:,i) = median(temp(:,:,i),2);
+               case {'huber'}
+                  p(:,i) = stat.mlochuber(temp(:,:,i)','k',5)';
+               case {'logistic'}
+                  p(:,i) = stat.mloclogist(temp(:,:,i)','loc','nanmedian','k',5)';
+               otherwise
+                  p(:,i) = mean(temp(:,:,i),2);
+            end
          end
       end
       
