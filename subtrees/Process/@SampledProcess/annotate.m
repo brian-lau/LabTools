@@ -1,4 +1,6 @@
 % Generate EventProcess matching SampledProcess
+% Right-clicking allows adding events to annotate the corresponding
+% SampledProcess
 
 function ep = annotate(self,ep)
 
@@ -18,6 +20,6 @@ end
 h = plot(self);
 
 % Add events to the plot
-%plot(events,'handle',h);
+plot(ep,'handle',h);
 % If you prefer non-overlapping, try below instead
-plot(ep,'handle',h,'overlap',-.05,'stagger',true);
+%plot(ep,'handle',h,'overlap',-.05,'stagger',true);

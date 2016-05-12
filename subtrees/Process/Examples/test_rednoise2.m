@@ -6,14 +6,15 @@ Fs = 2000;
 T = 30;
 step = 5;
 p = [0.01 0.05 0.1];
-N = 100;
+N = 10;
 
 for i = 1:N
    i
-   s1 = fakeLFP2(Fs,T,4);
-   %s2 = fakeLFP2(Fs,T,6);
+   s1 = fakeLFP2(Fs,T,0);
+   s2 = fakeLFP2(Fs,T,0);
+   s2.labels = s1.labels;
 
-   S = Spectrum('input',s1,'step',step);
+   S = Spectrum('input',[s1 s2],'step',step);
    S.rawParams = struct('f',0:.25:500,'hbw',1,'detrend','linear');
    S.baseParams = struct('method','broken-power','smoother','none');
    
