@@ -325,6 +325,16 @@ function addEvent(~,~,obj,h,id,eventType)
          event.tStart = d.xPoints(2);
          event.tEnd = d.xPoints(1);
       end
+      if isa(event,'metadata.event.Artifact')
+         p = findobj(h,'Type','Text','-not','Tag',id);
+         labels = [p.UserData]; %fliplr([p.UserData]);
+         
+         [s,v] = listdlg('PromptString','Channels to which event applies',...
+            'SelectionMode','multiple','ListString',{labels.name});
+         if v
+            event.labels = labels(s);
+         end
+      end
       obj(ind1).insert(event);
       refreshPlot(obj,h,id);
       delete(d);
