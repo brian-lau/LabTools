@@ -241,7 +241,8 @@ function refreshPlot(obj,h,id)
          lh(i).YData = data(:,i);
       end
    end
-   % Distribute label colors, masking for quality=0
+   
+   % Distribute label colors to lines, masking for quality=0
    q0 = obj(ind1).quality == 0;
    if any(q0)
       [lh(~q0).Color] = deal(obj(ind1).labels(~q0).color);
@@ -295,7 +296,7 @@ function refreshPlot(obj,h,id)
       th = findobj(h,'Tag',id,'-and','Type','Text');
       th = th(ind);
       for i = 1:n
-         th(i).Position(2) = sf(i);
+         th(i).Position = [t(end) sf(i)];
       end
    end
    
