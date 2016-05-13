@@ -2,9 +2,9 @@
 % Right-clicking allows adding events to annotate the corresponding
 % SampledProcess
 
-function ep = annotate(self,ep)
+function ep = annotate(self,h,ep)
 
-if nargin == 1
+if nargin == 2
    % Create array of EventProcesses that correspond to above, using a null
    % event as a placeholder
    null = metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN);
@@ -17,9 +17,12 @@ else
    assert(all([self.tEnd]==[self.tEnd]),'arrays do not match');
 end
 
-h = plot(self);
+plot(self,'handle',h);
+plot(ep,'handle',h);
+
+%h = plot(self);
 
 % Add events to the plot
-plot(ep,'handle',h);
+%plot(ep,'handle',h);
 % If you prefer non-overlapping, try below instead
 %plot(ep,'handle',h,'overlap',-.05,'stagger',true);

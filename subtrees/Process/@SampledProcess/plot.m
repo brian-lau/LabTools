@@ -108,7 +108,7 @@ function varargout = plot(self,varargin)
       % Create the slider controlling separation between lines
       sepSlider = javax.swing.JSlider(javax.swing.JSlider.VERTICAL,...
          sep_min,sep_max,sep_init);
-      [jsepSlider,hsepSlider] = javacomponent(sepSlider,[0 0 1 1],[]);
+      [jsepSlider,hsepSlider] = javacomponent(sepSlider,[0 0 1 1],h.Parent);
       set(hsepSlider,'UserData',jsepSlider,'Tag','LineScaleSlider',...
          'Units','norm','Position',[0 .25 .04 .5],'Parent',h.Parent);
       % Use cellfun in the callback to allow adding multiple callbacks later
@@ -127,7 +127,7 @@ function varargout = plot(self,varargin)
    rh = findobj(h.Parent,'Tag','RangeSlider');
    if isempty(rh)
       rangeSlider = com.jidesoft.swing.RangeSlider(0,150,0,150);  % min,max,low,high
-      [rangeSlider,hrangeSlider] = javacomponent(rangeSlider,[0 0 1 1],[]);
+      [rangeSlider,hrangeSlider] = javacomponent(rangeSlider,[0 0 1 1],h.Parent);
       set(hrangeSlider,'UserData',rangeSlider,'Tag','RangeSlider',...
          'Units','norm','Position',[.4 .005 .525 .05],'Parent',h.Parent);
       set(rangeSlider,'Enabled',false,'StateChangedCallback',{@setx self h gui.id});
@@ -268,14 +268,17 @@ function refreshPlot(obj,h,id)
       blh.YData = temp(:)';
    end
    
+   hf = ancestor(h,'Figure');
+   
    % Attach menus
    delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
-   lineMenu = uicontextmenu();
+   lineMenu = uicontextmenu('Parent',hf);
    uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj(ind1) 0});
    uimenu(lineMenu,'Label','Edit quality','Callback',{@setQuality obj(ind1) NaN});
    uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
    uimenu(lineMenu,'Label','Edit label','Callback',{@editLabel obj(ind1) h});
    set(lineMenu,'Tag',id);
+   
    set(lh,'uicontextmenu',lineMenu);
    
    % Refresh labels
@@ -300,7 +303,7 @@ function refreshPlot(obj,h,id)
       end
    end
    
-   if isempty(h.Parent.KeyPressFcn) % Zoom is not active
+   if isempty(hf.KeyPressFcn)%isempty(h.Parent.KeyPressFcn) % Zoom is not active
       rh = findobj(h.Parent,'Tag','RangeSlider');
       if ~rh.UserData.Enabled
          h.XLim(1) = t(1);

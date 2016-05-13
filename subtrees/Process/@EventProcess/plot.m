@@ -124,8 +124,10 @@ function varargout = plot(self,varargin)
       h.UserData = [h.UserData {gui}];
    end
    
+   hf = ancestor(h,'Figure');
+
    % Create top-level menu for Events
-   menu = uicontextmenu('Tag',gui.id);
+   menu = uicontextmenu('Tag',gui.id,'Parent',hf);
    topmenu = uimenu('Parent',menu,'Label','Add event');
    validEventTypes = {'Generic' 'Artifact' 'Stimulus' 'Response'};
    for i = 1:numel(validEventTypes)
