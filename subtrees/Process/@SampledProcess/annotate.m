@@ -18,11 +18,35 @@ else
 end
 
 plot(self,'handle',h);
-plot(ep,'handle',h);
+plot(ep,'handle',h,'patchcallback',{@testPatchClick ep});
 
 %h = plot(self);
-
 % Add events to the plot
 %plot(ep,'handle',h);
 % If you prefer non-overlapping, try below instead
 %plot(ep,'handle',h,'overlap',-.05,'stagger',true);
+
+function testPatchClick(src,event,obj)
+%src.UserData
+
+thisfig = ancestor(src,'Figure');
+if strcmp(thisfig.SelectionType,'extend')
+   h = datacursormode(thisfig);
+   h.UpdateFcn = {@labelNames obj};
+   h.SnapToDataVertex = 'off';
+   h.Enable = 'on';
+   
+   set(thisfig,'WindowButtonMotionFcn',{@testit event h});
+end
+
+function txt = labelNames(~,event,obj)
+ev = obj.find('eventVal',event.Target.UserData);
+if isprop(ev,'labels')
+   txt = {ev.labels.name}';
+else
+   txt = 'no associated labels';
+end
+
+function testit(x,y,event,h)
+h.Enable = 'off';
+h.removeAllDataCursors;
