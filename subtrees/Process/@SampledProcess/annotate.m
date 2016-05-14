@@ -27,8 +27,6 @@ plot(ep,'handle',h,'patchcallback',{@testPatchClick ep});
 %plot(ep,'handle',h,'overlap',-.05,'stagger',true);
 
 function testPatchClick(src,event,obj)
-%src.UserData
-
 thisfig = ancestor(src,'Figure');
 if strcmp(thisfig.SelectionType,'extend')
    h = datacursormode(thisfig);

@@ -153,13 +153,15 @@ displayEndOfDemoMessage('')
       
       % User selected a demo from the list - update "data" and refresh
       data.Selection = get(gui.ListBox, 'Value' );
+      data.data = [];
+      data.artifacts = [];
       
       file = data.Files{data.Selection};
       s = load(file);      
       set(gui.Window, 'pointer',oldpointer);
       
       data.data = s.data;
-      if isfield(data,'artifacts')
+      if isfield(data,'artifacts') && ~isempty(data.artifacts)
          data.artifacts = annotate(s.data,gui.ViewAxes,s.artifacts);
       else
          data.artifacts = annotate(s.data,gui.ViewAxes);
@@ -168,7 +170,10 @@ displayEndOfDemoMessage('')
 
 %-------------------------------------------------------------------------%
    function onExport( src, ~ )
-      keyboard
+      %s = copy(data.data);
+      %artifacts = copy(data.artifacts.fix);
+      assignin('base','data',copy(data.data));
+      assignin('base','artifacts',copy(data.artifacts.fix));
    end
 
 %-------------------------------------------------------------------------%
@@ -192,7 +197,7 @@ displayEndOfDemoMessage('')
       delete(findobj(h,'Tag','LineScaleSlider'));
    end
 
-% %-------------------------------------------------------------------------%
+%-------------------------------------------------------------------------%
 %    function onExit( ~, ~ )
 %       % User wants to quit out of the application
 %       delete( gui.Window );
