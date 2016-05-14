@@ -91,7 +91,7 @@ gui.YData = [];
          set(gui.currenthandle,'XData',gui.XData + pos(1,1));
       end
       if any(d=='y')
-         set(gui.currenthandle,'YData',gui.YData + pos(1,1));
+         set(gui.currenthandle,'YData',gui.YData + pos(1,2));
       end
       drawnow;
    end
