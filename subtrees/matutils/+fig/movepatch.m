@@ -54,38 +54,40 @@ if nargin < 2
 end
 
 % Unpack gui object
-gui = get(gcf,'UserData');
+gui = get(ancestor(h,'Figure'),'UserData');
 
 % Make a fresh figure window
 set(h,'ButtonDownFcn',{@startmovit d f});
 
 % Store gui object
-set(gcf,'UserData',gui);
+set(ancestor(h,'Figure'),'UserData',gui);
 
 function startmovit(src,evnt,d,f)
+%keyboard
+hf = ancestor(src,'Figure');
 % Unpack gui object
-gui = get(gcf,'UserData');
+gui = get(hf,'UserData');
 
 % Remove mouse pointer
-set(gcf,'PointerShapeCData',nan(16,16));
-set(gcf,'Pointer','custom');
+set(hf,'PointerShapeCData',nan(16,16));
+set(hf,'Pointer','custom');
 
 % Set callbacks
 gui.currenthandle = src;
-thisfig = gcbf();
+thisfig = hf;%gcbf();
 set(thisfig,'WindowButtonMotionFcn',{@movit d});
 set(thisfig,'WindowButtonUpFcn',{@stopmovit f});
 
 % Store starting point of the object
-gui.startpoint = get(gca,'CurrentPoint');
+gui.startpoint = get(ancestor(src,'Axes'),'CurrentPoint');
 set(gui.currenthandle,'UserData',{get(gui.currenthandle,'XData') get(gui.currenthandle,'YData')});
 
 % Store gui object
-set(gcf,'UserData',gui);
+set(hf,'UserData',gui);
 
 function movit(src,evnt,d)
 % Unpack gui object
-gui = get(gcf,'UserData');
+gui = get(src,'UserData');
 
 try
    if isequal(gui.startpoint,[])
@@ -95,7 +97,7 @@ catch
 end
 
 % Do "smart" positioning of the object, relative to starting point...
-pos = get(gca,'CurrentPoint')-gui.startpoint;
+pos = get(ancestor(gui.currenthandle,'Axes'),'CurrentPoint')-gui.startpoint;
 XYData = get(gui.currenthandle,'UserData');
 
 if any(d=='x')
@@ -107,13 +109,13 @@ end
 drawnow;
 
 % Store gui object
-set(gcf,'UserData',gui);
+set(src,'UserData',gui);
 
 function stopmovit(src,evnt,f)
 % Clean up the evidence ...
 thisfig = gcbf();
-gui = get(gcf,'UserData');
-set(gcf,'Pointer','arrow');
+gui = get(thisfig,'UserData');
+set(thisfig,'Pointer','arrow');
 set(thisfig,'WindowButtonUpFcn','');
 set(thisfig,'WindowButtonMotionFcn','');
 drawnow;
@@ -121,4 +123,4 @@ set(gui.currenthandle,'UserData',[],'ButtonDownFcn',[]);
 if ~isempty(f)
    feval(f);
 end
-set(gcf,'UserData',[]);
+set(thisfig,'UserData',[]);
