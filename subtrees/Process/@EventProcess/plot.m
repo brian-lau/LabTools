@@ -67,6 +67,7 @@ function varargout = plot(self,varargin)
    p.addParameter('alpha',0.2,@isnumeric);
    p.addParameter('stagger',false,@(x) isnumeric(x) || islogical(x) );
    p.addParameter('overlap',1,@(x) isnumeric(x) || islogical(x) );
+   p.addParameter('patchcallback','');
    p.parse(varargin{:});
    par = p.Results;
 
@@ -87,6 +88,7 @@ function varargout = plot(self,varargin)
    gui.top = par.top;
    gui.overlap = par.overlap;
    gui.stagger = par.stagger;
+   gui.patchcallback = par.patchcallback;
    
    if numel(self) > 1
       ah = findobj(h.Parent,'Tag','ArraySlider');
@@ -220,7 +222,7 @@ function refreshPlot(obj,h,id)
          end
          ph(i) = fill([left left right right],topbottom,...
             color,'FaceAlpha',gui.alpha,'EdgeColor','none','Parent',h);
-         set(ph(i),'UserData',values(i).name,'Tag',id);
+         set(ph(i),'UserData',values(i).name,'Tag',id,'ButtonDownFcn',gui.patchcallback);
          if values(i).duration == 0
             ph(i).EdgeColor = color;
          end
@@ -248,10 +250,10 @@ function refreshPlot(obj,h,id)
    %if newdraw
       delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
       eventMenu = uicontextmenu('Parent',hf,'Callback',@patchHittest);
-      uimenu('Parent',eventMenu,'Label','View properties','Callback',{@editEvent obj(ind1)});
       uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj(ind1) h});
       uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj(ind1) h});
       uimenu('Parent',eventMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
+      uimenu('Parent',eventMenu,'Label','View properties','Callback',{@editEvent obj(ind1)});
       set(eventMenu,'Tag',id);
       set(ph,'uicontextmenu',eventMenu);
    %end
@@ -321,6 +323,11 @@ function addEvent(~,~,obj,h,id,eventType)
    
    function keypressEvent(~,~)
       name = inputdlg('Event name:','Event name');
+      if isempty(name) % Cancel or no name given
+         delete(d);
+         g.WindowKeyPressFcn = orig;
+         return;
+      end
       event = metadata.event.(eventType)('name',metadata.Label('name',name{1}));
       if d.xPoints(1) <= d.xPoints(2)
          event.tStart = d.xPoints(1);
