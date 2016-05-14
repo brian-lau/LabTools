@@ -129,7 +129,7 @@ function varargout = plot(self,varargin)
    % Create top-level menu for Events
    menu = uicontextmenu('Tag',gui.id,'Parent',hf);
    topmenu = uimenu('Parent',menu,'Label','Add event');
-   validEventTypes = {'Generic' 'Artifact' 'Stimulus' 'Response'};
+   validEventTypes = {'Artifact' 'Stimulus' 'Response' 'Generic'};
    for i = 1:numel(validEventTypes)
       uimenu('Parent',topmenu,'Label',validEventTypes{i},...
          'Callback',{@addEvent self h gui.id validEventTypes{i}});
@@ -242,17 +242,19 @@ function refreshPlot(obj,h,id)
       end
    end
       
+   hf = ancestor(h,'Figure');
+
    % Attach menus
-   if newdraw
+   %if newdraw
       delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
-      eventMenu = uicontextmenu();
-      m1 = uimenu('Parent',eventMenu,'Label','View properties','Callback',{@editEvent obj(ind1)});
-      m2 = uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj(ind1) h});
-      m3 = uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj(ind1) h});
-      m4 = uimenu('Parent',eventMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
+      eventMenu = uicontextmenu('Parent',hf,'Callback',@patchHittest);
+      uimenu('Parent',eventMenu,'Label','View properties','Callback',{@editEvent obj(ind1)});
+      uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj(ind1) h});
+      uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj(ind1) h});
+      uimenu('Parent',eventMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
       set(eventMenu,'Tag',id);
       set(ph,'uicontextmenu',eventMenu);
-   end
+   %end
    
    % Refresh labels
    if newdraw
@@ -280,7 +282,7 @@ function refreshPlot(obj,h,id)
             'FontAngle','italic','Color',color,'Parent',h);
          set(eText,'UserData',values(i).name,'Tag',id);
       end
-      axis tight;
+      axis(h,'tight');
    else
       th = findobj(h,'Tag',id,'-and','Type','Text');
       th = th(ind);
@@ -312,7 +314,7 @@ function addEvent(~,~,obj,h,id,eventType)
       ind1 = 1;
    end
    
-   d = dragRect('xx');
+   d = dragRect('xx',[],h);
    g = ancestor(h,'Figure');
    orig = g.WindowKeyPressFcn;
    g.WindowKeyPressFcn = {@keypressEvent};
@@ -337,6 +339,7 @@ function addEvent(~,~,obj,h,id,eventType)
             event.labels = labels(s);
          end
       end
+      
       obj(ind1).insert(event);
       refreshPlot(obj,h,id);
       delete(d);
@@ -345,8 +348,8 @@ function addEvent(~,~,obj,h,id,eventType)
 
 end
 
-function editEvent(~,~,obj)
-   ph = gco;
+function editEvent(src,~,obj)
+   ph = src.Parent.UserData;
    ind = [obj.values{1}.name] == ph.UserData;
    label = ph.UserData;
    event = obj.values{1}(ind);	
@@ -355,8 +358,8 @@ function editEvent(~,~,obj)
    warning('ON','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
 end
 
-function moveEvent(~,~,obj,h)
-   ph = gco;
+function moveEvent(src,~,obj,h)
+   ph = src.Parent.UserData;
    ind = [obj.values{1}.name] == ph.UserData;
    label = ph.UserData;
    event = obj.values{1}(ind);
@@ -365,7 +368,7 @@ function moveEvent(~,~,obj,h)
    ind2 = [textLabel.UserData] == label;
    textLabel(~ind2) = [];
    
-   setptr(gcf,'hand');
+   setptr(ancestor(h,'Figure'),'hand');
    fig.movepatch(ph,'x',@mouseupEvent);
 
    function mouseupEvent(~,~)
@@ -383,15 +386,15 @@ function moveEvent(~,~,obj,h)
    end
 end
 
-function deleteEvent(~,~,obj,h)
-   ph = gco;
+function deleteEvent(src,~,obj,h)
+   ph = src.Parent.UserData;
    obj.remove(ph.Vertices(1,1));
    g = findobj(h,'UserData',ph.UserData);
    delete(g);
 end
 
-function pickColor(~,~,obj,h)
-   ph = gco;
+function pickColor(src,~,obj,h)
+   ph = src.Parent.UserData;
    event = find(obj,'eventProp','name','eventVal',ph.UserData);
    
    try
@@ -418,4 +421,8 @@ function pickColor(~,~,obj,h)
    
    textLabel = findobj(h,'UserData',ph.UserData,'-and','Type','Text');
    textLabel.Color = ph.FaceColor;
+end
+
+function patchHittest(src,~)
+   src.UserData = hittest(ancestor(src,'figure'));
 end

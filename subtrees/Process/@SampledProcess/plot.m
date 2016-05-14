@@ -83,7 +83,8 @@ function varargout = plot(self,varargin)
             'Units','norm','Position',[0.01 0.005 .2 .04],...
             'Parent',h.Parent,'Tag','ArraySlider');
          gui.arraySliderTxt = uicontrol('Style','text','String','Element 1/',...
-            'HorizontalAlignment','left','Units','norm','Position',[.22 .005 .2 .04]);
+            'HorizontalAlignment','left','Parent',h.Parent,...
+            'Units','norm','Position',[.22 .005 .2 .04],'Tag','ArraySliderTxt');
          % Use cellfun in the callback to allow adding multiple callbacks later
          set(gui.arraySlider,'Callback',...
             {@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self h gui.id}} } );
@@ -271,15 +272,17 @@ function refreshPlot(obj,h,id)
    hf = ancestor(h,'Figure');
    
    % Attach menus
-   delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
-   lineMenu = uicontextmenu('Parent',hf);
-   uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj(ind1) 0});
-   uimenu(lineMenu,'Label','Edit quality','Callback',{@setQuality obj(ind1) NaN});
-   uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
-   uimenu(lineMenu,'Label','Edit label','Callback',{@editLabel obj(ind1) h});
-   set(lineMenu,'Tag',id);
+   %if newdraw
+      delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
+      lineMenu = uicontextmenu('Parent',hf,'Callback',@lineHittest);
+      uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj(ind1) 0});
+      uimenu(lineMenu,'Label','Edit quality','Callback',{@setQuality obj(ind1) NaN});
+      uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
+      uimenu(lineMenu,'Label','Edit label','Callback',{@editLabel obj(ind1) h});
+      set(lineMenu,'Tag',id);
+      set(lh,'uicontextmenu',lineMenu);
+   %end
    
-   set(lh,'uicontextmenu',lineMenu);
    
    % Refresh labels
    if newdraw
@@ -305,11 +308,11 @@ function refreshPlot(obj,h,id)
    
    if isempty(hf.KeyPressFcn)%isempty(h.Parent.KeyPressFcn) % Zoom is not active
       rh = findobj(h.Parent,'Tag','RangeSlider');
-      if ~rh.UserData.Enabled
+      %if ~rh.UserData.Enabled
          h.XLim(1) = t(1);
          h.XLim(2) = t(end);
          rh.UserData.Enabled = true;
-      end
+      %end
       h.YLim(1) = sf(1)-abs(min(min(values)));
       h.YLim(2) = sf(end)+max(max(values));
    end
@@ -323,14 +326,14 @@ function refreshPlot(obj,h,id)
       sprintf('%1.2f (3 SD)',3*sd)});
 end
 
-function setQuality(~,~,obj,quality)
-   lh = gco;
+function setQuality(src,~,obj,quality)
+   lh = src.Parent.UserData;%gco;
    label = lh.UserData;
    ind = obj.labels == label;
    if isnan(quality)
       mouse = get(0,'PointerLocation');
       d = dialog('Position',[mouse 200 150],'Name','Set quality');
-      uicontrol(d,'Style','edit','Callback',{@txtcallback obj},...
+      uicontrol(d,'Style','edit','Callback',{@txtcallback obj src},...
          'String',num2str(obj.quality(ind)),'Position',[35 60 130 20]);
       uicontrol(d,'Style','text','Position',[35 80 130 40],...
          'String',{'Enter numeric value for ' label.name});
@@ -349,17 +352,17 @@ function setQuality(~,~,obj,quality)
    end
 end
 
-function txtcallback(data,~,obj)
+function txtcallback(data,~,obj,src)
    h = findobj(data.Parent,'Style','edit');
    
    quality = str2double(h.String);
    delete(h.Parent);
    
-   setQuality([],[],obj,quality);
+   setQuality(src,[],obj,quality);
 end
 
-function pickColor(~,~,obj,h)
-   lh = gco;
+function pickColor(src,~,obj,h)
+   lh = src.Parent.UserData;%gco;
    label = lh.UserData;
    ind = obj.labels == label;
    
@@ -388,9 +391,13 @@ function pickColor(~,~,obj,h)
    th.Color = lh.Color;
 end
 
-function editLabel(~,~,obj,h)
-   lh = gco;
+function editLabel(src,~,obj,h)
+   lh = src.Parent.UserData;%gco;
    label = lh.UserData;
    %TODO
    disp('Not Finished');
+end
+
+function lineHittest(src,~)
+   src.UserData = hittest(ancestor(src,'figure'));
 end
