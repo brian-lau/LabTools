@@ -32,6 +32,7 @@ displayEndOfDemoMessage('')
       selection = [];
       
       data = struct( ...
+         'Directory',pwd, ...
          'Files', files, ...
          'Selection', selection );
    end % createData
@@ -78,7 +79,7 @@ displayEndOfDemoMessage('')
          'Value', data.Selection, ...
          'Callback', @onListSelection);
       gui.VariableList = uicontrol( 'Style', 'list', ...
-         'BackgroundColor', 'w', ...
+         'BackgroundColor', 'w', 'Min', 0, 'Max', 10, 'Value', [], ...
          'Parent', controlLayout);
       gui.AnnotateButton = uicontrol( 'Style', 'PushButton', ...
          'Parent', controlLayout, ...
@@ -102,31 +103,10 @@ displayEndOfDemoMessage('')
    end % createInterface
 
 %-------------------------------------------------------------------------%
-   function updateInterface()
-      % Update various parts of the interface in response to the demo
-      % being changed.
-      if data.Selection
-         % Update the list and menu to show the current demo
-         set( gui.ListBox, 'Value', data.Selection );
-         % Update the help button label
-         demoName = data.Files{ data.Selection };
-         %      set( gui.AnnotateButton, 'String', ['Help for ',demoName] );
-         % Update the view panel title
-         set( gui.ViewPanel, 'Title', sprintf( 'Viewing: %s', demoName ) );
-         % Untick all menus
-         menus = get( gui.ViewMenu, 'Children' );
-         set( menus, 'Checked', 'off' );
-         % Use the name to work out which menu item should be ticked
-         whichMenu = strcmpi( demoName, get( menus, 'Label' ) );
-         set( menus(whichMenu), 'Checked', 'on' );
-      end
-   end % updateInterface
-
-%-------------------------------------------------------------------------%
    function onListSelection( src, ~ )
       % Blank variable listing
       gui.VariableList.String = '';
-      
+      gui.ViewPanel.Title = '';
       clearAxes();
       
       oldpointer = get(gui.Window, 'pointer');
@@ -161,25 +141,47 @@ displayEndOfDemoMessage('')
       set(gui.Window, 'pointer',oldpointer);
       
       data.data = s.data;
-      if isfield(data,'artifacts') && ~isempty(data.artifacts)
-         data.artifacts = annotate(s.data,gui.ViewAxes,s.artifacts);
+      
+      if isfield(s,'artifacts')
+         data.artifacts = s.artifacts;
+      end
+      
+      if ~isempty(data.artifacts)
+         data.artifacts = annotate(s.data,gui.ViewAxes,data.artifacts);
       else
          data.artifacts = annotate(s.data,gui.ViewAxes);
       end
+      
+      gui.ViewPanel.Title = file;
    end % onAnnotate
 
 %-------------------------------------------------------------------------%
    function onExport( src, ~ )
-      %s = copy(data.data);
-      %artifacts = copy(data.artifacts.fix);
       assignin('base','data',copy(data.data));
       assignin('base','artifacts',copy(data.artifacts.fix));
    end
 
 %-------------------------------------------------------------------------%
    function onSave( src, ~ )
-      keyboard
+      filename = data.Files{data.Selection};
+      [filename, pathname] = uiputfile('*.mat',...
+         'Save as',filename);
+      savestruct.data = copy(data.data);
+      savestruct.artifacts = copy(data.artifacts.fix);
+      save(fullfile(pathname,filename),'-struct','savestruct');
       
+      updateFilelist();
+   end
+
+   function updateFilelist()
+      filename = data.Files{data.Selection};
+      d = dir('*.mat');
+      data.Files = {d.name}';
+      ind = strcmp(data.Files,filename);
+      data.Selection = find(ind);    
+      
+      gui.ListBox.String = data.Files(:);
+      gui.ListBox.Value = data.Selection;
    end
 
 %-------------------------------------------------------------------------%

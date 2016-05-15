@@ -292,7 +292,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       % Visualization
       h = plot(self,varargin)
       % plotTrajectory
-      ep = annotate(self,ep)
+      ep = annotate(self,h,ep)
 
       function S = saveobj(self)
          if ~self.serializeOnSave
