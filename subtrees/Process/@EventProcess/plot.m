@@ -280,9 +280,11 @@ function refreshPlot(obj,h,id)
          end
          
          left = values(i).time(1);
-         eText = text(left,top2,name,'VerticalAlignment','bottom',...
-            'FontAngle','italic','Color',color,'Parent',h);
-         set(eText,'UserData',values(i).name,'Tag',id);
+         if ~isempty(name)
+            eText = text(left,top2,name,'VerticalAlignment','bottom',...
+               'FontAngle','italic','Color',color,'Parent',h);
+            set(eText,'UserData',values(i).name,'Tag',id);
+         end
       end
       axis(h,'tight');
    else
