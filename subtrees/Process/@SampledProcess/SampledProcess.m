@@ -287,6 +287,7 @@ classdef(CaseInsensitiveProperties) SampledProcess < Process
       % xcov
       % xcorr
       obj = filterBank(self,h,d)
+      obj = detect(self,threshold)
 
       
       % Visualization

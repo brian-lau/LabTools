@@ -1,29 +1,9 @@
 function Annotate()
-%demoBrowser: an example of using layouts to build a user interface
-%
-%   demoBrowser() opens a simple GUI that allows several of MATLAB's
-%   built-in demos to be viewed. It aims to demonstrate how multiple
-%   layouts can be used to create a good-looking user interface that
-%   retains the correct proportions when resized. It also shows how to
-%   hook-up callbacks to interpret user interaction.
-%
-%   See also: <a href="matlab:doc Layouts">Layouts</a>
-
-%   Copyright 2010-2013 The MathWorks, Inc.
-
 % Data is shared between all child functions by declaring the variables
 % here (they become global to the function). We keep things tidy by putting
-% all GUI stuff in one structure and all data stuff in another. As the app
-% grows, we might consider making these objects rather than structures.
+% all GUI stuff in one structure and all data stuff in another. 
 data = createData();
 gui = createInterface( data.Files );
-
-% % Now update the GUI with the current data
-% updateInterface();
-% redrawDemo();
-
-% Explicitly call the demo display so that it gets included if we deploy
-displayEndOfDemoMessage('')
 
 %-------------------------------------------------------------------------%
    function data = createData()
