@@ -399,7 +399,12 @@ function deleteEvent(src,~,obj,h)
    ph = src.Parent.UserData;
    obj.remove(ph.Vertices(1,1));
    g = findobj(h,'UserData',ph.UserData);
-   delete(g);
+   labels = get(g,'UserData');
+   if iscell(labels)
+      labels = [labels{:}];
+   end
+   ind = labels == ph.UserData;
+   delete(g(ind));
 end
 
 function pickColor(src,~,obj,h)
