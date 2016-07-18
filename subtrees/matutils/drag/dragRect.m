@@ -51,6 +51,7 @@ classdef dragRect < handle & hgsetget
       hpatch
       %????
       model %='xx' | 'yy' |'xxyy'
+      h % Axis handle
    end
    properties(Dependent = true)
       xPoints %=[min_x, max_x]
@@ -69,42 +70,45 @@ classdef dragRect < handle & hgsetget
       EndDragCallback;
    end
    methods %public
-      function hobj = dragRect(model,xyPoints)
+      function hobj = dragRect(model,xyPoints,h)
          if ~exist('model','var');model='xxyy';end
          model =lower(model);
          hobj.model = model;
+         
+         hobj.h = h;
+         
          if ~(strcmp(model,'xx')||strcmp(model,'yy')||strcmp(model,'xxyy'))
             error('model????????');
          end
-         if exist('xyPoints','var')
+         if exist('xyPoints','var') && ~isempty(xyPoints)
             pos = xyPoints;
             x1pos = pos(1);
             x2pos = pos(2);
             y1pos = pos(3);
             y2pos = pos(4);
          else
-            pos = axis;
+            pos = [h.XLim h.YLim];%axis;
             x1pos = pos(1)+.25*(pos(2)-pos(1)); %x??1/4????
             x2pos = pos(1)+.75*(pos(2)-pos(1));
-            y1pos = pos(3)+.25*(pos(4)-pos(3));
-            y2pos = pos(3)+.75*(pos(4)-pos(3)); %y??3/4????
+            y1pos = pos(3);%pos(3)+.25*(pos(4)-pos(3));
+            y2pos = pos(4);%pos(3)+.75*(pos(4)-pos(3)); %y??3/4????
          end
          
          % patch ??????????
-         hobj.hpatch=patch([x1pos x2pos x2pos x1pos],[y1pos y1pos y2pos y2pos],... %'r'??????
+         hobj.hpatch=patch([x1pos x2pos x2pos x1pos],[y1pos y1pos y2pos y2pos],...
             'r','LineStyle','none',...
             'facecolor',hobj.color,...
-            'FaceAlpha',hobj.facealpha);
+            'FaceAlpha',hobj.facealpha,'Parent',h);
+         
          % line ??????????
-         hobj.hdragLines2x=[dragLine('x',x1pos),dragLine('x',x2pos)];
-         hobj.hdragLines2y=[dragLine('y',y1pos),dragLine('y',y2pos)];
+         hobj.hdragLines2x=[dragLine('x',x1pos,h),dragLine('x',x2pos,h)];
+         hobj.hdragLines2y=[dragLine('y',y1pos,h),dragLine('y',y2pos,h)];
          switch model
             case 'xx'
                set(hobj.hdragLines2y,'visible','off');
             case 'yy'
                set(hobj.hdragLines2x,'visible','off');
          end
-         
          
          % ????????drag
          set([hobj.hdragLines2x,hobj.hdragLines2y],'StartDragCallback',@hobj.FcnStartDrag);
@@ -119,8 +123,8 @@ classdef dragRect < handle & hgsetget
          
          %set this lines+patch all chang when axis-range chang.
          %axis([xlim ylim]); %have done when--dragLine
-         hobj.lh_reFreshLim=addlistener(gca,'MarkedClean',@hobj.reFreshLim);
-         notify(gca,'MarkedClean');
+         hobj.lh_reFreshLim=addlistener(h,'MarkedClean',@hobj.reFreshLim);
+         notify(h,'MarkedClean');
       end
       
       function delete(hobj)
@@ -138,7 +142,7 @@ classdef dragRect < handle & hgsetget
          set(hobj.hdragLines2x(1),'point',xlims(1));
          set(hobj.hdragLines2x(2),'point',xlims(2));
          set(hobj.hpatch,'xdata',xlims([1 2 2 1]));
-         notify(gca,'MarkedClean');
+         notify(hobj.h,'MarkedClean');
       end
       
       function set.yPoints(hobj,ylims)
@@ -146,7 +150,7 @@ classdef dragRect < handle & hgsetget
          set(hobj.hdragLines2y(1),'point',ylims(1));
          set(hobj.hdragLines2y(2),'point',ylims(2));
          set(hobj.hpatch,'ydata',ylims([1 1 2 2]));
-         notify(gca,'MarkedClean');
+         notify(hobj.h,'MarkedClean');
       end
       
       function set.xyPoints(hobj,xylims)
@@ -185,6 +189,7 @@ classdef dragRect < handle & hgsetget
          hobj.DragingCallback = hfcn;
          hobj.lh_Draging = addlistener(hobj,'evnt_Darging',hfcn);
       end
+      
       function set.EndDragCallback(hobj,hfcn)
          delete(hobj.lh_End);
          if isempty(hfcn);hfcn=@(x,y)[];end;
@@ -204,23 +209,17 @@ classdef dragRect < handle & hgsetget
          %             xpoint = pt(1,1);
          %             ypoint = pt(1,2);
          %????patch
-         lineobj = gco;
-         switch lineobj
-            case {hobj.hdragLines2x(1).hline,hobj.hdragLines2x(2).hline}
-               pos1=hobj.hdragLines2x(1).point;
-               pos2=hobj.hdragLines2x(2).point;
-               set(hobj.hpatch,'xdata',[pos1,pos2,pos2,pos1]);
-            case {hobj.hdragLines2y(1).hline,hobj.hdragLines2y(2).hline}
-               pos1=hobj.hdragLines2y(1).point;
-               pos2=hobj.hdragLines2y(2).point;
-               set(hobj.hpatch,'ydata',[pos1,pos1,pos2,pos2]);
-            otherwise
-               disp('????1')
-         end
+         pos1=hobj.hdragLines2x(1).point;
+         pos2=hobj.hdragLines2x(2).point;
+         set(hobj.hpatch,'xdata',[pos1,pos2,pos2,pos1]);
+         pos1=hobj.hdragLines2y(1).point;
+         pos2=hobj.hdragLines2y(2).point;
+         set(hobj.hpatch,'ydata',[pos1,pos1,pos2,pos2]);
          
          %??????????????????????DragingCallback
          notify(hobj,'evnt_Darging');
       end
+      
       function FcnEndDrag(hobj,varargin)
          %??????????????????????EndDragCallback
          notify(hobj,'evnt_EndDarg');
@@ -247,16 +246,15 @@ classdef dragRect < handle & hgsetget
          else
             error('''visible''should be ''on'' or ''off''');
          end
-         
       end
       
       %??????????
       function reFreshLim(hobj,varargin)
          switch hobj.model
             case 'xx'
-               hobj.yPoints = ylim;
+               hobj.yPoints = hobj.h.YLim;%ylim;
             case 'yy'
-               hobj.xPoints = xlim;
+               hobj.xPoints = hobj.h.XLim;%xlim;
          end
       end
    end

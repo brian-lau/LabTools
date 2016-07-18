@@ -1,6 +1,11 @@
-% Subtract mean
+% Detrend
+% flag - 'constant', 'linear', or scalar integer for polynomial fit
 
-function self = detrend(self)
+function self = detrend(self,flag)
+
+if nargin < 2
+   flag = 'constant';
+end
 
 for i = 1:numel(self)
    %-- Add link to function queue ----------
@@ -13,7 +18,6 @@ for i = 1:numel(self)
    %----------------------------------------
 
    for j = 1:size(self(i).window,1)
-      self(i).values{j} = bsxfun(@minus,self(i).values{j},...
-         nanmean(self(i).values{j}));
+      self(i).values{j} = detrend(self(i).values{j},flag);
    end
 end

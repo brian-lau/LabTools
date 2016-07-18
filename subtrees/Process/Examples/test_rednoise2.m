@@ -3,36 +3,31 @@
 clear all
 rng(23351);
 Fs = 2000;
-T = 4;
-step = 0;
+T = 30;
+step = 5;
 p = [0.01 0.05 0.1];
-N = 250;
+N = 10;
 
 for i = 1:N
    i
-   [s,f,Sx0] = fakeLFP2(Fs,T,0);
+   s1 = fakeLFP2(Fs,T,0);
+   s2 = fakeLFP2(Fs,T,0);
+   s2.labels = s1.labels;
+
+   S = Spectrum('input',[s1 s2],'step',step);
+   S.rawParams = struct('f',0:.25:500,'hbw',1,'detrend','linear');
+   S.baseParams = struct('method','broken-power','smoother','none');
    
-   if step > 0
-      win = [s.tStart:step:s.tEnd]';
-      win = [win,win+step];
-      win(win>s.tEnd) = s.tEnd;
-      s.window = win;
-   end
-   
-   S = Spectrum('input',s);
-   S.psdParams.f = 0:.25:500;
-   S.psdParams.quadratic = false; % inflates type 1 error (dof inaccurate)
-   S.psdParams.hbw = 1.5;
    S.run;
    
-   psdRaw{i} = S.psd.values{1};
-   psdWhite{i} = S.psdWhite.values{1};
+   psdRaw{i} = S.raw.values{1};
+   psdWhite{i} = S.detail.values{1};
    for j = 1:numel(p)
       [~,fa{i,j}] = S.threshold(p(j));
    end
 end
 
-f = S.psdParams.f;
+f = S.raw.f;
 nbins = 150;
 
 figure;
@@ -58,7 +53,7 @@ plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,4); hold on
 h = histogram(cat(2,fa{:,i}),edf,'Normalization','count');
-y = p(i)*numel(S.psdParams.f)*N/h.NumBins;
+y = p(i)*numel(S.rawParams.f)*N/h.NumBins;
 plot(get(gca,'xlim'),[y y],'--');
 plot(get(gca,'xlim'),[mean(h.Values) mean(h.Values)],'-');
 
@@ -69,7 +64,7 @@ plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,6); hold on
 h = histogram(cat(2,fa{:,i}),edf,'Normalization','count');
-y = p(i)*numel(S.psdParams.f)*N/h.NumBins;
+y = p(i)*numel(S.rawParams.f)*N/h.NumBins;
 plot(get(gca,'xlim'),[y y],'--');
 plot(get(gca,'xlim'),[mean(h.Values) mean(h.Values)],'-');
 
@@ -80,45 +75,6 @@ plot([p(i) p(i)],get(gca,'ylim'),'--');
 
 subplot(4,2,8); hold on
 h = histogram(cat(2,fa{:,i}),edf,'Normalization','count');
-y = p(i)*numel(S.psdParams.f)*N/h.NumBins;
+y = p(i)*numel(S.rawParams.f)*N/h.NumBins;
 plot(get(gca,'xlim'),[y y],'--');
 plot(get(gca,'xlim'),[mean(h.Values) mean(h.Values)],'-');
-
-
-% %%%
-% Fs = 2000;
-% T = 30;
-% [s,f,Sx0] = fakeLFP2(Fs,T,0);
-% 
-% step = 3;
-% win = [s.tStart:step:s.tEnd]';
-% win = [win,win+step];
-% win(win>s.tEnd) = s.tEnd;
-% s.window = win;
-% 
-% S = Spectrum('input',s);
-% S.psdParams.f = 0:.25:1000;
-% S.psdParams.hbw = 1;
-% S.run;
-S.plotDiagnostics;
-S.plot
-
-% 
-% hbw = 1;
-% x = s.values;
-% tic;[out,params] = sig.mtspectrum(x,'hbw',hbw,'f',0:.5:500,'Fs',Fs);toc
-% 
-% alpha = mean(params.k);
-% 
-% figure;
-% xx = 0:.1:50;
-% subplot(211); hold on
-% % Eq 33 Das et al.
-% n = histc(out.P*(7.5*2*alpha/mean(out.P)),[0:1:100]);
-% bar([0:1:100],n./sum(n),'histc');
-% hold on
-% plot(xx,chi2pdf(xx,2*alpha),'r');
-% axis([0 100 get(gca,'ylim')])
-% xlabel('PSD values')
-% title('Multitaper PSD is central \chi^2_\nu distributed, with \nu \approx 2\timesK')
-% %sum(out.P*(2*params.k/mean(out.P)) > 100)

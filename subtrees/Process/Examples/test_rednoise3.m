@@ -1,16 +1,22 @@
 clear sig;
 %h = 1.1:.1:2.9;
 h = 1.1:.05:1.9;
-x = Da;%s.values{1};%
-f = 0:.25:250;
+x = s.values{1};%Da;%
+f = 0:.25:500;
 q = 0;
 Fs = 1000;
-nw = 2.5;
+nw = 4;
 
 [px,params] = sig.mtspectrum(x,'thbw',nw,'f',f,'Fs',Fs,'quadratic',q);
 
-pmed = sig.irasa(x,f,q,Fs,2*nw);
+pmed = sig.irasa(x,f,q,Fs,nw);
 
+z = px.P./(1./px.f);
+pmed2 = smooth(z,57,'rlowess');
+
+ind = (f>4) & (f<35);
+opts = fitoptions('Method','SmoothingSpline','SmoothingParam',0.1);
+[pmed3, goodness, output] = fit(px.f,pmed,'smoothingspline',opts);
 
 figure;
 subplot(311);
@@ -27,7 +33,7 @@ plot(px.f,(px.P./pmed))
 %set(gca,'yscale','log');
 
 % %%
-Fs = 2000;
+Fs = 1000;
 T = 20;
-[s,f,Sx0] = fakeLFP2(Fs,T,1);
+[s,f,Sx0] = fakeLFP2(Fs,T,2);
 spec = amri_sig_fractal(s.values{1},Fs,'frange',[1 500]);

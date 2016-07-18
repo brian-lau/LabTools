@@ -15,7 +15,7 @@
 % INPUTS
 %     method - string, optional, default = 'multitaper'
 %              One of following indicating type of transformation
-%              'multitaper' - Thompson's multitaper method
+%              'multitaper' - Thomson's multitaper method
 %              'welch'      - Welch's averaged, modified periodogram
 %
 % OPTIONAL
@@ -38,7 +38,7 @@
 %               'adapt'  - Thomson's adaptive non-linear combination 
 %               'unity'  - linear combination with unity weights
 %               'eigen'  - linear combination with eigenvalue weights
-%     robust  - string, optional, default = 'huber'
+%     robust  - string, optional, default = 'mean'
 %               This applies only when SampledProcess has more than one
 %               window, in which case it specifies how the estimates in
 %               each window should be combined:
@@ -47,6 +47,7 @@
 %               'huber'    - robust location using Huber weights
 %               'logistic' - robust location using logistic weights
 %
+%     All remaining name/value pairs are passed down to sig.mtspectrum.
 %     See sig.mtspectrum for more options.
 %
 %     If method = 'welch'
@@ -71,11 +72,8 @@
 %     https://github.com/brian-lau/Process
 
 % TODO
-%  o confidence intervals
-%  o quadratic bias
+%  o confidence intervals, f-tests, how to return
 %  o circular welch
-%  o when section-averaging, do not recalculate tapers, this may requires
-%    sorting the windows
 function obj = psd(self,varargin)
 
 p = inputParser;
@@ -95,14 +93,13 @@ for i = 1:nObj
 end
 
 %%
-function tfr = psdEach(obj,par,params)
+function ps = psdEach(obj,par,params)
 
 Fs = obj.Fs;
 
 switch lower(par.method)
    case {'mtm' 'multitaper'}
       params.Fs = obj.Fs;
-      %params.f = f;
       
       [out,par] = sig.mtspectrum(obj.values,params);
       p = out.P;
@@ -132,9 +129,9 @@ switch lower(par.method)
 end
 
 P = zeros([1 size(p)]);
-P(1,:,:) = p;
+P(1,:,:) = p; % format for SpectralProcess
 
-tfr = SpectralProcess(P,...
+ps = SpectralProcess(P,...
    'f',f,...
    'params',params,...
    'tBlock',tBlock,...

@@ -53,72 +53,58 @@ if nargin < 2
    d = 'xy';
 end
 
-% Unpack gui object
-gui = get(gcf,'UserData');
-
-% Make a fresh figure window
+oldButtonDownFcn = get(h,'ButtonDownFcn');
+oldUserData = get(h,'UserData');
 set(h,'ButtonDownFcn',{@startmovit d f});
+thisfig = ancestor(h,'Figure');
+gui.currenthandle = h;
+gui.startpoint = [];
+gui.XData = [];
+gui.YData = [];
 
-% Store gui object
-set(gcf,'UserData',gui);
+   function startmovit(src,~,d,f)
+      % Remove mouse pointer
+      set(thisfig,'PointerShapeCData',nan(16,16));
+      set(thisfig,'Pointer','custom');
 
-function startmovit(src,evnt,d,f)
-% Unpack gui object
-gui = get(gcf,'UserData');
+      % Set callbacks
+      set(thisfig,'WindowButtonMotionFcn',{@movit d});
+      set(thisfig,'WindowButtonUpFcn',{@stopmovit f});
 
-% Remove mouse pointer
-set(gcf,'PointerShapeCData',nan(16,16));
-set(gcf,'Pointer','custom');
-
-% Set callbacks
-gui.currenthandle = src;
-thisfig = gcbf();
-set(thisfig,'WindowButtonMotionFcn',{@movit d});
-set(thisfig,'WindowButtonUpFcn',{@stopmovit f});
-
-% Store starting point of the object
-gui.startpoint = get(gca,'CurrentPoint');
-set(gui.currenthandle,'UserData',{get(gui.currenthandle,'XData') get(gui.currenthandle,'YData')});
-
-% Store gui object
-set(gcf,'UserData',gui);
-
-function movit(src,evnt,d)
-% Unpack gui object
-gui = get(gcf,'UserData');
-
-try
-   if isequal(gui.startpoint,[])
-      return
+      % Store starting point of the object
+      gui.startpoint = get(ancestor(src,'Axes'),'CurrentPoint');
+      gui.XData = get(gui.currenthandle,'XData');
+      gui.YData = get(gui.currenthandle,'YData');
    end
-catch
-end
 
-% Do "smart" positioning of the object, relative to starting point...
-pos = get(gca,'CurrentPoint')-gui.startpoint;
-XYData = get(gui.currenthandle,'UserData');
+   function movit(~,~,d)
+      try
+         if isequal(gui.startpoint,[])
+            return
+         end
+      catch
+      end
 
-if any(d=='x')
-   set(gui.currenthandle,'XData',XYData{1} + pos(1,1));
-end
-if any(d=='y')
-   set(gui.currenthandle,'YData',XYData{2} + pos(1,2));
-end
-drawnow;
+      % Do "smart" positioning of the object, relative to starting point...
+      pos = get(ancestor(gui.currenthandle,'Axes'),'CurrentPoint')-gui.startpoint;
+      if any(d=='x')
+         set(gui.currenthandle,'XData',gui.XData + pos(1,1));
+      end
+      if any(d=='y')
+         set(gui.currenthandle,'YData',gui.YData + pos(1,2));
+      end
+      drawnow;
+   end
 
-% Store gui object
-set(gcf,'UserData',gui);
-
-function stopmovit(src,evnt,f)
-% Clean up the evidence ...
-thisfig = gcbf();
-gui = get(gcf,'UserData');
-set(gcf,'Pointer','arrow');
-set(thisfig,'WindowButtonUpFcn','');
-set(thisfig,'WindowButtonMotionFcn','');
-drawnow;
-set(gui.currenthandle,'UserData',[],'ButtonDownFcn',[]);
-if ~isempty(f)
-   feval(f);
+   function stopmovit(~,~,f)
+      % Clean up the evidence ...
+      set(thisfig,'Pointer','arrow');
+      set(thisfig,'WindowButtonUpFcn','');
+      set(thisfig,'WindowButtonMotionFcn','');
+      drawnow;
+      set(gui.currenthandle,'UserData',oldUserData,'ButtonDownFcn',oldButtonDownFcn);
+      if ~isempty(f)
+         feval(f);
+      end
+   end
 end
-set(gcf,'UserData',[]);

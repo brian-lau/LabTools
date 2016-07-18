@@ -20,7 +20,7 @@ if nargin < 2
 end
 
 for i = 1:numel(self)
-   if nargin < 4
+   if nargin < 3
       % Insert same times & values from all
       labels = self(i).labels;
    end

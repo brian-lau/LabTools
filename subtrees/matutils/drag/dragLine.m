@@ -39,6 +39,7 @@ classdef dragLine < handle & hgsetget
    properties (SetAccess = protected)
       model; %'x'??'y'
       hline; %??????????
+      h
    end
    properties (SetObservable=true) %????????????
       color='r';
@@ -68,7 +69,7 @@ classdef dragLine < handle & hgsetget
    
    
    methods %????
-      function hobj= dragLine(model,point)
+      function hobj= dragLine(model,point,h)
          if ~exist('model','var');model='x';end
          model = lower(model);
          if ~strcmp(model,'x')
@@ -76,15 +77,17 @@ classdef dragLine < handle & hgsetget
          end
          hobj.model = lower(model);
          
+         hobj.h = h;
+
          %???? line
-         xylim = axis;
+         xylim = [h.XLim h.YLim];%axis;
          if hobj.model == 'x'
-            if ~exist('point','var');point=mean(xlim);end
+            if ~exist('point','var');point=mean(xylim(1:2));end
             xdata = point*[1 1];
             ydata = xylim(3:4);
             hobj.dargPointer='left'; %drag????????
          else
-            if ~exist('point','var');point=mean(ylim);end
+            if ~exist('point','var');point=mean(xylim(3:4));end
             xdata = xylim(1:2);
             ydata = point*[1 1];
             hobj.dargPointer='top';
@@ -92,7 +95,7 @@ classdef dragLine < handle & hgsetget
          hobj.point = point;
          hobj.hline = plot(xdata,ydata,...
             'color',hobj.color,...
-            'linewidth',hobj.linewidth);
+            'linewidth',hobj.linewidth,'Parent',h);
          set(hobj.hline,'ButtonDownFcn',@hobj.FcnStartDrag)
          
          %????????????????????
@@ -100,11 +103,12 @@ classdef dragLine < handle & hgsetget
          addlistener(hobj,'linewidth','PostSet',@hobj.SetInnerProp);
          addlistener(hobj,'visible','PostSet',@hobj.SetInnerProp);
          %set this line chang when axis-range chang.
-         axis([xlim ylim]); %must a fix axis
+
+         %axis([xlim ylim]); %must a fix axis
          if hobj.model == 'x'
-            hobj.lh_reFreshLim=addlistener(gca,'MarkedClean',@(x,y)set(hobj.hline,'ydata',ylim) );
+            hobj.lh_reFreshLim=addlistener(h,'MarkedClean',@(x,y)set(hobj.hline,'ydata',xylim(3:4)) );
          else
-            hobj.lh_reFreshLim=addlistener(gca,'MarkedClean',@(x,y)set(hobj.hline,'xdata',xlim) );
+            hobj.lh_reFreshLim=addlistener(h,'MarkedClean',@(x,y)set(hobj.hline,'xdata',xylim(1:2)) );
          end
       end
       
@@ -150,17 +154,18 @@ classdef dragLine < handle & hgsetget
    
    methods (Access = private) %????,drag?????????????????? drag????
       function FcnStartDrag(hobj,varargin)
+         g = ancestor(hobj.h,'Figure');
          %??????????????windowfcn
-         set(gcf,'pointer',hobj.dargPointer);
-         hobj.saveWindowFcn.Motion = get(gcf,'WindowButtonMotionFcn');
-         hobj.saveWindowFcn.Up = get(gcf,'WindowButtonUpFcn');
-         set(gcf,'WindowButtonMotionFcn',@hobj.FcnDraging);
-         set(gcf,'WindowButtonUpFcn',@hobj.FcnEndDrag);
+         set(g,'pointer',hobj.dargPointer);
+         hobj.saveWindowFcn.Motion = get(g,'WindowButtonMotionFcn');
+         hobj.saveWindowFcn.Up = get(g,'WindowButtonUpFcn');
+         set(g,'WindowButtonMotionFcn',@hobj.FcnDraging);
+         set(g,'WindowButtonUpFcn',@hobj.FcnEndDrag);
          %??????????????????????StartDragCallback
          notify(hobj,'evnt_StartDarg');
       end
       function FcnDraging(hobj,varargin)
-         pt = get(gca,'CurrentPoint');
+         pt = get(hobj.h,'CurrentPoint');
          xpoint = pt(1,1);
          ypoint = pt(1,2);
          switch hobj.model
@@ -175,10 +180,11 @@ classdef dragLine < handle & hgsetget
          notify(hobj,'evnt_Darging');
       end
       function FcnEndDrag(hobj,varargin)
+         g = ancestor(hobj.h,'Figure');
          %????????????windowfcn
-         set(gcf,'pointer','arrow');
-         set(gcf,'WindowButtonMotionFcn',hobj.saveWindowFcn.Motion);
-         set(gcf,'WindowButtonUpFcn',hobj.saveWindowFcn.Up);
+         set(g,'pointer','arrow');
+         set(g,'WindowButtonMotionFcn',hobj.saveWindowFcn.Motion);
+         set(g,'WindowButtonUpFcn',hobj.saveWindowFcn.Up);
          %??????????????????????EndDragCallback
          notify(hobj,'evnt_EndDarg');
       end

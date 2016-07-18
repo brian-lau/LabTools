@@ -2,6 +2,7 @@
 classdef Artifact < metadata.Event
    properties
       method
+      labels
    end
    methods
       function self = Artifact(varargin)

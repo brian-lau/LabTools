@@ -67,6 +67,7 @@ function varargout = plot(self,varargin)
    p.addParameter('alpha',0.2,@isnumeric);
    p.addParameter('stagger',false,@(x) isnumeric(x) || islogical(x) );
    p.addParameter('overlap',1,@(x) isnumeric(x) || islogical(x) );
+   p.addParameter('patchcallback','');
    p.parse(varargin{:});
    par = p.Results;
 
@@ -87,6 +88,7 @@ function varargout = plot(self,varargin)
    gui.top = par.top;
    gui.overlap = par.overlap;
    gui.stagger = par.stagger;
+   gui.patchcallback = par.patchcallback;
    
    if numel(self) > 1
       ah = findobj(h.Parent,'Tag','ArraySlider');
@@ -124,10 +126,12 @@ function varargout = plot(self,varargin)
       h.UserData = [h.UserData {gui}];
    end
    
+   hf = ancestor(h,'Figure');
+
    % Create top-level menu for Events
-   menu = uicontextmenu('Tag',gui.id);
+   menu = uicontextmenu('Tag',gui.id,'Parent',hf);
    topmenu = uimenu('Parent',menu,'Label','Add event');
-   validEventTypes = {'Generic' 'Artifact' 'Stimulus' 'Response'};
+   validEventTypes = {'Artifact' 'Stimulus' 'Response' 'Generic'};
    for i = 1:numel(validEventTypes)
       uimenu('Parent',topmenu,'Label',validEventTypes{i},...
          'Callback',{@addEvent self h gui.id validEventTypes{i}});
@@ -158,6 +162,11 @@ function refreshPlot(obj,h,id)
       return;
    end
    
+   if obj(ind1).count == 0
+      delete(findobj(h,'Tag',id,'-and','Type','Patch'));
+      delete(findobj(h,'Tag',id,'-and','Type','Text'));
+      return;
+   end
    values = obj(ind1).values{1};
    n = numel(values);
    
@@ -213,7 +222,7 @@ function refreshPlot(obj,h,id)
          end
          ph(i) = fill([left left right right],topbottom,...
             color,'FaceAlpha',gui.alpha,'EdgeColor','none','Parent',h);
-         set(ph(i),'UserData',values(i).name,'Tag',id);
+         set(ph(i),'UserData',values(i).name,'Tag',id,'ButtonDownFcn',gui.patchcallback);
          if values(i).duration == 0
             ph(i).EdgeColor = color;
          end
@@ -235,17 +244,19 @@ function refreshPlot(obj,h,id)
       end
    end
       
+   hf = ancestor(h,'Figure');
+
    % Attach menus
-   if newdraw
+   %if newdraw
       delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
-      eventMenu = uicontextmenu();
-      m1 = uimenu('Parent',eventMenu,'Label','View properties','Callback',{@editEvent obj(ind1)});
-      m2 = uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj(ind1) h});
-      m3 = uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj(ind1) h});
-      m4 = uimenu('Parent',eventMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
+      eventMenu = uicontextmenu('Parent',hf,'Callback',@patchHittest);
+      uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj(ind1) h});
+      uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj(ind1) h});
+      uimenu('Parent',eventMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
+      uimenu('Parent',eventMenu,'Label','View properties','Callback',{@editEvent obj(ind1)});
       set(eventMenu,'Tag',id);
       set(ph,'uicontextmenu',eventMenu);
-   end
+   %end
    
    % Refresh labels
    if newdraw
@@ -269,11 +280,13 @@ function refreshPlot(obj,h,id)
          end
          
          left = values(i).time(1);
-         eText = text(left,top2,name,'VerticalAlignment','bottom',...
-            'FontAngle','italic','Color',color,'Parent',h);
-         set(eText,'UserData',values(i).name,'Tag',id);
+         if ~isempty(name)
+            eText = text(left,top2,name,'VerticalAlignment','bottom',...
+               'FontAngle','italic','Color',color,'Parent',h);
+            set(eText,'UserData',values(i).name,'Tag',id);
+         end
       end
-      axis tight;
+      axis(h,'tight');
    else
       th = findobj(h,'Tag',id,'-and','Type','Text');
       th = th(ind);
@@ -305,13 +318,18 @@ function addEvent(~,~,obj,h,id,eventType)
       ind1 = 1;
    end
    
-   d = dragRect('xx');
+   d = dragRect('xx',[],h);
    g = ancestor(h,'Figure');
    orig = g.WindowKeyPressFcn;
    g.WindowKeyPressFcn = {@keypressEvent};
    
    function keypressEvent(~,~)
       name = inputdlg('Event name:','Event name');
+      if isempty(name) % Cancel or no name given
+         delete(d);
+         g.WindowKeyPressFcn = orig;
+         return;
+      end
       event = metadata.event.(eventType)('name',metadata.Label('name',name{1}));
       if d.xPoints(1) <= d.xPoints(2)
          event.tStart = d.xPoints(1);
@@ -320,15 +338,27 @@ function addEvent(~,~,obj,h,id,eventType)
          event.tStart = d.xPoints(2);
          event.tEnd = d.xPoints(1);
       end
+      if isa(event,'metadata.event.Artifact')
+         p = findobj(h,'Type','Text','-not','Tag',id);
+         labels = [p.UserData]; %fliplr([p.UserData]);
+         
+         [s,v] = listdlg('PromptString','Channels to which event applies',...
+            'SelectionMode','multiple','ListString',{labels.name});
+         if v
+            event.labels = labels(s);
+         end
+      end
+      
       obj(ind1).insert(event);
       refreshPlot(obj,h,id);
       delete(d);
       g.WindowKeyPressFcn = orig;
    end
+
 end
 
-function editEvent(~,~,obj)
-   ph = gco;
+function editEvent(src,~,obj)
+   ph = src.Parent.UserData;
    ind = [obj.values{1}.name] == ph.UserData;
    label = ph.UserData;
    event = obj.values{1}(ind);	
@@ -337,8 +367,8 @@ function editEvent(~,~,obj)
    warning('ON','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
 end
 
-function moveEvent(~,~,obj,h)
-   ph = gco;
+function moveEvent(src,~,obj,h)
+   ph = src.Parent.UserData;
    ind = [obj.values{1}.name] == ph.UserData;
    label = ph.UserData;
    event = obj.values{1}(ind);
@@ -347,7 +377,7 @@ function moveEvent(~,~,obj,h)
    ind2 = [textLabel.UserData] == label;
    textLabel(~ind2) = [];
    
-   setptr(gcf,'hand');
+   setptr(ancestor(h,'Figure'),'hand');
    fig.movepatch(ph,'x',@mouseupEvent);
 
    function mouseupEvent(~,~)
@@ -365,15 +395,20 @@ function moveEvent(~,~,obj,h)
    end
 end
 
-function deleteEvent(~,~,obj,h)
-   ph = gco;
+function deleteEvent(src,~,obj,h)
+   ph = src.Parent.UserData;
    obj.remove(ph.Vertices(1,1));
    g = findobj(h,'UserData',ph.UserData);
-   delete(g);
+   labels = get(g,'UserData');
+   if iscell(labels)
+      labels = [labels{:}];
+   end
+   ind = labels == ph.UserData;
+   delete(g(ind));
 end
 
-function pickColor(~,~,obj,h)
-   ph = gco;
+function pickColor(src,~,obj,h)
+   ph = src.Parent.UserData;
    event = find(obj,'eventProp','name','eventVal',ph.UserData);
    
    try
@@ -400,4 +435,8 @@ function pickColor(~,~,obj,h)
    
    textLabel = findobj(h,'UserData',ph.UserData,'-and','Type','Text');
    textLabel.Color = ph.FaceColor;
+end
+
+function patchHittest(src,~)
+   src.UserData = hittest(ancestor(src,'figure'));
 end

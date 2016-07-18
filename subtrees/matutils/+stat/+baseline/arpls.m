@@ -13,14 +13,18 @@ function z = arpls(y,lambda,ratio)
 if nargin < 3
    ratio = 1e-3;
 end
+
 if nargin < 2
    lambda = 1e7;
 end
+
+maxiter = 100;
 
 N = length(y);
 D = diff(speye(N),2);
 H = lambda*D'*D;
 w = ones(N,1);
+count = 1;
 while true
    W = spdiags(w,0,N,N);
    C = chol(W + H);
@@ -30,8 +34,9 @@ while true
    m = mean(dn);
    s = std(dn);
    wt = 1 ./ (1 + exp( 2*(d - (2*s - m))/s ) );
-   if norm(w-wt)/norm(w) < ratio
+   if (norm(w-wt)/norm(w) < ratio) || (count<maxiter)
       break;
    end
    w = wt;
+   count = count + 1;
 end

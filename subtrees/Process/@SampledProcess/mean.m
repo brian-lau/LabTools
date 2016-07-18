@@ -32,8 +32,8 @@
 % EXAMPLES
 %     l(1) = metadata.Label('name','01D');
 %     l(2) = metadata.Label('name','12D');
-%     s(1) = SampledProcess([ones(100,1), 2*ones(100,1)],'Fs',1000,'labels',l);
-%     s(2) = SampledProcess([ones(100,1), 2*ones(100,1)],'Fs',1000,'labels',l);
+%     s(1) = SampledProcess([ones(100,1), 2*ones(100,1)] + 0.1*randn(100,2),'Fs',1000,'labels',l);
+%     s(2) = SampledProcess([ones(100,1), 2*ones(100,1)] + 0.1*randn(100,2),'Fs',1000,'labels',l);
 %     m = s.mean();
 %     plot(m)
 % 
