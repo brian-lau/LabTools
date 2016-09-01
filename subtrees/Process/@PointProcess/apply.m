@@ -30,19 +30,19 @@
 %
 % EXAMPLE
 % % process with different rates in two different windows
-% spk = PointProcess('times',[rand(100,1) ; 1+rand(100,1)*10],'window',[0 1;1 10]);
-% spk.raster('style','line');
+% p = PointProcess('times',[rand(100,1) ; 1+rand(100,1)*10],'window',[0 1;1 10]);
+% p.plot('style','line');
 %
 % % Average inter-event interval in each window
-% spk.windowFun(@(x) mean(diff(x)))
+% p.windowFun(@(x) mean(diff(x)))
 %
 % % Maximum event time and index in each window
-% spk.windowFun(@(x) max(x))
+% p.windowFun(@(x) max(x))
 %
 % % Return the maximum and it's index (nOpt = 2). Since both
 % % outputs of MAX are scalar, the elements of RESULT are vectors,
 % % one element corresponding to each window of SPK
-% result = spk.windowFun(@(x) max(x),2)
+% result = p.windowFun(@(x) max(x),2)
 %
 % % Estimate a PSTH for each window. The outputs of GETPSTH are
 % % not scalar, so result is a nested cell array, the outer cell
