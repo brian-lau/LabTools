@@ -68,7 +68,8 @@ if nargin<4
 end
 
 if length(stringPassed)>=totalChars
-   warning('The string is already longer than the required pad value');     %#ok<WNTAG>
+   %warning('The string is already longer than the required pad value');     %#ok<WNTAG>
+   stringReturn = stringPassed(1:totalChars);
    return;
 end
 if size(fillChar,1) ~= 1 || size(fillChar,2) ~=1

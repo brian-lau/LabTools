@@ -85,7 +85,10 @@ switch lower(ext)
       if size(temp,2)>6
          temp = temp(:,((size(temp,2)-6)+1):end);
       end
-      labels = {'01D' '12D' '23D' '01G' '12G' '23G'};
+      tags = {'01D' '12D' '23D' '01G' '12G' '23G'};
+      for i = 1:numel(tags)
+         labels(i) = metadata.label.dbsDipole(tags{i});
+      end
       s = SampledProcess('values',temp,...
          'Fs',512,...
          'tStart',0,...
@@ -150,5 +153,9 @@ fix(s);
 
 params = par.Results;
 params.origFs = origFs;
-params.highpass = info(h,'long'); 
+if par.Results.Fpass
+   params.highpass = info(h,'long');
+else
+   params.highpass = [];
+end
 %s.info('preprocessParams') = preprocessParams;

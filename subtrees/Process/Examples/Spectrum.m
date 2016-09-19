@@ -128,8 +128,9 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                for j = 1:numel(artifacts(i).values)
                   if isa(artifacts(i).values{j},'metadata.event.Artifact')...
                         &&(numel(artifacts(i).values{j})~=0)
-                     if ~isempty(artifacts(i).values{j}.labels)
-                        [~,match] = intersect(labels,artifacts(i).values{j}.labels);
+                     temp = unique(cat(2,artifacts(i).values{j}(:).labels));
+                     if ~isempty(temp)
+                        [~,match] = intersect(labels,temp);
                      else
                         match = 1:numel(labels);
                      end
@@ -254,7 +255,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                
                % Don't fit DC component TODO : nor nyquist?
                % TODO, implement cutoff frequency or range to restrict fit
-               ind = f~=0;
+               ind = f>=1;%f~=0;
                fnz = f(ind);
                pnz = p(ind,:);
                
