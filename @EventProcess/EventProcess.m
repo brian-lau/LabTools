@@ -1,41 +1,68 @@
-% Event processes
+% Event process
 
 classdef(CaseInsensitiveProperties) EventProcess < PointProcess         
-   properties(SetAccess = private, Dependent = true, Transient = true)
-      duration  % # of events in window
-      isValidEvent
+   properties(SetAccess = private, Dependent)
+      duration           % duration of events in windows
+      isValidEvent       % start/end time of events in windows?
    end
    properties
-      nullEvent = metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN)
+      null = metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN)
    end
+   properties(SetAccess = protected, Hidden, Transient)
+      updateEventListener_@event.proplistener % listener
+   end   
+   %%
    methods
       %% Constructor
       function self = EventProcess(varargin)
+         if mod(nargin,2)==1 && ~isstruct(varargin{1})
+            assert(isa(varargin{1},'metadata.Event'),...
+               'EventProcess:Constructor:InputFormat',...
+                  'Single inputs must be passed in as array of metadata.Events');
+            varargin = [{'events'} varargin];
+         end
+         
          p = inputParser;
          p.KeepUnmatched= true;
          p.FunctionName = 'EventProcess constructor';
-         p.addParamValue('events',[],@(x) isa(x,'metadata.Event') );
+         p.addParameter('events',[],@(x) iscell(x) || isa(x,'metadata.Event') );
+         p.addParameter('times',[],@(x) isnumeric(x) || iscell(x));
          p.parse(varargin{:});
-
+         par = p.Results;
+         
+         % Pass through to PointProcess constructor
          args = p.Unmatched;
-         if ~isempty(p.Results.events)
-            if all(isa(p.Results.events,'metadata.Event'))
-               times = vertcat(p.Results.events.time);
-               args.times = times;
-               args.values = p.Results.events(:);               
+         
+         if ~isempty(par.events)
+            if ~isempty(par.times)
+               if iscell(par.times) && iscell(par.events)
+                  times = par.times;
+                  events = par.events;
+               elseif ismatrix(par.times) && ismatrix(par.events)
+                  times = {par.times};
+                  events = {par.events};
+               else
+                  error('mismatched');
+               end
+               assert(all(cellfun(@(x,y) all(size(x,1)==numel(y)),times,events,'uni',1)),...
+                  'EventProcess:constructor:InputValue',...
+                  'nonmatching dimensions for times and events');
             else
-               times = vertcat(p.Results.events.time);
-               times = [times , times+vertcat(p.Results.events.duration)];
-               args.times = times;
-               args.values = p.Results.events;
+               if iscell(par.events)
+                  assert(all(cellfun(@(x) isa(x,'metadata.Event'),par.events)));
+               end
+               events = {par.events};
+               times = cellfun(@(x) vertcat(x.time),events,'uni',0);
             end
+
+            args.times = times;
+            args.values = events;
+         else
+            args = {};
          end
-         self = self@PointProcess(args);
          
-         % Should be able to handle case where metadata is directly passed
-         % in
-         
-         % check that each event has start and end time
+         self = self@PointProcess(args);         
+         self.updateEventListener_ = addlistener(self,'values','PreGet',@self.updateEventTimes);
       end
       
       function duration = get.duration(self)
@@ -48,25 +75,50 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       end
       
       function bool = get.isValidEvent(self)
-         % start/end time of events fall within windows?
+         % start AND end time of events fall within windows?
          if isempty(self.times)
             bool = false;
          else
             bool = cellfun(@(times,win) (times(:,1)>=win(:,1))&(times(:,2)<=win(:,2)),...
-               self.times,{self.window},'uni',0);
+               self.times,mat2cell(self.window,ones(1,size(self.window,1)),2),'uni',0);
          end
       end
       
-      ev = find(self,varargin)
+      updateEventTimes(self,varargin)
+      
+      [ev,selection] = find(self,varargin)
+      
+      window = getWindow(self,varargin)
       
       % add event
-      % remove event
-      
+      self = insert(self,ev,labels)
+      % remove event (overload)
+      self = remove(self,times,labels)
+
       %% Display
       h = plot(self,varargin)
+      
+      function S = saveobj(self)
+         if ~self.serializeOnSave
+            S = self;
+         else
+            %disp('event process saveobj');
+            delete(self.updateEventListener_);
+            % Converting to bytestream prevents removal of transient/dependent
+            % properties, so we have to do this manually
+            warning('off','MATLAB:structOnObject');
+            S = getByteStreamFromArray(struct(self));
+            warning('on','MATLAB:structOnObject');
+         end
+      end
    end
+   
    methods(Access = protected)
-      applyOffset(self,offset)
+      applyWindow(self)
+   end
+   
+   methods(Static)
+      obj = loadobj(S)
    end
 end
 

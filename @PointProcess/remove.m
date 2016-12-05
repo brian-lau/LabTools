@@ -10,6 +10,9 @@
 % SEE ALSO
 % insert
 
+% TODO
+%   o 
+
 function self = remove(self,times,labels)
 
 if nargin < 2
@@ -23,19 +26,12 @@ for i = 1:numel(self)
    end
    indL = find(ismember(self(i).labels,labels));
    if any(indL)
-      indT = cellfun(@(x) ismember(x,times),self(i).times_(indL),'uni',0);
+      indT = cellfun(@(x) ismember(x(:,1),times),self(i).times(indL),'uni',0);
       for j = 1:numel(indL)
          if any(indT{j})
-            self(i).times_{indL(j)}(indT{j}) = [];
-            self(i).values_{indL(j)}(indT{j}) = [];
+            self(i).times{indL(j)}(indT{j},:) = [];
+            self(i).values{indL(j)}(indT{j}) = [];
          end
-      end
-      if any(cellfun(@(x) any(x),indT))
-         % Reset properties that depend on event times
-         oldOffset = self(i).offset;
-         self(i).offset = 'windowIsReset';
-         applyWindow(self(i));
-         self(i).offset = oldOffset;
       end
    end
 end

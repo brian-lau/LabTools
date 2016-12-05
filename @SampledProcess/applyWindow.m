@@ -1,20 +1,20 @@
-% Window original event times, setting
+% Window event times, setting
 %     times
 %     values
 %     index
 %     isValidWindow
 
 % TODO
-%   o Windows are inclusive on both sides, does this make sense???
+%   o Round windows to dt to avoid surprises due to numerical error?
 
 function applyWindow(self)
 
-if isempty(self.times_)
+if isempty(self.times)
    return;
 end
 
 nWindowReq = size(self.window,1);
-nWindowOrig = numel(self.values);
+nWindowOrig = numel(self.times);
 if nWindowOrig > 1
    assert(nWindowReq==nWindowOrig,'monkey!');
 end
@@ -22,6 +22,7 @@ end
 window = self.window;
 windowedTimes = cell(nWindowReq,1);
 windowedValues = cell(nWindowReq,1);
+
 for i = 1:nWindowReq
    minWin = min(window(i,1));
    maxWin = max(window(i,2));
@@ -30,36 +31,49 @@ for i = 1:nWindowReq
    else
       idx = i;
    end
+   
+   times = self.times{idx};
+   values = self.values{idx};
+   tStart = min(times);
+   tEnd = max(times);
+   dim = size(values);
+   dim = dim(2:end); % leading dim is always time
+
    % NaN-pad when window extends beyond process. This extension is
    % done to the nearest sample that fits in the window.
-   tStart = min(self.times{idx});
-   tEnd = max(self.times{idx});
-   dim = size(self.values{idx});
-   dim = dim(2:end); % leading dim is always time
-   if (minWin<tStart) && (maxWin>tEnd)
-      [pre,preV] = self.extendPre(tStart,minWin,1/self.Fs,dim);
-      [post,postV] = self.extendPost(tEnd,maxWin,1/self.Fs,dim);
-      times = [pre ; self.times{idx} ; post];
-      values = [preV ; self.values{idx} ; postV];
-   elseif (minWin<tStart) && (maxWin<=tEnd)
-      [pre,preV] = self.extendPre(tStart,minWin,1/self.Fs,dim);
-      times = [pre ; self.times{idx}];
-      values = [preV ; self.values{idx}];
-   elseif (minWin>=tStart) && (maxWin>tEnd)
-      [post,postV] = self.extendPost(tEnd,maxWin,1/self.Fs,dim);
-      times = [self.times{idx} ; post];
-      values = [self.values{idx} ; postV];
-   else
-      times = self.times{idx};
-      values = self.values{idx};
-   end
-   
+   [preT,preV] = extendPre(min(tStart,maxWin+self.dt),minWin,1/self.Fs,dim);
+   [postT,postV] = extendPost(tEnd,maxWin,1/self.Fs,dim);
+
    ind = (times>=window(i,1)) & (times<=window(i,2));
-   windowedTimes{i,1} = times(ind);
-   
-   % Index to allow expansion to arbitrary trailing dimensions
-   idx = repmat({':'},1,numel(dim));
-   windowedValues{i,1} = values(ind,idx{:});
+   if ~isempty(preT) && ~isempty(postT)
+      windowedTimes{i,1} = [preT ; times(ind) ; postT];
+      windowedValues{i,1} = [preV ; values(ind,:) ; postV];
+   elseif isempty(preT) && ~isempty(postT)
+      if sum(ind) ~= numel(ind)
+         windowedTimes{i,1} = [times(ind) ; postT];
+         windowedValues{i,1} = [values(ind,:) ; postV];
+      else
+         windowedTimes{i,1} = [times ; postT];
+         windowedValues{i,1} = [values ; postV];
+      end
+   elseif ~isempty(preT) && isempty(postT)
+      if sum(ind) ~= numel(ind)
+         windowedTimes{i,1} = [preT ; times(ind)];
+         windowedValues{i,1} = [preV ; values(ind,:)];
+      else
+         windowedTimes{i,1} = [preT ; times];
+         windowedValues{i,1} = [preV ; values];
+      end
+   else
+      if sum(ind) ~= numel(ind)
+         windowedTimes{i,1} = times(ind);
+         windowedValues{i,1} = values(ind,:);
+      else
+         windowedTimes{i,1} = times;
+         windowedValues{i,1} = values;
+      end
+   end
 end
+
 self.times = windowedTimes;
 self.values = windowedValues;
