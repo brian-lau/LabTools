@@ -14,6 +14,9 @@ classdef Msup < metadata.Trial
       stopTrial
       sync
       start
+      startStateTime  % relative time of start state
+      finishStateTime % relative time of finish state
+      triggerTime % absolute trigger time
       isCorrect
       isRepeat
       isSuccess

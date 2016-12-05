@@ -1,9 +1,9 @@
-classdef Response < metadata.Event
+classdef Generic < metadata.Event
    properties
-      modality
+      value
    end
    methods
-      function self = Response(varargin)
+      function self = Generic(varargin)
          self = self@metadata.Event(varargin{:});
          if nargin == 0
             return;
@@ -11,22 +11,21 @@ classdef Response < metadata.Event
          
          p = inputParser;
          p.KeepUnmatched= true;
-         p.FunctionName = 'Response constructor';
-         p.addParamValue('modality','',@ischar);
+         p.FunctionName = 'Generic constructor';
+         p.addParameter('value',[]);
          p.parse(varargin{:});
          par = p.Results;
          
-         self.modality = par.modality;
+         self.value = par.value;
          
          % Default color
          if ~any(strcmp(varargin,'color'))
             if isa(self.name,'metadata.Label')
                if all(self.name.color == [0.2 0.2 0.2])
-                  self.name.color = [55 126 184]/255;
+                  self.name.color = [255 255 1]/255;
                end
             end
          end
       end
    end
-
 end
