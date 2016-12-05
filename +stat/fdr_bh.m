@@ -71,7 +71,7 @@
 % Psychophysiology, 48(12) pp. 1711-1725, DOI: 10.1111/j.1469-8986.2011.01273.x 
 % http://www.cogsci.ucsd.edu/~dgroppe/PUBLICATIONS/mass_uni_preprint1.pdf
 %
-%
+
 % Author:
 % David M. Groppe
 % Kutaslab

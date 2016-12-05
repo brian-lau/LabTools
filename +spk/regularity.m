@@ -27,17 +27,13 @@
 %                            Poisson has lv = 1, regular < 1, bursty > 1
 %                    'lvr' : version of Lv that corrects for the refractoriness
 %                    'ir'  : difference of log ISIs
-%     outputFormat - 'struct' (default) returns structure with fields
-%                    corresponding to requested statistics
-%                    'array' returns an array with columns corresponding to
-%                    requested statistics
 %     dataFormat   - 'times' (default) data correspond to event times
 %                    'intervals' data correspond to interspike intervals
 %
 %     R - refractoriness constant, default = 0.005 seconds
 %
 %     OUTPUTS
-%     stats        - estimate
+%     stats        - estimates
 %
 %     REFERENCE
 %     Shinomoto S, Kim H, Shimokawa T, Matsuno N, Funahashi S, et al. (2009)
@@ -64,6 +60,8 @@
 
 function stats = regularity(data,varargin)
 
+import spk.*
+
 %% Parse inputs
 p = inputParser;
 p.KeepUnmatched= true;
@@ -74,19 +72,18 @@ p.addParamValue('dataFormat','times',@(x)any(strcmp(x,validDataFormats)));
 validMethods = {'cv' 'cv2' 'lv' 'lvr' 'ir'};
 p.addParamValue('method','lvr',@(x)all(ismember(x,validMethods)));
 validOutputFormats = {'array' 'struct'};
-p.addParamValue('outputFormat','array',@(x)any(strcmp(x,validOutputFormats)));
 p.parse(data,varargin{:});
 params = p.Unmatched; % passed through to the requested methods
 
 if iscell(data)
-   n = length(data);
-   keyboard
+   n = numel(data);
    for i = 1:n
-      
+      stats(i) = regularity(data{i},varargin{:});
    end
+   return;
 else   
    if strcmp(p.Results.dataFormat,'times')
-      isi = diff(sort(data(:)'));
+      isi = diff(sort(data(:)));
    else
       isi = data;
    end
@@ -117,12 +114,5 @@ else
          otherwise
       end
    end
-   
-   % Format output, if array requested, columns are in order of requested
-   % methods
-   
-   %if ~iscell(p.Results.method)
-   %   stats = getfield(stats,p.Results.method);
-   %end
 end
    

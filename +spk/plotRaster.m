@@ -131,7 +131,7 @@ p.addParamValue('window',[],@(x) validateattributes(eventTimes,{'numeric' 'cell'
 p.addParamValue('windowThenOffset',true,@islogical);
 p.addParamValue('rowIndex',true(nRows,nCols),@(x) islogical(x) && (size(x,1)==nRows) );
 % Specific for plotRaster
-p.addParamValue('handle',[],@isnumeric);
+p.addParamValue('handle',[],@(x) isnumeric(x) || ishandle(x));
 p.addParamValue('skipNaN',true,@islogical);
 p.addParamValue('grpColor',[],@(x)( ... 
    (ischar(x) && (size(x,1)==1) && (size(x,2)==1)) ||... % single color str
@@ -139,7 +139,7 @@ p.addParamValue('grpColor',[],@(x)( ...
    iscell(x)) ... % cell array of str or RGB values
    );
 validStyles = {'tick' 'line' 'marker'};
-p.addParamValue('style','marker',@(x)any(strcmp(x,validStyles)));
+p.addParamValue('style','tick',@(x)any(strcmp(x,validStyles)));
 p.addParamValue('markerStyle','.',@ischar);
 p.addParamValue('markerSize',3,@(x)(x>0)&&isnumeric(x));
 p.addParamValue('tickHeight',0.5,@(x)(x>0)&&(x<=0.5));
@@ -158,9 +158,8 @@ if isempty(p.Results.handle) || ~ishandle(p.Results.handle)
    h = subplot(1,1,1);
 else
    h = p.Results.handle;
-   axes(h);
 end
-set(h,'DrawMode','fast','NextPlot','replacechildren');
+%set(h,'DrawMode','fast','NextPlot','replacechildren');
 hold on;
 
 %% Pass through to windowTimes, any raster-specific parameters will be ignored
@@ -203,11 +202,7 @@ end
 
 %% Assign colors
 if isempty(p.Results.grpColor)
-   if exist('distinguishable_colors') == 2
-      c = distinguishable_colors(nGrps);
-   else
-      c = get(0,'DefaultAxesColorOrder');
-   end
+   c = get(0,'DefaultAxesColorOrder');
    count = 1;
    for i = grpInd
       col{i} = c(count,:);
@@ -231,33 +226,41 @@ elseif isnumeric(p.Results.grpColor)
 end
 
 %% Plot
+
 for i = grpInd % groups
-   for j = 1:nRows % rows
-      if ~(isempty(eventTimes{j,i}) || any(isnan(eventTimes{j,i})))
-         if strcmp(p.Results.style,'marker')
-            plot(eventTimes{j,i}(:) , yOffset*ones(size(eventTimes{j,i}(:))), ...
-               'color',col{i},'marker',p.Results.markerStyle,'linestyle','none', ...
-               'Markersize',p.Results.markerSize,plotParams);
-         else
-            line([eventTimes{j,i}(:) , eventTimes{j,i}(:)]', ...
-               [(yOffset*ones(size(eventTimes{j,i}(:))) - p.Results.tickHeight),...
-               (yOffset*ones(size(eventTimes{j,i}(:))) + p.Results.tickHeight)]',...
-               'color',col{i},'Linewidth',p.Results.tickWidth,plotParams);
-         end
-      end
-      if p.Results.skipNaN
-         if isempty(eventTimes{j,i})
-            yOffset = yOffset + 1;
-         elseif ~isnan(eventTimes{j,i})
-            yOffset = yOffset + 1;
-         end
+   x = [];
+   y = [];
+   count = 1;
+   for j = 1:nRows
+      spk = eventTimes{j,i}(:)';
+      nSpk = numel(spk);
+      N = NaN(1,nSpk);
+      
+      if isempty(spk)
+         count = count + 1;
+      elseif all(isnan(spk)) && p.Results.skipNaN
       else
-         yOffset = yOffset + 1;
+         if strcmp(p.Results.style,'tick')
+            tempx = [spk ; spk ; N];
+            tempy = [count*ones(1,nSpk)-p.Results.tickHeight ; count*ones(1,nSpk)+p.Results.tickHeight ; N];
+         else
+            tempx = spk;
+            tempy = count*ones(1,nSpk);
+         end
+         x = [x ; tempx(:)];
+         y = [y ; tempy(:)];
+         count = count + 1;
       end
    end
-   
+   if strcmp(p.Results.style,'tick')
+      line(x,yOffset+y-1,'color',col{i},'Linewidth',p.Results.tickWidth,'Parent',h,plotParams);
+   else
+      plot(x,yOffset+y-1,'color',col{i},'marker',p.Results.markerStyle,...
+         'linestyle','none','Markersize',p.Results.markerSize,'Parent',h,plotParams);
+   end
+   yOffset = yOffset + count - 1;
    if p.Results.grpBorder
-      plot(xLim, [yOffset yOffset] - p.Results.tickHeight,'-','color',col{i});
+      plot(xLim, [yOffset yOffset] - p.Results.tickHeight,'-','color',col{i},'Parent',h);
    end
 end
 

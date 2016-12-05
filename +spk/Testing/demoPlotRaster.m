@@ -16,37 +16,39 @@
 clear all
 close all
 
+import spk.*
+
 tic;
 % generate some fake spikes
-spk = cell(100,3);
+s = cell(100,3);
 shift = [0 -1.5 1.5];
 rate = [100 10 50];
-for i = 1:length(spk)
-   spk{i,1} = rand(rate(1),1) + shift(1);
-   spk{i,2} = rand(rate(2),1) + shift(2);
-   spk{i,3} = rand(rate(3),1) + shift(3);
+for i = 1:length(s)
+   s{i,1} = rand(rate(1),1) + shift(1);
+   s{i,2} = rand(rate(2),1) + shift(2);
+   s{i,3} = rand(rate(3),1) + shift(3);
 end
 
-%% Default is to plot each column of spk in a different color
-plotRaster(spk);
+%% Default is to plot each column of s in a different color
+plotRaster(s);
 
-%% Assign different colors to each spk
-plotRaster(spk,'grpColor',{'b' [0 .75 0] 'k'});
+%% Assign different colors to each s
+plotRaster(s,'grpColor',{'b' [0 .75 0] 'k'});
 
-%% Plotting a subset of the spks
-%plotRaster(spk,'colIndex',[1 3]);
-plotRaster(spk(:,[1 3]));
+%% Plotting a subset of the ss
+%plotRaster(s,'colIndex',[1 3]);
+plotRaster(s(:,[1 3]));
 
 %% No borders between groups
-plotRaster(spk,'grpBorder',false);
+plotRaster(s,'grpBorder',false);
 
 %% Plot subset, and force all the same color, two ways you can do this
-plotRaster(spk,'colIndex',[1 2],'grpColor','b');
-plotRaster(spk(:,[1 2]),'grpColor','b');
+plotRaster(s,'colIndex',[1 2],'grpColor','b');
+plotRaster(s(:,[1 2]),'grpColor','b');
 
 %% Axis limits default to include all spks, change this using 'window'
-plotRaster(spk,'window',[-3 3]);
-plotRaster(spk,'window',[-1 2]);
+plotRaster(s,'window',[-3 3]);
+plotRaster(s,'window',[-1 2]);
 
 %% Plot properties can be applied
 % Except for 'grpColor', these apply to all groups. 
@@ -54,43 +56,46 @@ plotRaster(spk,'window',[-1 2]);
 % repeatedly (see example below)
 %
 % again, two ways to do this
-plotRaster(spk,'colIndex',2,'grpColor','m','markerstyle','o','markerfacecolor','c','markersize',5);
-plotRaster(spk(:,2),'grpColor','m','markerstyle','o','markerfacecolor','c','markersize',5);
+plotRaster(s,'colIndex',2,'grpColor','m','markerstyle','o','markerfacecolor','c','markersize',5);
+plotRaster(s(:,2),'grpColor','m','markerstyle','o','markerfacecolor','c','markersize',5);
 % 
-plotRaster(spk,'grpColor',{'b' [0 .75 0] 'k'},'style','marker','markerstyle','x','markersize',5);
+plotRaster(s,'grpColor',{'b' [0 .75 0] 'k'},'style','marker','markerstyle','x','markersize',5);
 
-%% You can plot spikes as tick marks, but this is much slower
-plotRaster(spk,'style','line','grpColor',{'b' [0 .75 0] [0.7 0.7 0.7]});
+%% You can plot spikes as tick marks
+plotRaster(s,'style','line','grpColor',{'b' [0 .75 0] [0.7 0.7 0.7]});
 
 %% You can pass a plot handle 
 figure;
 h1 = subplot(311);
-plotRaster(spk(:,1),'handle',h1,'grpColor','r','window',[-3 3]);
+plotRaster(s(:,1),'handle',h1,'grpColor','r','window',[-3 3]);
 h2 = subplot(312);
-plotRaster(spk(:,2),'handle',h2,'grpColor','b','window',[-3 3]);
+plotRaster(s(:,2),'handle',h2,'grpColor','b','window',[-3 3]);
 h3 = subplot(313);
-plotRaster(spk(:,3),'handle',h3,'grpColor','g','window',[-3 3]);
+plotRaster(s(:,3),'handle',h3,'grpColor','g','window',[-3 3]);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clear all;
 close all;
+
+import spk.*
+
 % Frequently, we have spks from a single neuron that we want to either
 % 1) plot with some other relevant events, or
 % 2) plot separately for different groupings of trials 
 
 % Create some spk data for a single neuron truncated on some event
 nTrials = 1000;
-spk = cell(nTrials,1);
-for i = 1:length(spk)
+s = cell(nTrials,1);
+for i = 1:length(s)
    event(i,1) = max(0.5,10*rand);
-   spk{i,1} = rand(10,1)*event(i);
+   s{i,1} = rand(10,1)*event(i);
 end
 [event,I] = sort(event);
-spk = spk(I);
+s = s(I);
 
 %% Plotting events along with spikes 
 % Default raster, returning the figure handle
-h = plotRaster(spk);
+h = plotRaster(s);
 % We can plot some events that happen on each trial by passing the figure 
 % handle back to PLOTRASTER with different data. This works by just treating
 % the events as spks (hence the call to num2cell), with different plot styling
@@ -102,7 +107,7 @@ plotRaster(num2cell(event-.5),'handle',h,'markerStyle','v','markerSize',5,'grpCo
 % We can plot subsets of trials for a neuron by using the 'rowIndex' 
 % parameter to create different groups of trials
 ind = [event<5 , event>=5]; % boolean defining two groupings of the data
-h = plotRaster(spk,'rowIndex',ind);
+h = plotRaster(s,'rowIndex',ind);
 % Again, we can pass the figure handle back to RASTER to overlay different 
 % data on the same plot. Note that I turn off the grpBorder, or else the
 % original grpBorder will be plotted over by the second call.
@@ -111,7 +116,7 @@ plotRaster(num2cell(event),'rowIndex',ind,'handle',h,'markerStyle','s',...
 
 % Check that above works with explicit window
 ind = [event<5 , event>=5]; % boolean defining two groupings of the data
-h = plotRaster(spk,'rowIndex',ind,'window',[-1 5]);
+h = plotRaster(s,'rowIndex',ind,'window',[-1 5]);
 plotRaster(num2cell(event),'rowIndex',ind,'handle',h,'markerStyle','s',...
    'markerSize',10,'grpColor',{'c' 'm'},'grpBorder',false,'window',[-1 5]);
 % Note that another call without an explicit window will grow the xlimit to
@@ -126,20 +131,20 @@ plotRaster(num2cell(event-.5),'handle',h,'markerStyle','v','markerSize',5,'grpCo
 % Sometimes it's useful to build plots by calling PLOTRASTER repeatedly, 
 % for example, if RASTER is called within a loop 
 ind = event<5;
-[h,yOffset] = plotRaster(spk(ind),'grpColor','c');
+[h,yOffset] = plotRaster(s(ind),'grpColor','c');
 plotRaster(num2cell(event(ind)),'handle',h,'markerStyle','s','markerSize',10,'grpColor','c');
 ind = event>=5;
-plotRaster(spk(ind),'handle',h,'grpColor','m','yOffset',yOffset);
+plotRaster(s(ind),'handle',h,'grpColor','m','yOffset',yOffset);
 plotRaster(num2cell(event(ind)),'handle',h,'yOffset',yOffset,'markerStyle','s','markerSize',10,'grpColor','m');
 
 %% Check auto color cycling (will take awhile)
 % If spk has one column, it's possible to pass rowIndex with multiple
 % columns, in which case, each as treated as a separate group
-plotRaster(spk,'rowIndex',repmat(ind,1,10));
+plotRaster(s,'rowIndex',repmat(ind,1,10));
 
 % We can also transpose spk, since each column is treated as a separate
 % group. Pretend we have 1 trial for 200 neurons!
-plotRaster(spk(1:100)','grpBorder',false,'style','tick');
+plotRaster(s(1:100)','grpBorder',false,'style','tick');
 
 close all;
 
