@@ -10,7 +10,7 @@ classdef GridFlex < uix.Grid & uix.mixin.Flex
     %  See also: uix.HBoxFlex, uix.VBoxFlex, uix.Grid
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1260 $ $Date: 2016-02-25 00:37:28 +0000 (Thu, 25 Feb 2016) $
+    %  $Revision: 1426 $ $Date: 2016-11-16 07:12:06 +0000 (Wed, 16 Nov 2016) $
     
     properties( Access = public, Dependent, AbortSet )
         DividerMarkings % divider markings [on|off]
@@ -57,8 +57,14 @@ classdef GridFlex < uix.Grid & uix.mixin.Flex
             
             % Set properties
             if nargin > 0
-                uix.pvchk( varargin )
-                set( obj, varargin{:} )
+                try
+                    assert( rem( nargin, 2 ) == 0, 'uix:InvalidArgument', ...
+                        'Parameters and values must be provided in pairs.' )
+                    set( obj, varargin{:} )
+                catch e
+                    delete( obj )
+                    e.throwAsCaller()
+                end
             end
             
         end % constructor
@@ -92,7 +98,7 @@ classdef GridFlex < uix.Grid & uix.mixin.Flex
     
     methods( Access = protected )
         
-        function onMousePress( obj, ~, eventData )
+        function onMousePress( obj, source, eventData )
             %onMousePress  Handler for WindowMousePress events
             
             % Check whether mouse is over a divider
@@ -113,6 +119,9 @@ classdef GridFlex < uix.Grid & uix.mixin.Flex
             obj.ActiveDividerPosition = divider.Position;
             root = groot();
             obj.MousePressLocation = root.PointerLocation;
+            
+            % Make sure the pointer is appropriate
+            obj.updateMousePointer( source, eventData );
             
             % Activate divider
             frontDivider = obj.FrontDivider;
@@ -214,22 +223,7 @@ classdef GridFlex < uix.Grid & uix.mixin.Flex
             
             loc = obj.ActiveDivider;
             if loc == 0 % hovering, update pointer
-                oldPointer = obj.Pointer;
-                if any( obj.RowDividers.isMouseOver( eventData ) )
-                    newPointer = 'top';
-                elseif any( obj.ColumnDividers.isMouseOver( eventData ) )
-                    newPointer = 'left';
-                else
-                    newPointer = 'unset';
-                end
-                switch newPointer
-                    case oldPointer % no change
-                        % do nothing
-                    case 'unset' % change, unset
-                        obj.unsetPointer()
-                    otherwise % change, set
-                        obj.setPointer( source, newPointer )
-                end
+                obj.updateMousePointer( source, eventData );
             elseif loc > 0 % dragging row divider
                 root = groot();
                 delta = root.PointerLocation(2) - obj.MousePressLocation(2);
@@ -444,5 +438,30 @@ classdef GridFlex < uix.Grid & uix.mixin.Flex
         end % reparent
         
     end % template methods
+    
+    methods( Access = protected )
+        
+        function updateMousePointer ( obj, source, eventData  )
+            
+            oldPointer = obj.Pointer;
+            if any( obj.RowDividers.isMouseOver( eventData ) )
+                newPointer = 'top';
+            elseif any( obj.ColumnDividers.isMouseOver( eventData ) )
+                newPointer = 'left';
+            else
+                newPointer = 'unset';
+            end
+            switch newPointer
+                case oldPointer % no change
+                    % do nothing
+                case 'unset' % change, unset
+                    obj.unsetPointer()
+                otherwise % change, set
+                    obj.setPointer( source, newPointer )
+            end
+            
+        end % updateMousePointer
+        
+    end % helpers methods
     
 end % classdef

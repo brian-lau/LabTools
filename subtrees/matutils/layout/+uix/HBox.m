@@ -9,7 +9,7 @@ classdef HBox < uix.Box
     %  See also: uix.VBox, uix.Grid, uix.HButtonBox, uix.HBoxFlex
     
     %  Copyright 2009-2015 The MathWorks, Inc.
-    %  $Revision: 1262 $ $Date: 2016-02-25 01:13:37 +0000 (Thu, 25 Feb 2016) $
+    %  $Revision: 1426 $ $Date: 2016-11-16 07:12:06 +0000 (Wed, 16 Nov 2016) $
     
     properties( Access = public, Dependent, AbortSet )
         Widths % widths of contents, in pixels and/or weights
@@ -33,8 +33,14 @@ classdef HBox < uix.Box
             
             % Set properties
             if nargin > 0
-                uix.pvchk( varargin )
-                set( obj, varargin{:} )
+                try
+                    assert( rem( nargin, 2 ) == 0, 'uix:InvalidArgument', ...
+                        'Parameters and values must be provided in pairs.' )
+                    set( obj, varargin{:} )
+                catch e
+                    delete( obj )
+                    e.throwAsCaller()
+                end
             end
             
         end % constructor
@@ -134,22 +140,7 @@ classdef HBox < uix.Box
             % Set positions
             children = obj.Contents_;
             for ii = 1:numel( children )
-                child = children(ii);
-                child.Units = 'pixels';
-                if isa( child, 'matlab.graphics.axis.Axes' )
-                    switch child.ActivePositionProperty
-                        case 'position'
-                            child.Position = positions(ii,:);
-                        case 'outerposition'
-                            child.OuterPosition = positions(ii,:);
-                        otherwise
-                            error( 'uix:InvalidState', ...
-                                'Unknown value ''%s'' for property ''ActivePositionProperty'' of %s.', ...
-                                child.ActivePositionProperty, class( child ) )
-                    end
-                else
-                    child.Position = positions(ii,:);
-                end
+                uix.setPosition( children(ii), positions(ii,:), 'pixels' )
             end
             
         end % redraw
