@@ -105,7 +105,7 @@ end
 if par.Results.Fpass
    fprintf('Highpass filtering\n');
    try
-      load('/Users/brian/Documents/Code/Repos/LabAnalyses/FIR_highpass.mat');
+      load('/Users/brian.lau/Documents/Code/Repos/LabAnalyses/FIR_highpass.mat');
       i = Fs == s.Fs;
       j = Fpass == par.Results.Fpass;
       k = Fstop == par.Results.Fstop;
@@ -116,7 +116,7 @@ if par.Results.Fpass
       toc
    catch
       fprintf('\tBuilding filter anew\n');
-      %beep; keyboard
+      beep; %keyboard
       tic;
       [~,h,d] = highpass(s,'Fpass',par.Results.Fpass,'Fstop',par.Results.Fstop);
       toc

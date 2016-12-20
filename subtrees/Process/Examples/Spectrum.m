@@ -75,7 +75,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          switch baseParams.method
             case 'broken-power'
                if ~isfield(baseParams,'smoother')
-                  baseParams.smoother = 'rlowess';
+                  baseParams.smoother = 'rlowess'; % DEFAULT SMOOTHER
                end
                if isfield(baseParams,'beta0') && ~isempty(baseParams.beta0)
                   assert(isvector(baseParams.beta0) && (numel(baseParams.beta0)==5),...
@@ -213,7 +213,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.section();
          
          % Raw spectrum
-         if isfield(self.rawParams,'rubust')
+         if isfield(self.rawParams,'robust')
             locFlag = self.rawParams.robust;
          else
             locFlag = 'mean';
@@ -256,8 +256,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                % Don't fit DC component TODO : nor nyquist?
                % TODO, implement cutoff frequency or range to restrict fit
                ind = f>=1;%f~=0;
-               fnz = f(ind);
-               pnz = p(ind,:);
+               fnz = f(ind);   % restricted frequencies
+               pnz = p(ind,:); % restricted power
                
                beta = zeros(5,self.nChannels);
                basefit = zeros(size(p));
@@ -266,13 +266,15 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                for i = 1:self.nChannels
                   % Fit smoothly broken power-law using asymmetric error
                   fun = @(b) sum( asymwt(log(smbrokenpl(b,fnz)),log(pnz(:,i))) );
+                  %fun = @(b) sum( asymwt((smbrokenpl(b,fnz)),(pnz(:,i))) );
                   
                   if isempty(self.baseParams.beta0)
                      b0 = [1   1  0.5  1   30];   % initial conditions
+                     %b0 = [1   -1  5  5   5];   % initial conditions
                   else
                      b0 = self.baseParams.beta0;
                   end
-                  lb = [0   -5  0    0   0];      % lower bounds
+                  lb = [0   -5  0    0   5];      % lower bounds
                   ub = [inf  5  5    5   100];    % upper bounds
                   
                   opts = optimoptions('fmincon','MaxFunEvals',5000,...
