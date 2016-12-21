@@ -11,7 +11,8 @@
 % INPUTS
 %     x       - [samples x channels] matrix or cell array of such matrices
 %               Required input, must be real
-%               If cell array, number of channels must match
+%               If cell array, number of channels must match. Use this
+%               option to produce a single PSD for multiple data sections.
 % OPTIONAL
 %     hbw     - scalar (Hz), optional, default = thbw/T
 %               Half-bandwidth, spectral concentration [-hbw hbw]
@@ -136,7 +137,7 @@ function [output,params] = mtspectrum(x,varargin)
 
 p = inputParser;
 p.KeepUnmatched = true;
-p.FunctionName = 'sig.pmtm';
+p.FunctionName = 'sig.mtspectrum';
 p.addRequired('x');
 p.addParameter('thbw',[],@(x) isscalar(x));
 p.addParameter('hbw',[],@(x) isscalar(x));
@@ -226,7 +227,7 @@ end
 
 %% Start processing for individual sections
 % Estimate two-sided spectrum
-[S,dS,ddS,Fval,dof] = mtm_spectrum(par);
+[S,Yk,dS,ddS,Fval,A,dof] = mtm_spectrum(par);
 
 if isempty(par.f)
    nfft = par.nfft;
@@ -284,9 +285,41 @@ if par.Ftest
    else
       output.Fval = Fval;
    end
+   output.A = A;
    output.v1 = 2;
    output.v2 = 2*par.k - 2;
    output.pval = 1 - fcdf(output.Fval,output.v1,output.v2);
+   %p=0.05/N
+   %sig = finv(1-p,2,2*K-2); % F-distribution based 1-p% point
+   
+
+   f0 = [150 300];
+   % Will have to match f0 to closest in grid
+   
+   for i = 1:par.Nchan
+      for j = 1:numel(f0)
+         % Frequency index around line element to remove
+         ind = find((f>=(f0(j)-2*par.hbw)) & (f<=(f0(j)+2*par.hbw)));
+         % Relative frequency for transformed tapers
+         f2 = f(ind)-f0(j);
+         
+         % Fourier transform tapers on grid around line element
+         fstart = f2(1);
+         fstop = f2(end);
+         nfft2 = length(f2);
+         % Initial complex weight
+         a = exp(2i*pi*fstart/par.Fs);
+         % Relative complex weight
+         w = exp(2i*pi*(fstart-fstop)/((nfft2-1)*par.Fs));
+         H = czt(par.V,nfft2,w,a);
+         
+         % Subtract line component (currently uses unity weights!)
+         A0 = A(f==f0(j),i);
+         Pxx(ind,i) = mean( abs( Yk{i}(ind,:) - A0*H ).^2 ,2) ./ par.Fs;
+      end
+   end
+   
+   output.P_reshaped = Pxx;
 end
 
 if nargout == 2
@@ -390,201 +423,208 @@ end
       end
    end % END checkInputs()
 
-end % END pmtm
+end % END mtpsectrum
 
 %% Estimate MTM spectrum
-function [S,dS,ddS,Fval,dof] = mtm_spectrum(params)
+function [S,Yk,dS,ddS,Fval,A,dof] = mtm_spectrum(params)
 
-if any(strcmpi(params.detrend,{'constant' 'linear'}))
-   x = detrend(params.x,params.detrend);
-else
-   x = params.x;
-end
-nfft = params.nfft;
-V  = params.V;
-lambda  = params.lambda;
-Fs = params.Fs;
-
-N = size(x,1);
-Nchan = params.Nchan;
-k = length(lambda);
-dof = zeros(nfft,Nchan);
-
-if params.Ftest
-   Fval = zeros(nfft,Nchan);
-else
-   Fval = [];
-end
-
-% Precompute quantities that only depend on tapers
-if params.quadratic
-   % Interpolate transformed tapers to denser frequency grid in [-W W]
-   nfft2 = 8*2^nextpow2(nfft);
-   nxi = 79;
-   W = params.thbw/N;
-   dxi = (2.0*W)/(nxi-1);
-   xi = (-W:dxi:W);
-   if (mod(nfft2,2)==0)
-      fsamp = (-nfft2/2:nfft2/2-1)'/(nfft2);
+   if any(strcmpi(params.detrend,{'constant' 'linear'}))
+      x = detrend(params.x,params.detrend);
    else
-      fsamp = (-(nfft2-1)/2:(nfft2-1)/2)'/(nfft2-1);
+      x = params.x;
    end
-   
-   % Interpolated tapers in frequency-domain
-   ind = (fsamp>=2*xi(1)) & (fsamp<=2*xi(end));
-   Vk = fftshift(fft(V,nfft2),1);
-   Vj = interp1(fsamp(ind),Vk(ind,:),xi,'pchip');
-   Vj = bsxfun(@times,Vj,1./sqrt(lambda'));
-   clear Vk;
-   
-   % Interpolated eigenspectra
-   L = k*k;
-   m = 0;
-   Pk = zeros(L,numel(xi));
-   for j = 1:k
-      for k = 1:k
-         m = m + 1;
-         Pk(m,1:nxi) = conj(Vj(:,j)) .* (Vj(:,k));
-      end
-   end
-   Pk(:,[1 nxi]) = 0.5*Pk(:,[1 nxi]);
-   
-   % Chebyshev polynomial as the expansion basis
-   hk = [sum(Pk,2) , Pk*(xi/W)' , Pk*(2*((xi/W).^2) - 1)']*dxi;
-   
-   % Least squares solution
-   [Q,R] = qr(hk);
-   
-   % Covariance estimate
-   ri = R \ eye(L);
-   covb = real(ri*ri');
-   
-   dS = zeros(nfft, Nchan);
-   ddS = zeros(nfft, Nchan);
-else
-   dS = [];
-   ddS = [];
-end
+   nfft = params.nfft;
+   V  = params.V;
+   lambda  = params.lambda;
+   Fs = params.Fs;
 
-%% Loop over channels
-S = zeros(nfft, Nchan);
-for chan = 1:Nchan
-   % Tapered signal
-   xvk = bsxfun(@times,V(:,1:k),x(:,chan));
-   
-   % Fourier transform of tapered signal (eigencoefficients)
-   if isempty(params.f)
-      yk = fft(xvk,nfft);
-   else
-      % Compute at specified grid using chirp-z transform
-      % Initial complex weight
-      a = exp(2i*pi*params.fstart/Fs);
-      % Relative complex weight
-      w = exp(2i*pi*(params.fstart-params.fstop)/((params.npts-1)*Fs));
-      yk = czt(xvk,params.npts,w,a);      
-      %yk = spectralZoom(xvk,Fs,params.fstart,params.fstop,params.npts);
-   end
-   
-   % Spectral estimate for each taper
-   Sk = abs(yk).^2;
+   N = size(x,1);
+   Nchan = params.Nchan;
+   k = length(lambda);
+   dof = zeros(nfft,Nchan);
 
    if params.Ftest
-      % Thomson's (1982) harmonic F-test (eq. 13.10)
-      Uk0 = sum(V);
-      Uk0sq = sum(Uk0.^2);
-      ykUk0 = sum(bsxfun(@times,yk,Uk0),2);
-      u = bsxfun(@rdivide,ykUk0,Uk0sq);
-      ykhat = bsxfun(@times,u,Uk0);
-      
-      num = (k-1)*(abs(u).^2)*Uk0sq;
-      den = sum( abs(yk-ykhat).^2 ,2);
-      Fval(:,chan) = num./den;
+      Fval = zeros(nfft,Nchan);
+      A = zeros(nfft,Nchan);
+      Yk = cell(1,Nchan);
+   else
+      Fval = [];
+      A = [];
+      Yk = {};
    end
 
-   % Combined tapered spectral estimates
-   switch params.weights
-      case 'adapt'
-         if k > 1
-            % The algorithm converges so fast that results are
-            % usually 'indistinguishable' after about three iterations.
-            % This version uses the equations from [2] (P&W pp 368-370).
-            sig2 = x(:,chan)'*x(:,chan)/N;  % Power
-            Schan = (Sk(:,1)+Sk(:,2))/2;    % Initial spectrum estimate
-            S1 = zeros(nfft,1);
-            
-            % Set tolerance for acceptance of spectral estimate:
-            tol = 0.0005*sig2/nfft;
-            a = bsxfun(@times,sig2,(1-lambda));
-            loop = 0;
-            while sum(abs(Schan-S1)/nfft)>tol
-               % calculate weights
-               b = (Schan*ones(1,k))./(Schan*lambda'+ones(nfft,1)*a');
-               dk = (b.^2).*(ones(nfft,1)*lambda');
-               % calculate new spectral estimate
-               S1 = sum(dk'.*Sk')./ sum(dk,2)';
-               S1 = S1';
-               Stemp = S1; S1 = Schan; Schan = Stemp;  % swap S and S1
-               loop = loop + 1;
-               if loop > 100 % TODO, problem with convergence compared to PMTM?
-                  break;
-               end
-            end
-            % Equivalent degrees of freedom, see p. 370 of Percival and Walden 1993.
-            dof(:,chan) = ( 2*sum(bsxfun(@times,b.^2,lambda'),2).^2 ) ...
-                          ./ sum(bsxfun(@times,b.^4,lambda'.^2),2);
-            % DOF estimate from Thomson (eq. 5.5) can yield dof > 2k, due
-            % to dk being greater than 1? Problem in algorithm convergence?
-            %dof(:,chan) = 2*sum(dk,2);
-         else
-            Schan = Sk;
-            dof(:,chan) = 2*ones(nfft,1);
-         end
-      case {'unity','eigen'}
-         % Compute the averaged estimate: simple arithmetic averaging is used.
-         % The Sk can also be weighted by the eigenvalues, as in Park et al.
-         % Eqn. 9.; note that the eqn. apparently has a typo; as the weights
-         % should be lambda and not 1/lambda.
-         if strcmp(params.weights,'eigen')
-            wt = lambda(:);    % Park estimate
-         else
-            wt = ones(k,1);
-         end
-         Schan = Sk*wt/k;
-   end
-   
-   if ~params.quadratic
-      S(:,chan) = Schan;
-   else % TODO: ASSUMES ADAPTIVE WEIGHTS NOW
-      % Local bias reduction using the method developed by Prieto et al. (2007).
-      % Follows Prieto's implementation (http://www.mit.edu/~gprieto/software.html),
-      % vectorizing whenever possible.
-      xk = dk.*yk; % tapered signal weighted by final weights
+   % Precompute quantities that only depend on tapers
+   if params.quadratic
+      % Interpolate transformed tapers to denser frequency grid in [-W W]
+      nfft2 = 8*2^nextpow2(nfft);
+      nxi = 79;
+      W = params.thbw/N;
+      dxi = (2.0*W)/(nxi-1);
+      xi = (-W:dxi:W);
+      if (mod(nfft2,2)==0)
+         fsamp = (-nfft2/2:nfft2/2-1)'/(nfft2);
+      else
+         fsamp = (-(nfft2-1)/2:(nfft2-1)/2)'/(nfft2-1);
+      end
 
+      % Interpolated tapers in frequency-domain
+      ind = (fsamp>=2*xi(1)) & (fsamp<=2*xi(end));
+      Vk = fftshift(fft(V,nfft2),1);
+      Vj = interp1(fsamp(ind),Vk(ind,:),xi,'pchip');
+      Vj = bsxfun(@times,Vj,1./sqrt(lambda'));
+      clear Vk;
+
+      % Interpolated eigenspectra
+      L = k*k;
       m = 0;
-      C = zeros(L,nfft);
+      Pk = zeros(L,numel(xi));
       for j = 1:k
          for k = 1:k
             m = m + 1;
-            C(m,:) = ( conj(xk(:,j)) .* (xk(:,k)) );
+            Pk(m,1:nxi) = conj(Vj(:,j)) .* (Vj(:,k));
          end
       end
-      
-      btilde = Q' * C;
-      hmodel = R \ btilde;
-      slope = -real(hmodel(2,:))' / W;
-      quad = real(hmodel(3,:))' / W^2;
-      sigma2 = sum(abs( C - hk*real(hmodel) ).^2) / (L-3);
-      quad_var  = (sigma2'*covb(3,3)) / W^4;
+      Pk(:,[1 nxi]) = 0.5*Pk(:,[1 nxi]);
 
-      %  Eq. 33 and 34 of Prieto et. al. (2007)
-      qicorr = (quad.^2) ./ (quad.^2 + quad_var);
-      qicorr = qicorr .* (1/6).*(W^2).*quad;
-      
-      S(:,chan) = Schan - qicorr;
-      dS(:,chan)  = slope;
-      ddS(:,chan) = quad;
+      % Chebyshev polynomial as the expansion basis
+      hk = [sum(Pk,2) , Pk*(xi/W)' , Pk*(2*((xi/W).^2) - 1)']*dxi;
+
+      % Least squares solution
+      [Q,R] = qr(hk);
+
+      % Covariance estimate
+      ri = R \ eye(L);
+      covb = real(ri*ri');
+
+      dS = zeros(nfft, Nchan);
+      ddS = zeros(nfft, Nchan);
+   else
+      dS = [];
+      ddS = [];
    end
-end
+
+   %% Loop over channels
+   S = zeros(nfft, Nchan);
+   for chan = 1:Nchan
+      % Tapered signal
+      xvk = bsxfun(@times,V(:,1:k),x(:,chan));
+
+      % Fourier transform of tapered signal (eigencoefficients)
+      if isempty(params.f)
+         yk = fft(xvk,nfft);
+      else
+         % Compute at specified grid using chirp-z transform
+         % Initial complex weight
+         a = exp(2i*pi*params.fstart/Fs);
+         % Relative complex weight
+         w = exp(2i*pi*(params.fstart-params.fstop)/((params.npts-1)*Fs));
+         yk = czt(xvk,params.npts,w,a);      
+         %yk = spectralZoom(xvk,Fs,params.fstart,params.fstop,params.npts);
+      end
+
+      % Spectral estimate for each taper
+      Sk = abs(yk).^2;
+
+      if params.Ftest
+         % Thomson's (1982) harmonic F-test (eq. 13.10)
+         Uk0 = sum(V);
+         Uk0sq = sum(Uk0.^2);
+         ykUk0 = sum(bsxfun(@times,yk,Uk0),2);
+         u = bsxfun(@rdivide,ykUk0,Uk0sq);
+         ykhat = bsxfun(@times,u,Uk0);
+
+         num = (k-1)*(abs(u).^2)*Uk0sq;
+         den = sum( abs(yk-ykhat).^2 ,2);
+         Fval(:,chan) = num./den;
+         A(:,chan) = u; % Amplitudes
+         
+         Yk{chan} = yk;
+      end
+
+      % Combined tapered spectral estimates
+      switch params.weights
+         case 'adapt'
+            if k > 1
+               % The algorithm converges so fast that results are
+               % usually 'indistinguishable' after about three iterations.
+               % This version uses the equations from [2] (P&W pp 368-370).
+               sig2 = x(:,chan)'*x(:,chan)/N;  % Power
+               Schan = (Sk(:,1)+Sk(:,2))/2;    % Initial spectrum estimate
+               S1 = zeros(nfft,1);
+
+               % Set tolerance for acceptance of spectral estimate:
+               tol = 0.0005*sig2/nfft;
+               a = bsxfun(@times,sig2,(1-lambda));
+               loop = 0;
+               while sum(abs(Schan-S1)/nfft)>tol
+                  % calculate weights
+                  b = (Schan*ones(1,k))./(Schan*lambda'+ones(nfft,1)*a');
+                  dk = (b.^2).*(ones(nfft,1)*lambda');
+                  % calculate new spectral estimate
+                  S1 = sum(dk'.*Sk')./ sum(dk,2)';
+                  S1 = S1';
+                  Stemp = S1; S1 = Schan; Schan = Stemp;  % swap S and S1
+                  loop = loop + 1;
+                  if loop > 100 % TODO, problem with convergence compared to PMTM?
+                     break;
+                  end
+               end
+               % Equivalent degrees of freedom, see p. 370 of Percival and Walden 1993.
+               dof(:,chan) = ( 2*sum(bsxfun(@times,b.^2,lambda'),2).^2 ) ...
+                             ./ sum(bsxfun(@times,b.^4,lambda'.^2),2);
+               % DOF estimate from Thomson (eq. 5.5) can yield dof > 2k, due
+               % to dk being greater than 1? Problem in algorithm convergence?
+               %dof(:,chan) = 2*sum(dk,2);
+            else
+               Schan = Sk;
+               dof(:,chan) = 2*ones(nfft,1);
+            end
+         case {'unity','eigen'}
+            % Compute the averaged estimate: simple arithmetic averaging is used.
+            % The Sk can also be weighted by the eigenvalues, as in Park et al.
+            % Eqn. 9.; note that the eqn. apparently has a typo; as the weights
+            % should be lambda and not 1/lambda.
+            if strcmp(params.weights,'eigen')
+               wt = lambda(:);    % Park estimate
+            else
+               wt = ones(k,1);
+            end
+            Schan = Sk*wt/k;
+      end
+
+      if ~params.quadratic
+         S(:,chan) = Schan;
+      else % TODO: ASSUMES ADAPTIVE WEIGHTS NOW
+         % Local bias reduction using the method developed by Prieto et al. (2007).
+         % Follows Prieto's implementation (http://www.mit.edu/~gprieto/software.html),
+         % vectorizing whenever possible.
+         xk = dk.*yk; % tapered signal weighted by final weights
+
+         m = 0;
+         C = zeros(L,nfft);
+         for j = 1:k
+            for k = 1:k
+               m = m + 1;
+               C(m,:) = ( conj(xk(:,j)) .* (xk(:,k)) );
+            end
+         end
+
+         btilde = Q' * C;
+         hmodel = R \ btilde;
+         slope = -real(hmodel(2,:))' / W;
+         quad = real(hmodel(3,:))' / W^2;
+         sigma2 = sum(abs( C - hk*real(hmodel) ).^2) / (L-3);
+         quad_var  = (sigma2'*covb(3,3)) / W^4;
+
+         %  Eq. 33 and 34 of Prieto et. al. (2007)
+         qicorr = (quad.^2) ./ (quad.^2 + quad_var);
+         qicorr = qicorr .* (1/6).*(W^2).*quad;
+
+         S(:,chan) = Schan - qicorr;
+         dS(:,chan)  = slope;
+         ddS(:,chan) = quad;
+      end
+   end
 end
 
 % Ref: Martin GD (2005). Chirp Z-transform spectral zoom optimization
