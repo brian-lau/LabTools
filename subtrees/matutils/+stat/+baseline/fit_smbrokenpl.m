@@ -10,13 +10,13 @@ switch model
       if ~exist('beta0','var') || isempty(beta0)
          beta0 = [1   2  1  1   30];
       end
-      lb = [0   -10  0    0      5];      % lower bounds
+      lb = [0   -10  0    0      2];      % lower bounds
       ub = [inf  10  15    15    100];    % upper bounds
    case {'broken-power3' 'bp3'}
       if ~exist('beta0','var') || isempty(beta0)
          beta0 = [1   1  0.5  1   30 1 1 500];
       end
-      lb = [0   -10  0    0   5    -5  0   100];      % lower bounds
+      lb = [0   -10  0    0   2    -5  0   100];      % lower bounds
       ub = [inf  10  15   15  100   5  15  1000];    % upper bounds
 end
 

@@ -28,6 +28,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       x_
       mask_
       labels_
+      version = '0.1.0'
    end
    
    methods
@@ -285,6 +286,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.detail = copy(self.raw);
          temp = reshape(base,[1 numel(f) self.nChannels]);
          self.detail.map(@(x) x./temp);
+         self.detail.fix();
       end
       
       %% Rescale detail spectrum to unit variance white noise
@@ -346,6 +348,24 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             baseSmooth = baseSmooth';
          end
          
+         % Take only frequencies included in basefit
+         if ~isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
+            ind = (f>=self.baseParams.fmin) & (f<=self.baseParams.fmax);
+         elseif ~isempty(self.baseParams.fmin) && isempty(self.baseParams.fmax)
+            ind = (f>=self.baseParams.fmin);
+         elseif isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
+            ind = (f<=self.baseParams.fmax);
+         else
+            ind = true(size(f));
+         end
+         
+         f = f(ind);
+         P = P(ind,:);
+         Pstan = Pstan(ind,:);
+         base = base(ind,:);
+         baseFit = baseFit(ind,:);
+         baseSmooth = baseSmooth(ind,:);
+
          for i = 1:self.nChannels
             switch self.baseParams.method
                case {'broken-power'}
@@ -354,7 +374,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                   plot(f,P(:,i));
                   plot(f,baseFit(:,i));
                   plot(f,base(:,i));
-                  set(gca,'yscale','log');
+                  set(gca,'yscale','log'); axis tight;
+                  
                   subplot(322); hold on
                   plot(f,10*log10(P(:,i)));
                   plot(f,10*log10(baseFit(:,i)));
@@ -364,7 +385,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                   subplot(323); hold on
                   P2 = P(:,i)./baseFit(:,i);
                   plot(f,P2);
-                  plot(f,baseSmooth(:,i));
+                  plot(f,baseSmooth(:,i)); axis tight;
+                  
                   subplot(324); hold on
                   plot(f,10*log10(P2));
                   plot(f,10*log10(baseSmooth(:,i)));
@@ -383,15 +405,11 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       
       function h = plot(self)
          f = self.rawParams.f;
-         Pstan = squeeze(self.detail.values{1});
-         if isrow(Pstan)
-            Pstan = Pstan';
-         end
          alpha = self.baseParams.alpha;
          h = figure;
          plot(self.detail,'log',0,'handle',h,'title',true);
+         %keyboard
          for i = 1:self.nChannels
-            %plot(f,Pstan(:,i));
             subplot(self.nChannels,1,i); hold on;
             p = [.05 .5 .95 .9999];
             for j = 1:numel(p)
@@ -399,8 +417,9 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                plot([f(2) f(end)],[c c],'-','Color',[1 0 0 0.25]);
                text(f(end),c,sprintf('%1.4f',p(j)));
             end
-            %plot([f(2) f(end)],[median(Pstan(:,i)) median(Pstan(:,i))],'-')
             set(gca,'xscale','log');
+            
+            %h.Children(i).XLim(1) = self.baseParams.fmin;
          end
       end
    end
