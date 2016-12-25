@@ -34,6 +34,7 @@ switch signal
           + 1*cos(2*pi*300*t);
    case 4
       bl = stat.baseline.smbrokenpl([100 2 .5 2 30],ff);
+      %bl = stat.baseline.smbrokenpl([100 2 .5 2 30],ff);
       bl(isinf(bl)) = 0;
       x = sig.noise(sqrt(bl));
    case 5 % 1/f background with some gaussian bumps in frequency
@@ -54,6 +55,21 @@ switch signal
       sd = [1 3 3 20];
       
       bl = stat.baseline.smbrokenpl([1 2 .5 2 30],ff);
+      for i = 1:numel(f)
+         temp = normpdf(ff,f(i),sd(i));
+         temp = temp./max(temp);
+         
+         ind = ff==f(i);
+         gp(:,i) = temp*bl(ind);
+      end
+      gp = 100*(sum(gp,2) + .5*bl);
+      gp(isinf(gp)) = 0;
+      x = sig.noise(sqrt(gp));
+   case 7 %% Some gaussian bumps in frequency
+      f = [12 30 90 300];
+      sd = [1 3 3 20];
+      
+      bl = stat.baseline.smbrokenpl([1 -5 3 1 30],ff);
       for i = 1:numel(f)
          temp = normpdf(ff,f(i),sd(i));
          temp = temp./max(temp);

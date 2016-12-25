@@ -3,11 +3,8 @@
 %  o expose baseline parameters
 %  x implement irasa, not great
 %  o during baseline estimation, consider extending edges to reduce edge effects
-%  o remove line noise
+%  x remove line noise
 %  o spike spectrum
-         % TODO handle SampledProcess array
-         % TODO handle SampledProcess array
-         % TODO detrend option
 classdef Spectrum < hgsetget & matlab.mixin.Copyable
    properties
       
@@ -19,7 +16,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       rejectParams
       
       raw   % direct multitaper spectral estimate
-      rawParams % 
+      rawParams %
       base  % estimate of base spectrum
       baseFit
       baseSmooth
@@ -58,7 +55,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       function set.input(self,input)
          assert(numel(unique([input.Fs]))==1,'Fs must match for SampledProcess array.');
          assert(numel(unique([input.n]))==1,'# of channels must match for SampledProcess array.');
-
+         
          self.nChannels = input(1).n;
          assert(numel(unique(cat(1,input.labels),'rows'))==self.nChannels,...
             'Labels must match for SampledProcess array.');
@@ -75,13 +72,16 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          switch baseParams.method
             case 'broken-power'
                if ~isfield(baseParams,'smoother')
-                  baseParams.smoother = 'rlowess'; % DEFAULT SMOOTHER
+                  baseParams.smoother = 'none'; % DEFAULT SMOOTHER
                end
                if isfield(baseParams,'beta0') && ~isempty(baseParams.beta0)
-                  assert(isvector(baseParams.beta0) && (numel(baseParams.beta0)==5),...
-                     'Initial conditions have incorrect size for broken-power fit.');
+%                   assert(isvector(baseParams.beta0) && (numel(baseParams.beta0)==5),...
+%                      'Initial conditions have incorrect size for broken-power fit.');
                else
                   baseParams.beta0 = [];
+               end
+               if ~isfield(baseParams,'f0')
+                  baseParams.f0 = 1;
                end
          end
          self.baseParams = baseParams;
@@ -102,9 +102,10 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                win = [self.input(i).tStart:self.step:self.input(i).tEnd]';
                win = [win,win+self.step];
                win(win>self.input(i).tEnd) = self.input(i).tEnd;
-               duration = diff(win,1,2);
+               
                % Remove windows that don't match step-size. This ensures
                % that the DOF estimation is correct
+               duration = diff(win,1,2);
                win(duration < self.step,:) = [];
                
                self.input(i).window = win;
@@ -118,7 +119,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          
          [s,labels] = extract(self.input);
          labels = labels{1}; % These already match
-
+         
          if isfield(self.rejectParams,'artifacts')
             % Create a boolean matrix [nSections x nChannels] indicating
             % artifacts-free sections with quality>0
@@ -168,98 +169,54 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          
          self.nSections = sum(ind);
       end
-            
-      function [c,f] = threshold(self,alpha)
-         P = self.detail.values{1};
-         c = gaminv(1-alpha,self.baseParams.alpha,1/self.baseParams.alpha);
-         if nargout == 2
-            f = self.detail.f(P>=c);
-         end
-      end
-            
-      function self = standardize(self)
-         % Rescale detail spectrum to unit variance white noise
-         % Approx alpha, this is not correct when window sizes differ
-         alpha = self.nSections*mean(self.detail.params.k);
-         f = self.raw.f;
-         pw = squeeze(self.detail.values{1});
-         if self.nChannels == 1
-            pw = pw';
-         end
-         % Match to lower 5% quantile of expected distribution for white noise
-         for i = 1:self.nChannels
-            Q(i) = gaminv(0.05,alpha(i),1/alpha(i)) ./ (quantile(pw(:,i),0.05));
-         end
-         if self.nChannels > 1
-            self.detail.map(@(x) x.*reshape(repmat(Q,numel(f),1),[1 numel(f) self.nChannels]));
-         else
-            self.detail.map(@(x) Q*x);
-         end
-         self.baseParams.alpha = alpha;
-         self.baseParams.Q = Q;
-      end
+      
       
       function bool = isRunnable(self)
          bool = ~isempty(self.input);
       end
-
+      
       function run(self)
-         import stat.baseline.*
-
+         
          if ~self.isRunnable
             error('No input signal');
          end
          
          self.section();
+         self.estimateRaw();
+         self.estimateBase();
          
-         % Raw spectrum
-         if isfield(self.rawParams,'robust')
-            locFlag = self.rawParams.robust;
-         else
-            locFlag = 'mean';
-         end
-         self.rawParams.robust = 'none';
+         self.standardize();
+      end
+      
+      % Estimate raw spectrum
+      function self = estimateRaw(self)
          [out,par] = sig.mtspectrum(self.x_,self.rawParams);
-    
-         temp = out.P;
-         p = zeros(par.nf,self.nChannels);
-         for i = 1:self.nChannels
-            switch lower(locFlag)
-               case {'median'}
-                  p(:,i) = median(temp(:,:,i),2);
-               case {'huber'}
-                  p(:,i) = stat.mlochuber(temp(:,:,i)','k',5)';
-               case {'logistic'}
-                  p(:,i) = stat.mloclogist(temp(:,:,i)','loc','nanmedian','k',5)';
-               otherwise
-                  p(:,i) = mean(temp(:,:,i),2);
-            end
-         end         
-         self.rawParams.robust = locFlag;
          
-         f = out.f;
-         P = zeros([1 size(p)]);
-         P(1,:,:) = p; % format for SpectralProcess
+         P = zeros([1 size(out.P)]);
+         P(1,:,:) = out.P; % format for SpectralProcess
          self.raw = SpectralProcess(P,...
-            'f',f,'params',par,'tBlock',1,'tStep',1,...
+            'f',out.f,'params',par,'tBlock',1,'tStep',1,...
             'labels',self.labels_,'tStart',0,'tEnd',1);
+      end
+      
+      % Estimate base spectrum
+      function self = estimateBase(self)
+         import stat.baseline.*
+         p = squeeze(self.raw.values{1});
+         f = self.raw.f(:);
          
-         % Estimate base spectrum
-         %f = self.raw.f(:);
+         if isrow(p)
+            p = p';
+         end
+         % Don't fit DC component TODO : nor nyquist?
+         % TODO, implement cutoff frequency or range to restrict fit
+         ind = f>=self.baseParams.f0;%f~=0;
+         fnz = f(ind);   % restricted frequencies
+         pnz = p(ind,:); % restricted power
+         
          switch self.baseParams.method
             case {'broken-power'} % Smoothly broken power-law fit
-               p = squeeze(self.raw.values{1});
-               if isrow(p)
-                  p = p';
-               end
-               
-               % Don't fit DC component TODO : nor nyquist?
-               % TODO, implement cutoff frequency or range to restrict fit
-               ind = f>=1;%f~=0;
-               fnz = f(ind);   % restricted frequencies
-               pnz = p(ind,:); % restricted power
-               
-               beta = zeros(5,self.nChannels);
+               %beta = zeros(5,self.nChannels);
                basefit = zeros(size(p));
                basesmooth = ones(size(p));
                % Estimate whitening transformation for each channel
@@ -269,22 +226,25 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                   %fun = @(b) sum( asymwt((smbrokenpl(b,fnz)),(pnz(:,i))) );
                   
                   if isempty(self.baseParams.beta0)
-                     b0 = [1   1  0.5  1   30];   % initial conditions
+                     b0 = [1   -.2  0.5  1   30];   % initial conditions
+                     %b0 = [1   1  0.5  2   30 300 -1 2];
                      %b0 = [1   -1  5  5   5];   % initial conditions
                   else
                      b0 = self.baseParams.beta0;
                   end
-                  lb = [0   -5  0    0   5];      % lower bounds
-                  ub = [inf  5  5    5   100];    % upper bounds
+%                  lb = [0   0  0    -5   1  100   -5    0];      % lower bounds
+%                  ub = [inf  5  5    5   90 1000  5    500];    % upper bounds
+                   lb = [0   -15  -5    0   5];      % lower bounds
+                   ub = [inf  15  5    95   100];    % upper bounds
                   
                   opts = optimoptions('fmincon','MaxFunEvals',5000,...
                      'Algorithm','sqp','Display','none');
-                  [beta(:,i),~,exitflag(i),optout(i)] = fmincon(fun,b0,[],[],[],[],...
-                     lb,ub,@smbrokenpl_constraint,opts);
+                  [beta(:,i),~,exitflag(i),optout(i)] = fmincon(fun,b0,...
+                     [],[],[],[],lb,ub,@smbrokenpl_constraint,opts);
                   
                   % Final fit
                   basefit(:,i) = smbrokenpl(beta(:,i),f);
-
+                  
                   % Smooth residuals
                   z = p(:,i)./basefit(:,i);
                   z(isinf(z)) = median(z); % Trap divide by zeros
@@ -308,17 +268,17 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                P = zeros([1 size(base)]);
                P(1,:,:) = base; % format for SpectralProcess
                self.base = SpectralProcess(P,...
-                  'f',f,'params',par,'tBlock',1,'tStep',1,...
+                  'f',f,'params',[],'tBlock',1,'tStep',1,...
                   'labels',self.labels_,'tStart',0,'tEnd',1);
                P = zeros([1 size(basefit)]);
                P(1,:,:) = basefit; % format for SpectralProcess
                self.baseFit = SpectralProcess(P,...
-                  'f',f,'params',par,'tBlock',1,'tStep',1,...
+                  'f',f,'params',[],'tBlock',1,'tStep',1,...
                   'labels',self.labels_,'tStart',0,'tEnd',1);
                P = zeros([1 size(basesmooth)]);
                P(1,:,:) = basesmooth; % format for SpectralProcess
                self.baseSmooth = SpectralProcess(P,...
-                  'f',f,'params',par,'tBlock',1,'tStep',1,...
+                  'f',f,'params',[],'tBlock',1,'tStep',1,...
                   'labels',self.labels_,'tStart',0,'tEnd',1);
                
                % Estimate detail spectrum
@@ -331,8 +291,38 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                self.baseParams.exitflag = exitflag;
                self.baseParams.optoutput = optout;
          end
+      end
+      
+      % Rescale detail spectrum to unit variance white noise
+      function self = standardize(self)
+         % Approx alpha, this is not correct when section lengths differ
+         alpha = self.nSections*mean(self.detail.params.k);
+         f = self.raw.f;
+         pw = squeeze(self.detail.values{1});
+         if self.nChannels == 1
+            pw = pw';
+         end
          
-         self.standardize();
+         % Match to lower 5% quantile of expected distribution for white noise
+         for i = 1:self.nChannels
+            Q(i) = gaminv(0.05,alpha(i),1/alpha(i)) ./ (quantile(pw(:,i),0.05));
+         end
+         if self.nChannels > 1
+            self.detail.map(@(x) x.*reshape(repmat(Q,numel(f),1),[1 numel(f) self.nChannels]));
+         else
+            self.detail.map(@(x) Q*x);
+         end
+         
+         self.baseParams.alpha = alpha;
+         self.baseParams.Q = Q;
+      end
+      
+      function [c,f] = threshold(self,alpha)
+         P = self.detail.values{1};
+         c = gaminv(1-alpha,self.baseParams.alpha,1/self.baseParams.alpha);
+         if nargout == 2
+            f = self.detail.f(P>=c);
+         end
       end
       
       function h = plotDiagnostics(self)
