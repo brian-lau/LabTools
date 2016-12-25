@@ -1,13 +1,12 @@
+% Check that we're calculating F-statistic correctly
 clear all;
 Fs = 1024;
 dt = 1/Fs;
 t = (0:92047)'*dt;
 
 x = cos(2*pi*250*t) + .5*cos(2*pi*50*t) + 5*randn(size(t));
-
 nw = 4.5;
 
-% Check that we're calculating F-statistic correctly
 [Fval,A,f,signal,sd] = ftestc(x,struct('tapers',[nw 8],'Fs',Fs),[],'n');
 [out,par] = sig.mtspectrum(x,'thbw',nw,'f',f,'Fs',Fs,'Ftest',true);
 
@@ -23,29 +22,56 @@ plot(f,Fval-out.Fval);
 figure;
 subplot(211); hold on
 plot(f,abs(A));
-plot(out.f,abs(out.A));
+plot(out.f,abs(par.A));
 subplot(212);
-plot(f,abs(A)-abs(out.A));
+plot(f,abs(A)-abs(par.A));
 
-data = rmlinesc(x,struct('tapers',[4.5 8],'Fs',Fs),[],'y',[50 250]);
+% Reshape spectrum removing line components
+[outR,par] = sig.mtspectrum(x,'thbw',nw,'f',f,'Fs',Fs,...
+   'reshape',true,'reshape_f',[50 250]);
+% Chronux version
+data = rmlinesc(x,struct('tapers',[nw 8],'Fs',Fs),[],'y',[50 250]);
+% plot mtspectrum results in lower right subplot
+subplot(3,2,6); hold on
+plot(out.f,10*log10(out.P));
+plot(outR.f,10*log10(outR.P));
 
 %
-data = rmlinesc(x,struct('tapers',[4.5 8],'Fs',Fs),[],'y',[50 250]);
 
+%% Spectral reshaping within range, multiple channels
+T = 5;
+Fs = 2048;
+s = fakeLFP2(Fs,T,6);
+x = s.values{1}(:,1) + 2*cos(2*pi*50.5*s.times{1}) + 4*cos(2*pi*201.5*s.times{1});
+x = [x , s.values{1}(:,1) + 5*cos(2*pi*49.25*s.times{1})];
+
+[out,par] = sig.mtspectrum(x,'hbw',.75,'f',0:.01:1000,'Fs',s.Fs,'Ftest',true,...
+   'reshape',true,'reshape_f',[50 200],'reshape_hw',2,'reshape_nhbw',6);
+
+hold on;
+figure;
+subplot(2,1,1); hold on
+plot(out.f,10*log10(out.P_original(:,1)));
+plot(out.f,10*log10(out.P(:,1)));
+subplot(2,1,2); hold on
+plot(out.f,10*log10(out.P_original(:,2)));
+plot(out.f,10*log10(out.P(:,2)));
+
+
+%%
 clear all;
-[s,artifacts,f,Sx] = fakeLFP(2000,5,[2 2 2 2]);
-Fs = 2000;
-dt = 1/Fs;
+T = 5;
+Fs = 2048;
+s = fakeLFP2(Fs,T,6);
 
-x = s.values{1}(:,1) + 5*cos(2*pi*50*s.times{1}) + 10*cos(2*pi*300*s.times{1});
-x = [x,s.values{1}(:,1)];
+x{1} = s.values{1}(:,1) + 2*cos(2*pi*50*s.times{1}) + 2*cos(2*pi*200*s.times{1});
+x{2} = s.values{1}(:,1) + 2*cos(2*pi*50.5*s.times{1}) + 2*cos(2*pi*201.5*s.times{1});
+x{3} = s.values{1}(:,1) + 2*cos(2*pi*49.5*s.times{1}) + 2*cos(2*pi*199.5*s.times{1});
+x{4} = s.values{1}(:,1);
 
+[out,par] = sig.mtspectrum(x,'hbw',.75,'f',0:.01:1000,'Fs',s.Fs,'Ftest',true,...
+   'reshape',true,'reshape_f',[50 200],'reshape_hw',2);
 
-data = rmlinesc(x,struct('tapers',[4.5 8],'Fs',Fs),[],'y',[50 300]);
-
-[out,par] = sig.mtspectrum(x,'hbw',.75,'f',0:.01:1000,'Fs',s.Fs,'Ftest',true);
-
-%
-x = data.values{1}(1:10000,6);
-
-d = rmlinesc(x,struct('tapers',[4.5 8],'Fs',data.Fs),[],'y',[50]);
+hold on;
+%plot(out.f,10*log10(out.P_original(:,1)));
+plot(out.f,10*log10(out.P(:,1)));
