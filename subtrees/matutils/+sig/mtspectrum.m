@@ -11,8 +11,8 @@
 % INPUTS
 %     x       - [samples x channels] matrix or cell array of such matrices
 %               Required input, must be real
-%               If cell array, number of channels must match. Use this
-%               option to produce a single PSD for multiple data sections.
+%               If cell array, number of channels must match across elements.
+%               Use this option to produce a single PSD for multiple data sections.
 % OPTIONAL
 %     hbw     - scalar (Hz), optional, default = thbw/T
 %               Half-bandwidth, spectral concentration [-hbw hbw]
@@ -30,6 +30,8 @@
 %               also be supplied
 %     lambda  - k x 1, optional
 %               Eigenvalues of tapers V. If given, V must also be supplied.
+%     lambda_thresh -
+%
 %     k       - scalar, optional, default = 2*thbw - 1
 %               # of tapers to average. There are less than 2*thbw-1 tapers 
 %               with good concentration in the band [-hbw hbw]. Frequently,
@@ -48,7 +50,7 @@
 %               True drops the last, which is usually less concentrated.
 %     robust  - string, optional, default = 'mean'
 %               This applies only when x is a cell array, in which case it 
-%               specifies how the estimates should be combined:
+%               specifies how the section estimates should be combined:
 %               'mean'     - simple arithmetic mean, NaN's excluded
 %               'median'   - median, NaN's excluded
 %               'huber'    - robust location using Huber weights
@@ -64,6 +66,13 @@
 %     confMethod - string, optional, default = 'asymp'
 %               'asymp' - asymptotic confidence intervals
 %               'jack'  - Jackknifed confidence intervals
+%     detrend - 
+%     reshape - boolean, optional, default = false
+%               Reshape spectrum at frequencies with significant F-test
+%     reshape_f -
+%     reshape_hw -
+%     reshape_nhbw -
+%     reshape_threshold -
 %
 % OUTPUTS
 %     output  - Structure that always contains the fields:
@@ -130,8 +139,7 @@
 %     https://github.com/brian-lau/Process
 
 % TODO
-% o confidence intervals
-% x for section-averaging, avoid recalculating tapers if possible
+% o jackknife confidence intervals
 % o multi-section F-test
 function [output,params] = mtspectrum(x,varargin)
 
@@ -156,14 +164,18 @@ p.addParameter('dropLastTaper',true,@(x) islogical(x) || isscalar(x));
 p.addParameter('quadratic',false,@(x) islogical(x) || isscalar(x));
 p.addParameter('robust','mean',@ischar);
 p.addParameter('detrend','none');
+p.addParameter('reshape',false,@(x) islogical(x));
+p.addParameter('reshape_f',[],@(x) isnumeric(x));
+p.addParameter('reshape_hw',0,@(x) isscalar(x) && isnumeric(x) && (x>=0));
+p.addParameter('reshape_nhbw',4,@(x) isscalar(x) && isnumeric(x) && (x>=0));
+p.addParameter('reshape_threshold',0.01,@(x) isscalar(x));
 p.addParameter('verbose',false,@(x) islogical(x) || isscalar(x));
 p.parse(x,varargin{:});
 par = p.Results;
 
 checkInputs();
 
-%% Cell array of signals, process each element holding adjusting tapers to
-%% keep hbw the same
+%% Cell array of signals, process each element adjusting tapers to maintain hbw
 if iscell(x)
    nSections = numel(x);
    
@@ -188,12 +200,13 @@ if iscell(x)
          par.k = params.k(i);
          par.V = V;
          par.lambda = lambda;
-         try
-            par = rmfield(par,'x');
-         end
+         try, par = rmfield(par,'x'); end
+         
          [it,partemp] = sig.mtspectrum(x{i},par);
          params.dof{i} = partemp.dof;
          temp(:,:,i) = it.P;
+         
+         % TODO: If reshaped, return original as well?
       end
       
       % Section-average
@@ -220,14 +233,15 @@ if iscell(x)
       params = rmfield(params,'x');
       output.f = it.f;
       output.P = p;
+      
       % TODO HOW TO RETURN F-TEST IN THIS CASE?
    end
    return;
 end
 
 %% Start processing for individual sections
-% Estimate two-sided spectrum
-[S,Yk,dS,ddS,Fval,A,dof] = mtm_spectrum(par);
+% Estimate spectrum
+[S,Yk,dS,ddS,Fval,A,dof] = mt_spectrum(par);
 
 if isempty(par.f)
    nfft = par.nfft;
@@ -250,11 +264,32 @@ else
    f = par.f;
 end
 
-% Scale by the sampling frequency to obtain the PSD [Power/freq]
-Pxx = S./par.Fs;
-
 output.f = f;
-output.P = Pxx;
+
+if par.Ftest
+   if exist('select','var')
+      output.Fval = Fval(select,:);
+   else
+      output.Fval = Fval;
+   end
+   par.v1 = 2;
+   par.v2 = 2*par.k - 2;
+   output.pval = 1 - fcdf(output.Fval,par.v1,par.v2);
+   
+   par.Yk = Yk;
+   par.A = A;
+end
+
+% Scale by the sampling frequency to obtain the PSD [Power/freq]
+output.P = S./par.Fs;
+
+if par.reshape
+   [P_reshaped,f0] = mt_reshape(output,par);
+   % TODO: return f0, as well as amplitude?
+   output.P_original = output.P;
+   output.P = P_reshaped;
+end
+
 if exist('select','var')
    dof = dof(select,:);
 end
@@ -266,60 +301,18 @@ if ~isempty(par.alpha)
          % Asymptotic chi-squared 95% confidence interval, Percival and Walden p.255-6
          Ql = chi2inv(1 - par.alpha/2,dof);
          Qu = chi2inv(par.alpha/2,dof);
-         CI = [dof.*Pxx./Ql , dof.*Pxx./Qu];
+         CI = [dof.*output.P./Ql , dof.*output.P./Qu];
          % TODO, FORMATTING FOR MULTICHANNEL
       case 'jack'
-         
+         % TODO
    end
    
    output.CI = CI;
 end
+
 if ~isempty(dS)
    output.dP = dS;
    output.ddP = ddS;
-end
-
-if par.Ftest
-   if exist('select','var')
-      output.Fval = Fval(select,:);
-   else
-      output.Fval = Fval;
-   end
-   output.A = A;
-   output.v1 = 2;
-   output.v2 = 2*par.k - 2;
-   output.pval = 1 - fcdf(output.Fval,output.v1,output.v2);
-   %p=0.05/N
-   %sig = finv(1-p,2,2*K-2); % F-distribution based 1-p% point
-   
-
-   f0 = [150 300];
-   % Will have to match f0 to closest in grid
-   
-   for i = 1:par.Nchan
-      for j = 1:numel(f0)
-         % Frequency index around line element to remove
-         ind = find((f>=(f0(j)-2*par.hbw)) & (f<=(f0(j)+2*par.hbw)));
-         % Relative frequency for transformed tapers
-         f2 = f(ind)-f0(j);
-         
-         % Fourier transform tapers on grid around line element
-         fstart = f2(1);
-         fstop = f2(end);
-         nfft2 = length(f2);
-         % Initial complex weight
-         a = exp(2i*pi*fstart/par.Fs);
-         % Relative complex weight
-         w = exp(2i*pi*(fstart-fstop)/((nfft2-1)*par.Fs));
-         H = czt(par.V,nfft2,w,a);
-         
-         % Subtract line component (currently uses unity weights!)
-         A0 = A(f==f0(j),i);
-         Pxx(ind,i) = mean( abs( Yk{i}(ind,:) - A0*H ).^2 ,2) ./ par.Fs;
-      end
-   end
-   
-   output.P_reshaped = Pxx;
 end
 
 if nargout == 2
@@ -421,12 +414,16 @@ end
          
          assert(max(par.f) <= par.Fs/2,'Frequencies must be less than Nyquist');
       end
+      
+      if par.reshape && ~par.Ftest
+         par.Ftest = true;
+      end
    end % END checkInputs()
-
 end % END mtpsectrum
 
-%% Estimate MTM spectrum
-function [S,Yk,dS,ddS,Fval,A,dof] = mtm_spectrum(params)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Estimate multitaper spectrum
+function [S,Yk,dS,ddS,Fval,A,dof] = mt_spectrum(params)
 
    if any(strcmpi(params.detrend,{'constant' 'linear'}))
       x = detrend(params.x,params.detrend);
@@ -536,9 +533,8 @@ function [S,Yk,dS,ddS,Fval,A,dof] = mtm_spectrum(params)
          num = (k-1)*(abs(u).^2)*Uk0sq;
          den = sum( abs(yk-ykhat).^2 ,2);
          Fval(:,chan) = num./den;
-         A(:,chan) = u; % Amplitudes
-         
-         Yk{chan} = yk;
+         A(:,chan) = u; % Amplitudes  
+         Yk{chan} = yk; % store eigencoefficients for each channel
       end
 
       % Combined tapered spectral estimates
@@ -627,37 +623,133 @@ function [S,Yk,dS,ddS,Fval,A,dof] = mtm_spectrum(params)
    end
 end
 
+function [P_reshaped,f0] = mt_reshape(out,par)
+   if ~par.Ftest
+      error('Ftest must be run using sig.mtspectrum');
+   end
+
+   Nchan = par.Nchan;
+   f = out.f;
+   P_reshaped = out.P;
+   pval = out.pval;
+   Fval = out.Fval;
+   hbw = par.hbw;
+   Fs = par.Fs;
+   Yk = par.Yk;
+   V = par.V;
+   A = par.A;
+
+   if ~isempty(par.reshape_f) && (par.reshape_hw == 0)
+      % Match requested frequencies to reshape to closest in frequency grid
+      f0 = repmat({nearest(par.reshape_f,f)},1,Nchan);
+   elseif ~isempty(par.reshape_f)
+      % Search for significant amplitudes in window (f-hw) <= f <= (f+hw)
+      f0 = search_f(f,pval,Fval,par.reshape_threshold,par.reshape_f,...
+         par.reshape_hw,hbw);
+   else
+      % TODO: search all frequencies?
+   end
+
+   for i = 1:Nchan
+      for j = 1:numel(f0{i})
+         % Frequency index around line element to remove
+         ind = find((f>=(f0{i}(j)-par.reshape_nhbw*hbw)) ...
+            & (f<=(f0{i}(j)+par.reshape_nhbw*hbw)));
+         % Relative frequency for transformed tapers
+         f2 = f(ind)-f0{i}(j);
+
+         % Fourier transform tapers on grid around line element
+         fstart = f2(1); fstop = f2(end); nfft2 = length(f2);
+         % Initial complex weight
+         a = exp(2i*pi*fstart/par.Fs);
+         % Relative complex weight
+         w = exp(2i*pi*(fstart-fstop)/((nfft2-1)*Fs));
+         H = czt(V,nfft2,w,a);
+
+         % Subtract line component (TODO: currently uses unity weights)
+         % TODO when we have multiple lines in +-hw
+         A0 = A(f==f0{i}(j),i);
+         P_reshaped(ind,i) = mean( abs( Yk{i}(ind,:) - A0*H ).^2 ,2) ./ Fs;
+      end
+   end
+end
+
+%% Search for significant amplitudes in window (f-hw) <= f <= (f+hw)
+% f - frequency vector
+% pval - corresponding p-values from Thompson's harmonic line test
+% Fval - corresponding F-values from Thompson's harmonic line test
+% threshold - cutoff p-value for detecting significant line
+% f0 - line frequencies to search for
+% hw - halfwidth of frequency range centered on f0 within which to search
+% hbw - half bandwidth of multitaper estimate
+function f_actual = search_f(f,pval,Fval,threshold,f0,hw,hbw)
+   Nchan = size(pval,2);
+   f_actual = cell(1,Nchan);
+
+   for chan = 1:Nchan
+      f_actual{chan} = [];
+      for i = 1:numel(f0)
+         ind = find( (f>=(f0(i)-hw)) & (f<=(f0(i)+hw)) );
+         ind2 = pval(ind,chan) < threshold;
+
+         if sum(ind2)
+            f_actual_temp = f(ind(ind2));
+            F_temp = Fval(ind(ind2),chan);
+            [F_temp,I] = sort(F_temp,1,'descend');
+            f_actual_temp = f_actual_temp(I);
+
+            if 1
+               % Take only the most significant peak within +-hw
+               try
+                  f_actual{chan} = [f_actual{chan} ; f_actual_temp(1)];
+               catch, keyboard
+               end
+            else
+               % Search for all peaks that don't overlap by +-hbw
+               % http://www.lsc-group.phys.uwm.edu/~ballen/grasp-distribution/GRASP/doc/html/node306.html
+               while ~isempty(f_actual_temp)
+                  f_actual{chan} = [f_actual{chan} ; f_actual_temp(1)];
+                  ind3 = (f_actual_temp>=(f_actual_temp(1)-hbw)) & (f_actual_temp<=(f_actual_temp(1)+hbw));
+                  f_actual_temp(ind3) = [];
+                  F_temp(ind3) = [];
+               end
+            end
+         end
+      end
+   end
+end
+
 % Ref: Martin GD (2005). Chirp Z-transform spectral zoom optimization
 %      with Matlab. Sandia Report SAND 2005-7084.
 % This is indeed slightly faster, but there are small differences between
 % this and the standard czt call, that grow with signal length. I can't
 % tell which is preferable for numerical stability...
 function z = spectralZoom(h,fs,f1,f2,m)
-[k, n] = size(h); oldk = k;
-if k == 1, h = h(:); [k, n] = size(h); end
+   [k, n] = size(h); oldk = k;
+   if k == 1, h = h(:); [k, n] = size(h); end
 
-%------- Length for power-of-two fft
-nfft = 2^nextpow2(k+m-1);
+   %------- Length for power-of-two fft
+   nfft = 2^nextpow2(k+m-1);
 
-%------- Premultiply data
-kk = ((-k+1):max(m-1,k-1)).';
-kk2 = (kk.^2)./2;
-wPow = times( -1i*2*pi*(f2-f1)/((m-1)*fs) , kk2 );
-ww = exp(wPow);
-nn = (0:(k-1))';
-aPow = times( -1i*2*pi*f1/fs , nn );
-aa = exp(aPow);
-aa = aa.*ww(k+nn);
-y = h.*aa(:,ones(1,n));
+   %------- Premultiply data
+   kk = ((-k+1):max(m-1,k-1)).';
+   kk2 = (kk.^2)./2;
+   wPow = times( -1i*2*pi*(f2-f1)/((m-1)*fs) , kk2 );
+   ww = exp(wPow);
+   nn = (0:(k-1))';
+   aPow = times( -1i*2*pi*f1/fs , nn );
+   aa = exp(aPow);
+   aa = aa.*ww(k+nn);
+   y = h.*aa(:,ones(1,n));
 
-%------- Fast convolution via FFT
-fy = fft(y,nfft);
-fv = fft(1./ww(1:(m-1+k)),nfft);
-fy = fy.*fv(:,ones(1, n));
-z  = ifft(fy);
+   %------- Fast convolution via FFT
+   fy = fft(y,nfft);
+   fv = fft(1./ww(1:(m-1+k)),nfft);
+   fy = fy.*fv(:,ones(1, n));
+   z  = ifft(fy);
 
-%------- Final multiply
-z = z(k:(k+m-1),:) .* ww(k:(k+m-1),ones(1, n));
+   %------- Final multiply
+   z = z(k:(k+m-1),:) .* ww(k:(k+m-1),ones(1, n));
 
-if oldk == 1, z = transpose(z); end
+   if oldk == 1, z = transpose(z); end
 end
