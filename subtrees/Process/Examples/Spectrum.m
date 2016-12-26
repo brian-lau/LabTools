@@ -13,7 +13,6 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       rejectParams 
       rawParams           % structure of parameters for mtspectrum
       baseParams
-      %verbose
    end
    properties(Dependent)
       %Fs                 % Sampling Frequency
@@ -21,15 +20,16 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       nSections           % valid sections
    end
    properties(SetAccess = protected)
-   %properties(SetAccess = protected, Hidden)
+      labels_              % 
       raw                 % direct multitaper spectral estimate
       base                % estimate of base spectrum
       baseFit             % parametric fit to raw spectrum
       baseSmooth          % smoothed residual spectrum (raw/baseFit)
       detail              % estimate of detail spectrum (whitened & standardized)
+   end
+   properties(SetAccess = protected, Hidden)
       x_                  % sectioned data
       mask_               % boolean for valid sections
-      labels_             % 
    end
    properties(SetAccess = immutable)
       version = '0.1.0'   % Version string
@@ -44,7 +44,6 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p.addParameter('rejectParams',[]);
          p.addParameter('baseParams',struct('method','broken-power'),@isstruct);
          p.addParameter('rawParams',struct('hbw',0.5),@isstruct);
-%         p.addParameter('verbose',false,@(x) isscalar(x) && islogical(x));
          p.addParameter('step',0,@(x) isscalar(x));
          p.parse(varargin{:});
          par = p.Results;
@@ -53,7 +52,6 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.rejectParams = par.rejectParams;
          self.baseParams = par.baseParams;
          self.rawParams = par.rawParams;
-%         self.verbose = par.verbose;
          self.step = par.step;
       end
       
@@ -150,6 +148,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.mask();
       end
       
+      %% Create mask for bad channels/sections
       function mask(self)
          [s,labels] = extract(self.input);
          labels = labels{1}; % These already match
@@ -198,7 +197,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
          
          self.x_ = temp;
-         self.mask_ = ind;
+         self.mask_ = logical(ind);
          self.labels_ = labels(channelsToKeep);
       end
       
@@ -206,8 +205,13 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       function self = estimateRaw(self)
          self.section();
 
-         [out,par] = sig.mtspectrum(self.x_,...
-            self.rawParams,'Fs',self.input(1).Fs);
+         if all(self.mask_)
+            [out,par] = sig.mtspectrum(self.x_,...
+               self.rawParams,'Fs',self.input(1).Fs);
+         else
+            [out,par] = sig.mtspectrum(self.x_,...
+               self.rawParams,'Fs',self.input(1).Fs,'mask',self.mask_);
+         end
          
          P = zeros([1 size(out.P)]);
          P(1,:,:) = out.P; % format for SpectralProcess
