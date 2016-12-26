@@ -5,30 +5,34 @@
 %  o during baseline estimation, consider extending edges to reduce edge effects
 %  x remove line noise
 %  o spike spectrum
+%  o label checking
 classdef Spectrum < hgsetget & matlab.mixin.Copyable
    properties
-      
-      input % SampledProcess
-      nChannels
-      step
-      nSections
-      
-      rejectParams
-      
-      raw   % direct multitaper spectral estimate
-      rawParams %
-      base  % estimate of base spectrum
-      baseFit
-      baseSmooth
+      input               % SampledProcess
+      step                % size of sections (seconds)
+      rejectParams 
+      rawParams           % structure of parameters for mtspectrum
       baseParams
-      detail % estimate of detail spectrum (whitened & standardized)
-      
-      verbose
-      
-      x_
-      mask_
-      labels_
-      version = '0.1.0'
+      %verbose
+   end
+   properties(Dependent)
+      %Fs                 % Sampling Frequency
+      nChannels           % unique & valid channels
+      nSections           % valid sections
+   end
+   properties(SetAccess = protected)
+   %properties(SetAccess = protected, Hidden)
+      raw                 % direct multitaper spectral estimate
+      base                % estimate of base spectrum
+      baseFit             % parametric fit to raw spectrum
+      baseSmooth          % smoothed residual spectrum (raw/baseFit)
+      detail              % estimate of detail spectrum (whitened & standardized)
+      x_                  % sectioned data
+      mask_               % boolean for valid sections
+      labels_             % 
+   end
+   properties(SetAccess = immutable)
+      version = '0.1.0'   % Version string
    end
    
    methods
@@ -40,7 +44,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p.addParameter('rejectParams',[]);
          p.addParameter('baseParams',struct('method','broken-power'),@isstruct);
          p.addParameter('rawParams',struct('hbw',0.5),@isstruct);
-         p.addParameter('verbose',false,@(x) isscalar(x) && islogical(x));
+%         p.addParameter('verbose',false,@(x) isscalar(x) && islogical(x));
          p.addParameter('step',0,@(x) isscalar(x));
          p.parse(varargin{:});
          par = p.Results;
@@ -49,24 +53,22 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.rejectParams = par.rejectParams;
          self.baseParams = par.baseParams;
          self.rawParams = par.rawParams;
-         self.verbose = par.verbose;
+%         self.verbose = par.verbose;
          self.step = par.step;
       end
       
       function set.input(self,input)
-         assert(numel(unique([input.Fs]))==1,'Fs must match for SampledProcess array.');
-         assert(numel(unique([input.n]))==1,'# of channels must match for SampledProcess array.');
-         
-         self.nChannels = input(1).n;
-         assert(numel(unique(cat(1,input.labels),'rows'))==self.nChannels,...
-            'Labels must match for SampledProcess array.');
-         
-         self.input = copy(input);
-         
-         % Remove previous estimates
-         self.raw = [];
-         self.base = [];
-         self.detail = [];
+         if isa(input,'SampledProcess')
+            assert(numel(unique([input.Fs]))==1,'Fs must match for SampledProcess array.');
+            assert(numel(unique([input.n]))==1,'# of channels must match for SampledProcess array.');
+            
+            % Check each SampledProcess has same labels in same order
+            %self.nChannels = input(1).n;
+%             assert(numel(unique(cat(1,input.labels),'rows'))==self.nChannels,...
+%                'Labels must match for SampledProcess array.');
+            
+            self.input = copy(input);
+         end
       end
       
       function set.baseParams(self,baseParams)
@@ -90,7 +92,6 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       end
       
       function set.rawParams(self,params)
-         params.Fs = self.input(1).Fs;
          self.rawParams = params;
       end
       
@@ -98,6 +99,32 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.step = step;
       end
       
+      function nSections = get.nSections(self)
+         nSections = sum(self.mask_);
+      end
+      
+      function nChannels = get.nChannels(self)
+         nChannels = numel(self.labels_);
+      end
+      
+      function bool = isRunnable(self)
+         bool = ~isempty(self.input);
+      end
+      
+      function run(self)
+         if ~self.isRunnable
+            error('No input signal');
+         end
+         
+         self.estimateRaw();
+         self.estimateBaseFit();
+         self.estimateBaseSmooth();
+         %self.combineBase();
+         %self.estimateDetail();
+         self.standardize();
+      end
+      
+      %% Break input into sections
       function section(self)
          if self.step > 0 % section the data
             for i = 1:numel(self.input)
@@ -105,8 +132,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                win = [win,win+self.step];
                win(win>self.input(i).tEnd) = self.input(i).tEnd;
                
-               % Remove windows that don't match step-size. This ensures
-               % that the DOF estimation is correct
+               % Remove windows that don't match step-size.
+               % This ensures that the DOF estimation is correct
                duration = diff(win,1,2);
                win(duration < self.step,:) = [];
                
@@ -119,6 +146,11 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             end
          end
          
+         % Determine validity
+         self.mask();
+      end
+      
+      function mask(self)
          [s,labels] = extract(self.input);
          labels = labels{1}; % These already match
          
@@ -143,6 +175,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                   else
                      ind = [ind ; ones(1,numel(labels))];
                   end
+                  % Remove entire channel if quality <= 0
                   ind(end,:) = ind(end,:).*(self.input(i).quality>0);
                end
             end
@@ -167,34 +200,14 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.x_ = temp;
          self.mask_ = ind;
          self.labels_ = labels(channelsToKeep);
-         self.nChannels = numel(self.labels_);
-         
-         self.nSections = sum(ind);
-      end
-      
-      
-      function bool = isRunnable(self)
-         bool = ~isempty(self.input);
-      end
-      
-      function run(self)
-         if ~self.isRunnable
-            error('No input signal');
-         end
-         
-         self.estimateRaw();
-         self.estimateBaseFit();
-         self.estimateBaseSmooth();
-         %self.combineBase();
-         %self.estimateDetail();
-         self.standardize();
       end
       
       %% Estimate raw spectrum
       function self = estimateRaw(self)
          self.section();
 
-         [out,par] = sig.mtspectrum(self.x_,self.rawParams);
+         [out,par] = sig.mtspectrum(self.x_,...
+            self.rawParams,'Fs',self.input(1).Fs);
          
          P = zeros([1 size(out.P)]);
          P(1,:,:) = out.P; % format for SpectralProcess
@@ -324,6 +337,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.baseParams.Q = Q;
       end
       
+      %% Threshold power at significance alpha
       function [c,f] = threshold(self,alpha)
          P = self.detail.values{1};
          c = gaminv(1-alpha,self.baseParams.alpha,1/self.baseParams.alpha);
@@ -408,7 +422,6 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          alpha = self.baseParams.alpha;
          h = figure;
          plot(self.detail,'log',0,'handle',h,'title',true);
-         %keyboard
          for i = 1:self.nChannels
             subplot(self.nChannels,1,i); hold on;
             p = [.05 .5 .95 .9999];
@@ -419,7 +432,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             end
             set(gca,'xscale','log');
             
-            %h.Children(i).XLim(1) = self.baseParams.fmin;
+            h.Children(i).XLim(1) = self.baseParams.fmin;
          end
       end
    end

@@ -232,12 +232,16 @@ if iscell(x)
       output.f = it.f;
       output.P = p;
       
-      % TODO HOW TO RETURN F-TEST IN THIS CASE?
+      % TODO HOW TO RETURN F-TEST/DOF IN THIS CASE?
    end
    return;
 end
 
 %% Start processing for individual sections
+if any(strcmpi(par.detrend,{'constant' 'linear'}))
+   x = detrend(x,par.detrend);
+end
+
 % Estimate spectrum
 [S,Yk,dS,ddS,Fval,A,dof] = mt_spectrum(x,par);
 
@@ -423,12 +427,7 @@ end % END mtpsectrum
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Estimate multitaper spectrum
-function [S,Yk,dS,ddS,Fval,A,dof] = mt_spectrum(x,params)
-
-   if any(strcmpi(params.detrend,{'constant' 'linear'}))
-      x = detrend(x,params.detrend);
-   end
-   
+function [S,Yk,dS,ddS,Fval,A,dof] = mt_spectrum(x,params)   
    nfft = params.nfft;
    V  = params.V;
    lambda  = params.lambda;
