@@ -7,7 +7,7 @@ par.KeepUnmatched = true;
 addRequired(par,'lfpfile',@ischar);
 
 % Trim data from beginning and end (after filtering)
-addParameter(par,'trim',0,@isscalar);
+addParameter(par,'trim',0,@(x) isscalar(x) || (numel(x)==2));
 
 % Remove line noise
 addParameter(par,'deline',false,@islogical);
@@ -138,8 +138,12 @@ if par.Results.deline
    s.map(@(x) f(x)');
 end
 
-if par.Results.trim
-   s.window = [par.Results.trim s.window(end)-par.Results.trim];
+if any(par.Results.trim>0)
+   if numel(par.Results.trim) == 2
+      s.window = [par.Results.trim(1) s.window(end)-par.Results.trim(2)];
+   else
+      s.window = [par.Results.trim s.window(end)-par.Results.trim];
+   end
    s.chop();
 end   
 
