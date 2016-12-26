@@ -173,6 +173,7 @@ p.addParameter('verbose',false,@(x) islogical(x) || isscalar(x));
 p.parse(x,varargin{:});
 par = p.Results;
 
+par = rmfield(par,'x');
 checkInputs();
 
 %% Cell array of signals, process each element adjusting tapers to maintain hbw
@@ -180,11 +181,10 @@ if iscell(x)
    nSections = numel(x);
    
    if nSections == 1
-      par = rmfield(par,'x');
       [output,params] = sig.mtspectrum(x{1},par);
    else
       % Duration of each section
-      Twin = cellfun(@(x) size(x,1)/par.Fs,par.x);
+      Twin = cellfun(@(x) size(x,1)/par.Fs,x);
       
       params = par;
       temp = zeros(par.nf,par.Nchan,nSections);
@@ -200,7 +200,6 @@ if iscell(x)
          par.k = params.k(i);
          par.V = V;
          par.lambda = lambda;
-         try, par = rmfield(par,'x'); end
          
          [it,partemp] = sig.mtspectrum(x{i},par);
          params.dof{i} = partemp.dof;
@@ -230,7 +229,6 @@ if iscell(x)
          end
       end
       
-      params = rmfield(params,'x');
       output.f = it.f;
       output.P = p;
       
@@ -241,7 +239,7 @@ end
 
 %% Start processing for individual sections
 % Estimate spectrum
-[S,Yk,dS,ddS,Fval,A,dof] = mt_spectrum(par);
+[S,Yk,dS,ddS,Fval,A,dof] = mt_spectrum(x,par);
 
 if isempty(par.f)
    nfft = par.nfft;
@@ -317,20 +315,22 @@ end
 
 if nargout == 2
    params = par;
-   params = rmfield(params,'x');
 end
 
 %% Verify consistency of parameters (nested)
    function checkInputs()
-      if iscell(par.x)
-         N = sum(cellfun(@(x) size(x,1),par.x));
-         T = sum(cellfun(@(x) size(x,1)/par.Fs,par.x));
-         par.Nchan = unique(cellfun(@(x) size(x,2),par.x));
+      if iscell(x)
+         ind = cellfun(@(z) isempty(z),x);
+         x(ind) = [];
+         
+         N = sum(cellfun(@(x) size(x,1),x));
+         T = sum(cellfun(@(x) size(x,1)/par.Fs,x));
+         par.Nchan = unique(cellfun(@(x) size(x,2),x));
          assert(numel(par.Nchan)==1,'Multiple sections must have same number of channels');
       else
-         [N,par.Nchan] = size(par.x);
+         [N,par.Nchan] = size(x);
          T = N/par.Fs;
-         assert(isreal(par.x),'Signal must be real');
+         assert(isreal(x),'Signal must be real');
       end
       
       if isempty(par.V)
@@ -353,7 +353,7 @@ end
             assert((par.k>=1) && (par.k<=k),...
                '# of tapers must be greater than 1 and < 2*nw-1');
          end
-         if ~iscell(par.x)
+         if ~iscell(x)
             % Compute tapers, if cell wait for each section
             [par.V,par.lambda] = dpss(N,par.thbw,par.k);
          end
@@ -379,7 +379,7 @@ end
          error('detrend options are ''none'', ''constant'' or ''linear''.');
       end
       
-      if ~iscell(par.x)
+      if ~iscell(x)
          % Do tapers pass the eigenvalue threshold?
          ind = find(par.lambda < par.lambdaThresh);
          if ~isempty(ind)
@@ -423,13 +423,12 @@ end % END mtpsectrum
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Estimate multitaper spectrum
-function [S,Yk,dS,ddS,Fval,A,dof] = mt_spectrum(params)
+function [S,Yk,dS,ddS,Fval,A,dof] = mt_spectrum(x,params)
 
    if any(strcmpi(params.detrend,{'constant' 'linear'}))
-      x = detrend(params.x,params.detrend);
-   else
-      x = params.x;
+      x = detrend(x,params.detrend);
    end
+   
    nfft = params.nfft;
    V  = params.V;
    lambda  = params.lambda;
