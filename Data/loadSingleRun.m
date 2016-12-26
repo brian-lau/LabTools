@@ -61,15 +61,20 @@ switch lower(ext)
          'labels','trigger');
    case '.edf'
       [hdr,values] = edfRead(lfpfile);
-      labels = hdr.label;
-      labels = cellfun(@(x) regexprep(x,'_','','emptymatch'),labels,'uni',false);
-      [~,temp] = intersect(labels,{'01D' '12D' '23D' '01G' '12G' '23G'});
-      ind = zeros(numel(labels),1);
+      tags = hdr.label;
+      tags = cellfun(@(x) regexprep(x,'_','','emptymatch'),tags,'uni',false);
+      [~,temp] = intersect(tags,{'01D' '12D' '23D' '01G' '12G' '23G'});
+      ind = zeros(numel(tags),1);
       ind(temp) = true;
       ind = logical(ind);
       nsamples = unique(hdr.samples);
       if numel(nsamples)~=1
          error('Multiple sampling rates in edf data');
+      end
+      for i = 1:numel(tags)
+         if ind(i)
+            labels(i) = metadata.label.dbsDipole(tags{i});
+         end
       end
       s = SampledProcess('values',values(ind,:)',...
          'Fs',1/(hdr.duration/nsamples),...
@@ -78,7 +83,7 @@ switch lower(ext)
       t = SampledProcess('values',values(~ind,:)',...
          'Fs',1/(hdr.duration/nsamples),...
          'tStart',0,...
-         'labels',labels(~ind));
+         'labels',tags(~ind));
    case '.txt'
       % Anne's data (text files)
       temp = load(lfpfile);
