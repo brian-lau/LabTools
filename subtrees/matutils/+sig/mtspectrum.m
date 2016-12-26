@@ -66,7 +66,11 @@
 %     confMethod - string, optional, default = 'asymp'
 %               'asymp' - asymptotic confidence intervals
 %               'jack'  - Jackknifed confidence intervals
-%     detrend - 
+%     detrend - string, optional, default = 'none'
+%               'constant' - remove mean
+%               'linear'   - remove linear trend
+%     mask    - nSections x nChannels logical, optional, default = []
+%               Set elements false to ignore sections/channels in average
 %     reshape - boolean, optional, default = false
 %               Reshape spectrum at frequencies with significant F-test
 %     reshape_f -
@@ -141,6 +145,7 @@
 % TODO
 % o jackknife confidence intervals
 % o multi-section F-test
+% o reshaping currently only takes the maximum within +-hw to reshape_f
 function [output,params] = mtspectrum(x,varargin)
 
 p = inputParser;
@@ -163,7 +168,8 @@ p.addParameter('weights','adapt',@(x) any(strcmp(x,{'adapt' 'eigen' 'unity'})));
 p.addParameter('dropLastTaper',true,@(x) islogical(x) || isscalar(x));
 p.addParameter('quadratic',false,@(x) islogical(x) || isscalar(x));
 p.addParameter('robust','mean',@ischar);
-p.addParameter('detrend','none');
+p.addParameter('detrend','none',@ischar);
+p.addParameter('mask',[]);
 p.addParameter('reshape',false,@(x) islogical(x));
 p.addParameter('reshape_f',[],@(x) isnumeric(x));
 p.addParameter('reshape_hw',0,@(x) isscalar(x) && isnumeric(x) && (x>=0));
@@ -178,17 +184,15 @@ checkInputs();
 
 %% Cell array of signals, process each element adjusting tapers to maintain hbw
 if iscell(x)
-   nSections = numel(x);
-   
-   if nSections == 1
+   if par.Nsections == 1
       [output,params] = sig.mtspectrum(x{1},par);
    else
       % Duration of each section
       Twin = cellfun(@(x) size(x,1)/par.Fs,x);
       
       params = par;
-      temp = zeros(par.nf,par.Nchan,nSections);
-      for i = 1:nSections
+      temp = zeros(par.nf,par.Nchan,par.Nsections);
+      for i = 1:par.Nsections
          % Adjust thbw & k to maintain desired hbw given the section length
          params.thbw(i) = Twin(i)*par.hbw;
          params.k(i) = max(2,min(round(2*params.thbw(i)),size(x{i},1)) - 1);
@@ -205,26 +209,44 @@ if iscell(x)
          params.dof{i} = partemp.dof;
          temp(:,:,i) = it.P;
          
+         if ~isempty(par.mask)
+            % Set power to NaN for all frequencies where mask for section false
+            mask = double(logical(par.mask(i,:)));
+            mask(mask==0) = NaN;
+            temp(:,:,i) = bsxfun(@times,it.P,mask);
+         else
+            temp(:,:,i) = it.P;
+         end
+         
          % TODO: If reshaped, return original as well?
       end
       
       % Section-average
-      temp = permute(temp,[1 3 2]);
+      temp = permute(temp,[1 3 2]); % frequency x sections x channels
+      
       if strcmp(params.robust,'none')
          p = temp;
       else
-         p = zeros(par.nf,par.Nchan);
+         p = nan(par.nf,par.Nchan);
          for i = 1:par.Nchan
+            if isempty(par.mask)
+               pSection = temp(:,:,i);
+            else
+               pSection = temp(:,par.mask(:,i),i);
+            end
+            
             %TODO: should issue warning on NaNs?
-            switch lower(params.robust)
-               case {'median'}
-                  p(:,i) = median(temp(:,:,i),2);
-               case {'huber'}
-                  p(:,i) = stat.mlochuber(temp(:,:,i)','k',5)';
-               case {'logistic'}
-                  p(:,i) = stat.mloclogist(temp(:,:,i)','loc','nanmedian','k',5)';
-               otherwise
-                  p(:,i) = mean(temp(:,:,i),2);
+            if ~isempty(pSection)
+               switch lower(params.robust)
+                  case {'median'}
+                     p(:,i) = median(pSection,2);
+                  case {'huber'}
+                     p(:,i) = stat.mlochuber(pSection','k',5)';
+                  case {'logistic'}
+                     p(:,i) = stat.mloclogist(pSection','loc','nanmedian','k',5)';
+                  otherwise
+                     p(:,i) = mean(pSection,2);
+               end
             end
          end
       end
@@ -288,6 +310,7 @@ output.P = S./par.Fs;
 if par.reshape
    [P_reshaped,f0] = mt_reshape(output,par);
    % TODO: return f0, as well as amplitude?
+   par.reshape_f_actual = f0;
    output.P_original = output.P;
    output.P = P_reshaped;
 end
@@ -324,17 +347,26 @@ end
 %% Verify consistency of parameters (nested)
    function checkInputs()
       if iscell(x)
+         % Remove empty sections
          ind = cellfun(@(z) isempty(z),x);
          x(ind) = [];
          
          N = sum(cellfun(@(x) size(x,1),x));
          T = sum(cellfun(@(x) size(x,1)/par.Fs,x));
          par.Nchan = unique(cellfun(@(x) size(x,2),x));
+         par.Nsections = numel(x);
          assert(numel(par.Nchan)==1,'Multiple sections must have same number of channels');
       else
          [N,par.Nchan] = size(x);
+         par.Nsections = 1;
          T = N/par.Fs;
          assert(isreal(x),'Signal must be real');
+      end
+      
+      if ~isempty(par.mask) && iscell(x)
+         assert(islogical(par.mask),'Mask must be a logical array');
+         assert(all(size(par.mask) == [par.Nsections par.Nchan]),...
+            'Mask must be formatted as nSections x nChan');
       end
       
       if isempty(par.V)
@@ -682,11 +714,16 @@ end
 % hbw - half bandwidth of multitaper estimate
 function f_actual = search_f(f,pval,Fval,threshold,f0,hw,hbw)
    Nchan = size(pval,2);
+   
+%    if numel(hw) == 1
+%       hw = repmat(hw,1,numel(f0));
+%    end
    f_actual = cell(1,Nchan);
 
    for chan = 1:Nchan
       f_actual{chan} = [];
       for i = 1:numel(f0)
+         %ind = find( (f>=(f0(i)-hw(i))) & (f<=(f0(i)+hw(i))) );
          ind = find( (f>=(f0(i)-hw)) & (f<=(f0(i)+hw)) );
          ind2 = pval(ind,chan) < threshold;
 
@@ -698,11 +735,8 @@ function f_actual = search_f(f,pval,Fval,threshold,f0,hw,hbw)
 
             if 1
                % Take only the most significant peak within +-hw
-               try
-                  f_actual{chan} = [f_actual{chan} ; f_actual_temp(1)];
-               catch, keyboard
-               end
-            else
+               f_actual{chan} = [f_actual{chan} ; f_actual_temp(1)];
+             else
                % Search for all peaks that don't overlap by +-hbw
                % http://www.lsc-group.phys.uwm.edu/~ballen/grasp-distribution/GRASP/doc/html/node306.html
                while ~isempty(f_actual_temp)
