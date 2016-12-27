@@ -37,19 +37,33 @@ for chan = 1:nChan
       [beta2,fval2,exitflag2] = ...
          fmincon(fun,beta0,[],[],[],[],lb,ub,@smbrokenpl_constraint,opts);
       
-      if fval1 < fval2
+      if (exitflag1>0) && (exitflag2>0)
+         if fval1 < fval2
+            beta(:,chan) = beta1;
+            fval(chan) = fval1;
+            exitflag(chan) = exitflag1;
+         else
+            beta(:,chan) = beta2;
+            fval(chan) = fval2;
+            exitflag(chan) = exitflag2;
+         end
+      elseif (exitflag1>0) && (exitflag2<=0)
          beta(:,chan) = beta1;
          fval(chan) = fval1;
          exitflag(chan) = exitflag1;
-      else
+      elseif (exitflag1<=0) && (exitflag2>0)
          beta(:,chan) = beta2;
          fval(chan) = fval2;
          exitflag(chan) = exitflag2;
+      else
+         beta(:,chan) = beta1;
+         fval(chan) = fval1;
+         exitflag(chan) = exitflag1;
       end
    else
       beta(:,chan) = beta1;
       fval(chan) = fval1;
       exitflag(chan) = exitflag1;
    end
+   
 end
-%keyboard
