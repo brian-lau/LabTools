@@ -244,6 +244,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          
          [beta,fval,exitflag] = fit_smbrokenpl(fnz,pnz,...
             self.baseParams.method,self.baseParams.beta0);
+
          basefit = zeros(size(p));
          for i = 1:self.nChannels
             basefit(:,i) = smbrokenpl(beta(:,i),f);
@@ -367,15 +368,15 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
          
          % Take only frequencies included in basefit
-         if ~isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
-            ind = (f>=self.baseParams.fmin) & (f<=self.baseParams.fmax);
-         elseif ~isempty(self.baseParams.fmin) && isempty(self.baseParams.fmax)
-            ind = (f>=self.baseParams.fmin);
-         elseif isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
-            ind = (f<=self.baseParams.fmax);
-         else
+%          if ~isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
+%             ind = (f>=self.baseParams.fmin) & (f<=self.baseParams.fmax);
+%          elseif ~isempty(self.baseParams.fmin) && isempty(self.baseParams.fmax)
+%             ind = (f>=self.baseParams.fmin);
+%          elseif isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
+%             ind = (f<=self.baseParams.fmax);
+%          else
             ind = true(size(f));
-         end
+%          end
          
          f = f(ind);
          P = P(ind,:);
@@ -436,7 +437,10 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             end
             set(gca,'xscale','log');
             
+            %try
             h.Children(i).XLim(1) = self.baseParams.fmin;
+            h.Children(i).YLim(2) = 5;
+            %catch; keyboard; end
          end
       end
    end
