@@ -19,7 +19,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       nChannels           % unique & valid channels
       nSections           % valid sections
    end
-   properties(SetAccess = protected)
+   properties%(SetAccess = protected)
       labels_              % 
       raw                 % direct multitaper spectral estimate
       base                % estimate of base spectrum
@@ -40,7 +40,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p = inputParser;
          p.KeepUnmatched= false;
          p.FunctionName = 'Spectrum constructor';
-         p.addParameter('input',[],@(x) isa(x,'SampledProcess'));
+         p.addParameter('input',[],@(x) isa(x,'SampledProcess') || ischar(x));
          p.addParameter('rejectParams',[]);
          p.addParameter('baseParams',struct('method','broken-power'),@isstruct);
          p.addParameter('rawParams',struct('hbw',0.5),@isstruct);
@@ -66,6 +66,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
 %                'Labels must match for SampledProcess array.');
             
             self.input = copy(input);
+         elseif ischar(input)
+            self.input = input;
          end
       end
       
@@ -109,7 +111,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          bool = ~isempty(self.input);
       end
       
-      function run(self)
+      function self = run(self)
          if ~self.isRunnable
             error('No input signal');
          end
@@ -117,8 +119,13 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.estimateRaw();
          self.estimateBaseFit();
          self.estimateBaseSmooth();
-         %self.combineBase();
-         %self.estimateDetail();
+         self.estimateDetail();
+         self.standardize();
+      end
+      
+      function self = refitBase(self)
+         self.estimateBaseFit();
+         self.estimateDetail();
          self.standardize();
       end
       
@@ -213,6 +220,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                self.rawParams,'Fs',self.input(1).Fs,'mask',self.mask_);
          end
          
+         par = rmfield(par,{'dof','f'});
          P = zeros([1 size(out.P)]);
          P(1,:,:) = out.P; % format for SpectralProcess
          self.raw = SpectralProcess(P,...
@@ -272,6 +280,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             basefit = basefit';
          end
          basesmooth = ones(size(p));
+         isSmooth = true;
          for i = 1:self.nChannels
             z = p(:,i)./basefit(:,i);
             z(isinf(z)) = median(z); % Trap divide by zeros
@@ -284,13 +293,17 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                   basesmooth(:,i) = arpls(z,1e5);
                case 'median'
                   basesmooth(:,i) = medfilt1(z,floor(numel(f)/4),'truncate');
+               otherwise
+                  isSmooth = false;
             end
          end
          
-         P(1,:,:) = basesmooth; % format for SpectralProcess
-         self.baseSmooth = SpectralProcess(P,...
-            'f',f,'params',[],'tBlock',1,'tStep',1,...
-            'labels',self.labels_,'tStart',0,'tEnd',1);
+         if isSmooth
+            P(1,:,:) = basesmooth; % format for SpectralProcess
+            self.baseSmooth = SpectralProcess(P,...
+               'f',f,'params',[],'tBlock',1,'tStep',1,...
+               'labels',self.labels_,'tStart',0,'tEnd',1);
+         end
          
          % Combine fit with smoother for overall whitening transform
          base = basefit.*basesmooth;
@@ -299,12 +312,14 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.base = SpectralProcess(P,...
             'f',f,'params',[],'tBlock',1,'tStep',1,...
             'labels',self.labels_,'tStart',0,'tEnd',1);
-         
-         % Estimate detail spectrum using whitening transform
+      end
+      
+      %% Estimate detail spectrum using whitening transform
+      function self = estimateDetail(self)
          self.detail = copy(self.raw);
-         temp = reshape(base,[1 numel(f) self.nChannels]);
+         temp = self.base.values{1};
          self.detail.map(@(x) x./temp);
-         self.detail.fix();
+         self.detail.fix();         
       end
       
       %% Rescale detail spectrum to unit variance white noise
@@ -337,6 +352,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          else
             self.detail.map(@(x) Q*x);
          end
+         self.detail.fix();
          
          self.baseParams.alpha = alpha;
          self.baseParams.Q = Q;
@@ -351,74 +367,109 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
       end
       
-      function h = plotDiagnostics(self)
+      function h = plotDiagnostics(self,singlefigure)
+         if nargin < 2
+            singlefigure = true;
+         end
+
          f = self.raw.f;
-         P = squeeze(self.raw.values{1});
-         Pstan = squeeze(self.detail.values{1});
-         Q = self.baseParams.Q;
-         base = squeeze(self.base.values{1});
-         baseFit = squeeze(self.baseFit.values{1});
-         baseSmooth = squeeze(self.baseSmooth.values{1});
-         if self.nChannels == 1
-            P = P';
-            Pstan = Pstan';
-            base = base';
-            baseFit = baseFit';
-            baseSmooth = baseSmooth';
+         str = {'raw' 'base' 'baseFit' 'baseSmooth' 'detail'};
+         bool = false(size(str));
+         for i = 1:numel(str)
+            if ~isempty(self.(str{i}))
+               bool(i) = true;
+               if self.nChannels == 1
+                  P.(str{i}) = squeeze(self.(str{i}).values{1})';
+               else
+                  P.(str{i}) = squeeze(self.(str{i}).values{1});
+               end
+            end
+         end
+
+         if all(bool)
+            n = 3;
+         elseif all(bool([1 2 3 5]))
+            n = 2;
          end
          
-         % Take only frequencies included in basefit
-%          if ~isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
-%             ind = (f>=self.baseParams.fmin) & (f<=self.baseParams.fmax);
-%          elseif ~isempty(self.baseParams.fmin) && isempty(self.baseParams.fmax)
-%             ind = (f>=self.baseParams.fmin);
-%          elseif isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
-%             ind = (f<=self.baseParams.fmax);
-%          else
-            ind = true(size(f));
-%          end
-         
-         f = f(ind);
-         P = P(ind,:);
-         Pstan = Pstan(ind,:);
-         base = base(ind,:);
-         baseFit = baseFit(ind,:);
-         baseSmooth = baseSmooth(ind,:);
-
+         xx = [0.5 max(f)];%[self.baseParams.fmin max(f)];
+         flim = self.baseParams.fmax;
+         if isempty(flim)
+            flim = max(f);
+         end
+            
+         shiftlog = 0;
+         shiftlin = 0;
          for i = 1:self.nChannels
-            switch self.baseParams.method
+             switch self.baseParams.method
                case {'broken-power'}
-                  figure;
-                  h = subplot(321); hold on
-                  plot(f,P(:,i));
-                  plot(f,baseFit(:,i));
-                  plot(f,base(:,i));
-                  set(gca,'yscale','log'); axis tight;
+                  if ~singlefigure
+                     figure;
+                     shiftlog = 0;
+                     shiftlin = 0;
+                  elseif i == 1
+                     figure;
+                  end
                   
-                  subplot(322); hold on
-                  plot(f,10*log10(P(:,i)));
-                  plot(f,10*log10(baseFit(:,i)));
-                  plot(f,10*log10(base(:,i)));
-                  set(gca,'xscale','log'); axis tight;
+                  h = subplot(n,2,1); hold on
+                  plot(f,shiftlog + 10*log10(P.raw(:,i)),'color',self.labels_(i).color);
+                  plot(f,shiftlog + 10*log10(P.baseFit(:,i)),'color',self.labels_(i).color);
+                  plot(f,shiftlog + 10*log10(P.base(:,i)),'color',self.labels_(i).color);
+                  axis tight;
+                  yy = get(gca,'ylim');
+                  plot([flim flim],yy,'k--');
+                 
+                  subplot(n,2,2); hold on
+                  plot(log10(f),shiftlog + 10*log10(P.raw(:,i)),'color',self.labels_(i).color);
+                  plot(log10(f),shiftlog + 10*log10(P.baseFit(:,i)),'color',self.labels_(i).color);
+                  plot(log10(f),shiftlog + 10*log10(P.base(:,i)),'color',self.labels_(i).color);
+                  axis tight;
+                  yy = get(gca,'ylim'); %[min(10*log10(P.raw(:,i))) max(10*log10(P.raw(:,i)))];%
+                  plot(log10([flim flim]),yy,'k--');
+                  axis([log10(xx) yy]);
                   
-                  subplot(323); hold on
-                  P2 = P(:,i)./baseFit(:,i);
-                  plot(f,P2);
-                  plot(f,baseSmooth(:,i)); axis tight;
+                  %shiftlog = shiftlog + 10*log10(max(max(P.raw) - min(P.raw)));
+                  shiftlog = shiftlog + max(10*log10(max(P.raw)) - 10*log10(min(P.raw)));
+
+                  if bool(4)
+                     subplot(n,2,3); hold on
+                     P2 = P.raw(:,i)./P.baseFit(:,i);
+                     plot(f,P2);
+                     plot(f,P.baseSmooth(:,i)); axis tight;
+                     
+                     subplot(n,2,4); hold on
+                     plot(f,10*log10(P2));
+                     plot(f,10*log10(P.baseSmooth(:,i)));
+                     set(gca,'xscale','log'); axis tight;
+                     yy = [min(10*log10(P2)) max(10*log10(P2))];%get(gca,'ylim');
+                     plot([flim flim],yy,'k--');
+                     axis([xx yy]);
+                     j = 2;
+                  else
+                     j = 0;
+                  end
                   
-                  subplot(324); hold on
-                  plot(f,10*log10(P2));
-                  plot(f,10*log10(baseSmooth(:,i)));
-                  set(gca,'xscale','log'); axis tight;
-                  
-                  P3 = Pstan(:,i)./Q(i);
-                  subplot(325); hold on
-                  plot(f,P3);
+                  subplot(n,2,3+j); hold on
+                  plot([xx(1) xx(end)],1 + [shiftlin shiftlin],'k');
+                  plot(f,shiftlin + P.detail(:,i),'color',self.labels_(i).color);
                   axis tight; grid on
-                  subplot(326); hold on
-                  plot(f,P3);
+                  yy = get(gca,'ylim');
+                  plot([flim flim],yy,'k--');
+                  axis([xx yy]);
+                  
+                  subplot(n,2,4+j); hold on
+                  plot([xx(1) xx(end)],1 + [shiftlin shiftlin],'k');
+                  plot(f,shiftlin + P.detail(:,i),'color',self.labels_(i).color);
                   set(gca,'xscale','log'); axis tight; grid on
-            end
+                  plot([flim flim],yy,'k--');
+                  axis([xx yy]);
+                  
+                  shiftlin = shiftlin + 2;%max(max(P.detail) - min(P.detail));
+                  
+                  if ~singlefigure
+                     fig.suptitle(self.labels_(i).name);
+                  end
+             end
          end
       end
       
@@ -437,12 +488,15 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             end
             set(gca,'xscale','log');
             
-            %try
             h.Children(i).XLim(1) = self.baseParams.fmin;
             h.Children(i).YLim(2) = 5;
-            %catch; keyboard; end
          end
       end
+      
+      function self = compact(self)
+         self.x_ = [];
+      end
+      
    end
    
 end
