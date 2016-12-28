@@ -51,7 +51,7 @@ for i = 1:n
    end
    
    if numel(t) == 1
-      plot(f,v);
+      plot(f,v,'color',self.labels(i).color);
    else
       surf(t,f,v,'edgecolor','none','Parent',g);
       view(g,0,90);
