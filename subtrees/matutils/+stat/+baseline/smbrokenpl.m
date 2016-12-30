@@ -5,7 +5,14 @@
 % http://www.aanda.org/articles/aa/full/2007/21/aa7055-07/aa7055-07.right.html
 function y = smbrokenpl(b,x)
 
-if numel(b) == 5
+if numel(b) == 4
+   c = b(1);
+   n = b(2);
+   alpha1 = b(3);
+   xb = b(4);
+   
+   y = c * ( (x./xb).^(alpha1*n) + (x./xb).^(0*n) ).^(-1/n);
+elseif numel(b) == 5
    c = b(1);
    n = b(2);
    alpha1 = b(3);

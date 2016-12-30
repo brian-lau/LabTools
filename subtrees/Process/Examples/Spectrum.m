@@ -1,6 +1,6 @@
 % TODO;
 %  x multichannel
-%  o expose baseline parameters
+%  x expose baseline parameters
 %  x implement irasa, not great
 %  o during baseline estimation, consider extending edges to reduce edge effects
 %  x remove line noise
@@ -13,6 +13,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       rejectParams 
       rawParams           % structure of parameters for mtspectrum
       baseParams
+      filter
    end
    properties(Dependent)
       %Fs                 % Sampling Frequency
@@ -45,6 +46,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p.addParameter('baseParams',struct('method','broken-power'),@isstruct);
          p.addParameter('rawParams',struct('hbw',0.5),@isstruct);
          p.addParameter('step',0,@(x) isscalar(x));
+         p.addParameter('filter',[]);
          p.parse(varargin{:});
          par = p.Results;
          
@@ -53,6 +55,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.baseParams = par.baseParams;
          self.rawParams = par.rawParams;
          self.step = par.step;
+         self.filter = par.filter;
       end
       
       function set.input(self,input)
@@ -73,7 +76,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       
       function set.baseParams(self,baseParams)
          switch baseParams.method
-            case 'broken-power'
+            case {'broken-power','broken-power1'}
                if ~isfield(baseParams,'smoother')
                   baseParams.smoother = 'none'; % DEFAULT SMOOTHER
                end
@@ -117,6 +120,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
          
          self.estimateRaw();
+         self.correctFilterGain();
          self.estimateBaseFit();
          self.estimateBaseSmooth();
          self.estimateDetail();
@@ -226,6 +230,19 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          self.raw = SpectralProcess(P,...
             'f',out.f,'params',par,'tBlock',1,'tStep',1,...
             'labels',self.labels_,'tStart',0,'tEnd',1);
+      end
+      
+      %% Remove attenuation due to ADC filter
+      function self = correctFilterGain(self)
+         if ~isempty(self.filter)
+            f = self.raw.f;
+            h = self.filter(f');
+            h = repmat(h,[1 self.nChannels]);
+            H = zeros(self.raw.dim{1});
+            H(1,:,:) = h;
+            self.raw.map(@(x) x./H);
+            self.raw.fix();
+         end
       end
       
       %% Estimate base spectrum
@@ -402,7 +419,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          shiftlin = 0;
          for i = 1:self.nChannels
              switch self.baseParams.method
-               case {'broken-power'}
+               case {'broken-power','broken-power1'}
                   if ~singlefigure
                      figure;
                      shiftlog = 0;
@@ -429,7 +446,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                   axis([log10(xx) yy]);
                   
                   %shiftlog = shiftlog + 10*log10(max(max(P.raw) - min(P.raw)));
-                  shiftlog = shiftlog + max(10*log10(max(P.raw)) - 10*log10(min(P.raw)));
+                  shiftlog = shiftlog + max(10*log10(max(P.raw)) - 10*log10(min(P.raw)))/3;
 
                   if bool(4)
                      subplot(n,2,3); hold on
