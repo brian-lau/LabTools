@@ -33,7 +33,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       mask_               % boolean for valid sections
    end
    properties(SetAccess = immutable)
-      version = '0.1.0'   % Version string
+      version = '0.2.0'   % Version string
    end
    
    methods
@@ -507,6 +507,41 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             
             h.Children(i).XLim(1) = self.baseParams.fmin;
             h.Children(i).YLim(2) = 5;
+         end
+      end
+      
+      function plot1(self,str,h,logy,shift,style)
+         f = self.raw.f;
+         % Take only frequencies included in basefit
+         if ~isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
+            ind = (f>=self.baseParams.fmin) & (f<=self.baseParams.fmax);
+         elseif ~isempty(self.baseParams.fmin) && isempty(self.baseParams.fmax)
+            ind = (f>=self.baseParams.fmin);
+         elseif isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
+            ind = (f<=self.baseParams.fmax);
+         else
+            ind = true(size(f));
+         end
+         f = f(ind);
+
+         axes(h); hold on
+         if logy
+            P = 10*log10(squeeze(self.(str).values{1}));
+         else
+            P = squeeze(self.(str).values{1});
+         end
+         P = P(ind,:);
+         
+         shiftlog = 0;
+         for i = 1:self.nChannels
+            plot(f,shiftlog + P(:,i),...
+               'color',self.labels_(i).color,'LineStyle',style);
+            axis tight;
+            set(gca,'xscale','log');
+            shiftlog = shiftlog + shift;
+
+            %yy = get(gca,'ylim');
+            %plot([flim flim],yy,'k--');
          end
       end
       
