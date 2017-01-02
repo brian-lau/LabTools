@@ -10,10 +10,10 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
    properties
       input               % SampledProcess
       step                % size of sections (seconds)
-      rejectParams 
+      rejectParams        % 
       rawParams           % structure of parameters for mtspectrum
-      baseParams
-      filter
+      baseParams          % structure of parameters for base spectrum fitting
+      filter              % magnitude response of ADC filter
    end
    properties(Dependent)
       %Fs                 % Sampling Frequency
@@ -21,7 +21,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       nSections           % valid sections
    end
    properties%(SetAccess = protected)
-      labels_              % 
+      labels_             % metadata labels for channels
       raw                 % direct multitaper spectral estimate
       base                % estimate of base spectrum
       baseFit             % parametric fit to raw spectrum
@@ -384,165 +384,235 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
       end
       
-      function h = plotDiagnostics(self,singlefigure)
-         if nargin < 2
-            singlefigure = true;
-         end
-
-         f = self.raw.f;
-         str = {'raw' 'base' 'baseFit' 'baseSmooth' 'detail'};
-         bool = false(size(str));
-         for i = 1:numel(str)
-            if ~isempty(self.(str{i}))
-               bool(i) = true;
-               if self.nChannels == 1
-                  P.(str{i}) = squeeze(self.(str{i}).values{1})';
-               else
-                  P.(str{i}) = squeeze(self.(str{i}).values{1});
-               end
-            end
-         end
-
-         if all(bool)
-            n = 3;
-         elseif all(bool([1 2 3 5]))
-            n = 2;
+      function P = meanInBand(self,varargin)
+         p = inputParser;
+         p.KeepUnmatched = true;
+         p.FunctionName = 'Spectrum toArray method';
+         p.addParameter('dB',true,@(x) isnumeric(x) || islogical(x));
+         p.addParameter('band',[],@(x) isnumeric(x) && (size(x,2)==2));
+         p.addParameter('exclude',[],@(x) isnumeric(x) && (size(x,2)==2));
+         p.addParameter('psd','',@(x) ischar(x));
+         p.parse(varargin{:});
+         par = p.Results;
+         
+         if isempty(par.psd)
+            par.psd = 'raw';
          end
          
-         xx = [0.5 max(f)];%[self.baseParams.fmin max(f)];
-         flim = self.baseParams.fmax;
-         if isempty(flim)
-            flim = max(f);
-         end
-            
-         shiftlog = 0;
-         shiftlin = 0;
-         for i = 1:self.nChannels
-             switch self.baseParams.method
-               case {'broken-power','broken-power1'}
-                  if ~singlefigure
-                     figure;
-                     shiftlog = 0;
-                     shiftlin = 0;
-                  elseif i == 1
-                     figure;
-                  end
-                  
-                  h = subplot(n,2,1); hold on
-                  plot(f,shiftlog + 10*log10(P.raw(:,i)),'color',self.labels_(i).color);
-                  plot(f,shiftlog + 10*log10(P.baseFit(:,i)),'color',self.labels_(i).color);
-                  plot(f,shiftlog + 10*log10(P.base(:,i)),'color',self.labels_(i).color);
-                  axis tight;
-                  yy = get(gca,'ylim');
-                  plot([flim flim],yy,'k--');
-                 
-                  subplot(n,2,2); hold on
-                  plot(log10(f),shiftlog + 10*log10(P.raw(:,i)),'color',self.labels_(i).color);
-                  plot(log10(f),shiftlog + 10*log10(P.baseFit(:,i)),'color',self.labels_(i).color);
-                  plot(log10(f),shiftlog + 10*log10(P.base(:,i)),'color',self.labels_(i).color);
-                  axis tight;
-                  yy = get(gca,'ylim'); %[min(10*log10(P.raw(:,i))) max(10*log10(P.raw(:,i)))];%
-                  plot(log10([flim flim]),yy,'k--');
-                  axis([log10(xx) yy]);
-                  
-                  %shiftlog = shiftlog + 10*log10(max(max(P.raw) - min(P.raw)));
-                  shiftlog = shiftlog + max(10*log10(max(P.raw)) - 10*log10(min(P.raw)))/3;
-
-                  if bool(4)
-                     subplot(n,2,3); hold on
-                     P2 = P.raw(:,i)./P.baseFit(:,i);
-                     plot(f,P2);
-                     plot(f,P.baseSmooth(:,i)); axis tight;
-                     
-                     subplot(n,2,4); hold on
-                     plot(f,10*log10(P2));
-                     plot(f,10*log10(P.baseSmooth(:,i)));
-                     set(gca,'xscale','log'); axis tight;
-                     yy = [min(10*log10(P2)) max(10*log10(P2))];%get(gca,'ylim');
-                     plot([flim flim],yy,'k--');
-                     axis([xx yy]);
-                     j = 2;
-                  else
-                     j = 0;
-                  end
-                  
-                  subplot(n,2,3+j); hold on
-                  plot([xx(1) xx(end)],1 + [shiftlin shiftlin],'k');
-                  plot(f,shiftlin + P.detail(:,i),'color',self.labels_(i).color);
-                  axis tight; grid on
-                  yy = get(gca,'ylim');
-                  plot([flim flim],yy,'k--');
-                  axis([xx yy]);
-                  
-                  subplot(n,2,4+j); hold on
-                  plot([xx(1) xx(end)],1 + [shiftlin shiftlin],'k');
-                  plot(f,shiftlin + P.detail(:,i),'color',self.labels_(i).color);
-                  set(gca,'xscale','log'); axis tight; grid on
-                  plot([flim flim],yy,'k--');
-                  axis([xx yy]);
-                  
-                  shiftlin = shiftlin + 2;%max(max(P.detail) - min(P.detail));
-                  
-                  if ~singlefigure
-                     fig.suptitle(self.labels_(i).name);
-                  end
-             end
-         end
-      end
-      
-      function h = plot(self)
-         f = self.rawParams.f;
-         alpha = self.baseParams.alpha;
-         h = figure;
-         plot(self.detail,'log',0,'handle',h,'title',true);
-         for i = 1:self.nChannels
-            subplot(self.nChannels,1,i); hold on;
-            p = [.05 .5 .95 .9999];
-            for j = 1:numel(p)
-               c = gaminv(p(j),alpha(i),1/alpha(i));
-               plot([f(2) f(end)],[c c],'-','Color',[1 0 0 0.25]);
-               text(f(end),c,sprintf('%1.4f',p(j)));
-            end
-            set(gca,'xscale','log');
-            
-            h.Children(i).XLim(1) = self.baseParams.fmin;
-            h.Children(i).YLim(2) = 5;
-         end
-      end
-      
-      function plot1(self,str,h,logy,shift,style)
          f = self.raw.f;
-         % Take only frequencies included in basefit
-         if ~isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
-            ind = (f>=self.baseParams.fmin) & (f<=self.baseParams.fmax);
-         elseif ~isempty(self.baseParams.fmin) && isempty(self.baseParams.fmax)
-            ind = (f>=self.baseParams.fmin);
-         elseif isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
-            ind = (f<=self.baseParams.fmax);
+         P = zeros(size(par.band,1),self.nChannels);
+         temp = squeeze(self.(par.psd).values{1});
+         if ~isempty(par.exclude)
+            exclude = zeros(numel(f),size(par.exclude,1));
+            for i = 1:size(par.exclude)
+               exclude(:,i) = (f>=par.exclude(i,1)) & (f<=par.exclude(i,2));
+            end
+            exclude = logical(sum(exclude,2))';
          else
-            ind = true(size(f));
+            exclude = false(1,numel(f));
          end
+         
+         for i = 1:size(par.band,1)
+            ind = (f>=par.band(i,1)) & (f<=par.band(i,2));
+            P(i,:) = mean(temp(ind&~exclude,:));
+         end
+      end
+      
+      %%
+      function h = plotDiagnostics(self)
+         f = self.raw.f;
+         fmin = 0.5;%f(1);
+         fmax = f(end);
+         
+         figure;
+         h = subplot(2,2,1);
+         self.plot('handle',h,'psd','raw','sep',10,'logx',false,'fmin',fmin,'fmax',fmax);
+         self.plot('handle',h,'psd','base','sep',10,'logx',false,'fmin',fmin,'fmax',fmax);
+         if ~isempty(self.baseParams.fmax)
+            yy = get(gca,'ylim');
+            plot([self.baseParams.fmax self.baseParams.fmax],yy,'k--');
+         end
+         grid on;
+         
+         h = subplot(2,2,2);
+         self.plot('handle',h,'psd','raw','sep',10,'fmin',fmin,'fmax',fmax);
+         self.plot('handle',h,'psd','base','sep',10,'fmin',fmin,'fmax',fmax,'label',true);
+         if ~isempty(self.baseParams.fmax)
+            yy = get(gca,'ylim');
+            plot([self.baseParams.fmax self.baseParams.fmax],yy,'k--');
+         end
+         grid on;
+         
+         h = subplot(2,2,3);
+         self.plot('handle',h,'psd','detail','sep',4,'logy',false,'logx',false,...
+            'percentile',[0.5],'fmin',fmin,'fmax',fmax,'vline',[4 8 12 20 30 70]);
+         
+         h = subplot(2,2,4);
+         self.plot('handle',h,'psd','detail','sep',4,'logy',false,...
+            'percentile',[0.9999],'fmin',fmin,'fmax',fmax,'vline',[4 8 12 20 30 70]);
+      end
+      
+      function [P,f,labels] = extract(self,varargin)
+         p = inputParser;
+         p.KeepUnmatched = true;
+         p.FunctionName = 'Spectrum toArray method';
+         p.addParameter('dB',true,@(x) isnumeric(x) || islogical(x));
+         p.addParameter('fmin',[],@(x) isscalar(x));
+         p.addParameter('fmax',[],@(x) isscalar(x));
+         p.addParameter('psd','',@(x) ischar(x));
+         p.addParameter('f',[],@(x) isvector(x));
+         p.parse(varargin{:});
+         par = p.Results;
+         
+         if isempty(par.psd)
+            par.psd = 'raw';
+         end
+         
+         if isempty(par.f)
+            f = self.raw.f;
+            if isempty(par.fmin) && ~isempty(self.baseParams.fmin)
+               fmin = self.baseParams.fmin;
+            elseif ~isempty(par.fmin)
+               fmin = par.fmin;
+            else
+               fmin = f(1);
+            end
+            
+            if isempty(par.fmax) && ~isempty(self.baseParams.fmax)
+               fmax = self.baseParams.fmax;
+            elseif ~isempty(par.fmin)
+               fmax = par.fmax;
+            else
+               fmax = f(end);
+            end
+            
+            ind = (f>=fmin) & (f<=fmax);
+            f = f(ind);
+            P = squeeze(self.(par.psd).values{1});
+            P = P(ind,:);
+         else
+            f = self.raw.f;
+            % Index into actual frequency vector
+            fmin = max(par.f(1),self.baseParams.fmin);
+            fmax = min(par.f(end),self.baseParams.fmax);
+            ind = (f>=fmin) & (f<=fmax);
+            
+            % Index into requested frequency vector
+            fmin = max(par.f(1),self.baseParams.fmin);%f(1);
+            fmax = min(par.f(end),self.baseParams.fmax);%f(end);
+            ind2 = (par.f>=fmin) & (par.f<=fmax);
+            
+            temp = squeeze(self.(par.psd).values{1});
+            P = nan(numel(par.f),numel(self.labels_));
+            P(ind2,:) = temp(ind,:);
+            f = par.f;
+         end         
+
+         if par.dB
+            P = 10*log10(P);
+         end
+         %P = P(ind,:);
+         labels = self.labels_;
+      end
+      
+      %% Plot all channels on one axis
+      % TODO
+      %   o add masking
+      function h = plot(self,varargin)
+         p = inputParser;
+         p.KeepUnmatched = true;
+         p.FunctionName = 'Spectrum plot method';
+         p.addParameter('handle',[],@(x) isnumeric(x) || ishandle(x));
+         p.addParameter('stack',true,@(x) isnumeric(x) || islogical(x));
+         p.addParameter('sep',3,@(x) isscalar(x));
+         p.addParameter('fmin',[],@(x) isscalar(x));
+         p.addParameter('fmax',[],@(x) isscalar(x));
+         p.addParameter('logy',true,@(x) isnumeric(x) || islogical(x));
+         p.addParameter('logx',true,@(x) isnumeric(x) || islogical(x));
+         p.addParameter('label',false,@(x) isnumeric(x) || islogical(x));
+         p.addParameter('hline',[],@(x) isnumeric(x));
+         p.addParameter('vline',[],@(x) isnumeric(x));
+         p.addParameter('percentile',[],@(x) isnumeric(x));
+         p.addParameter('psd','',@(x) ischar(x));
+         p.parse(varargin{:});
+         par = p.Results;
+         
+         if isempty(par.handle)
+            h = axes(); hold on
+         else
+            axes(par.handle); hold on
+         end
+         
+         if isempty(par.psd)
+            par.psd = 'raw';
+         end
+         
+         f = self.raw.f;
+         if isempty(par.fmin) && ~isempty(self.baseParams.fmin)
+            fmin = self.baseParams.fmin;
+         elseif ~isempty(par.fmin)
+            fmin = par.fmin;
+         else
+            fmin = f(1);
+         end
+         
+         if isempty(par.fmax) && ~isempty(self.baseParams.fmax)
+            fmax = self.baseParams.fmax;
+         elseif ~isempty(par.fmin)
+            fmax = par.fmax;
+         else
+            fmax = f(end);
+         end
+         
+         ind = (f>=fmin) & (f<=fmax);
          f = f(ind);
 
-         axes(h); hold on
-         if logy
-            P = 10*log10(squeeze(self.(str).values{1}));
+         if par.logy
+            P = 10*log10(squeeze(self.(par.psd).values{1}));
          else
-            P = squeeze(self.(str).values{1});
+            P = squeeze(self.(par.psd).values{1});
          end
          P = P(ind,:);
          
-         shiftlog = 0;
+         shift = 0;
+         alpha = self.baseParams.alpha;
          for i = 1:self.nChannels
-            plot(f,shiftlog + P(:,i),...
-               'color',self.labels_(i).color,'LineStyle',style);
+            plot(f,shift + P(:,i),...
+               'color',self.labels_(i).color,p.Unmatched);
             axis tight;
-            set(gca,'xscale','log');
-            shiftlog = shiftlog + shift;
+            if par.logx
+               set(gca,'xscale','log');
+            end
 
-            %yy = get(gca,'ylim');
-            %plot([flim flim],yy,'k--');
+            if ~isempty(par.hline)
+               plot([fmin fmax],shift + [par.hline par.hline],'-','Color',[0 0 0 0.25]);
+            end
+            
+            if ~isempty(par.percentile)
+               for j = 1:numel(par.percentile)
+                  c = gaminv(par.percentile(j),alpha(i),1/alpha(i));
+                  plot([fmin fmax],shift + [c c],'-','Color',[1 0 0 0.25]);
+                  text(fmax,shift + c,sprintf('%1.4f',par.percentile(j)));
+               end
+            end
+            
+            if par.label
+               text(fmax,shift+ P(end,i),self.labels_(i).name,...
+                  'Color',self.labels_(i).color,'VerticalAlignment','middle');
+            end
+            
+            shift = shift + par.sep;
          end
+         
+         if ~isempty(par.vline)
+            yy = get(gca,'ylim');
+            for i = 1:numel(par.vline)
+               plot([par.vline(i) par.vline(i)],yy,'Color',[0 0 0 0.25]);
+               text(par.vline(i),yy(2),sprintf('%g',par.vline(i)),...
+                  'VerticalAlignment','bottom','HorizontalAlignment','center');
+            end
+         end
+         
       end
       
       function self = compact(self)
