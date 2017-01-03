@@ -57,9 +57,9 @@ classdef dbsDipole < metadata.Label
       function set.side(self,side)
          assert(ischar(side),'Side must be a string');
          switch lower(side)
-            case {'l' 'g'}
+            case {'l' 'g' 'left'}
                self.side = 'left';
-            case {'r' 'd'}
+            case {'r' 'd' 'right'}
                self.side = 'right';
             otherwise
                error('invalid side');
