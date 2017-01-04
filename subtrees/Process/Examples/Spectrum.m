@@ -472,39 +472,6 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
       end
       
-      %%
-      function h = plotDiagnostics(self)
-         f = self.raw.f;
-         fmin = 0.5;%f(1);
-         fmax = f(end);
-         
-         figure;
-         h = subplot(2,2,1);
-         self.plot('handle',h,'psd','raw','sep',10,'logx',false,'fmin',fmin,'fmax',fmax);
-         self.plot('handle',h,'psd','base','sep',10,'logx',false,'fmin',fmin,'fmax',fmax);
-         if ~isempty(self.baseParams.fmax)
-            yy = get(gca,'ylim');
-            plot([self.baseParams.fmax self.baseParams.fmax],yy,'k--');
-         end
-         grid on;
-         
-         h = subplot(2,2,2);
-         self.plot('handle',h,'psd','raw','sep',10,'fmin',fmin,'fmax',fmax);
-         self.plot('handle',h,'psd','base','sep',10,'fmin',fmin,'fmax',fmax,'label',true);
-         if ~isempty(self.baseParams.fmax)
-            yy = get(gca,'ylim');
-            plot([self.baseParams.fmax self.baseParams.fmax],yy,'k--');
-         end
-         grid on;
-         
-         h = subplot(2,2,3);
-         self.plot('handle',h,'psd','detail','sep',4,'logy',false,'logx',false,...
-            'percentile',[0.5],'fmin',fmin,'fmax',fmax,'vline',[4 8 12 20 30 70]);
-         
-         h = subplot(2,2,4);
-         self.plot('handle',h,'psd','detail','sep',4,'logy',false,...
-            'percentile',[0.9999],'fmin',fmin,'fmax',fmax,'vline',[4 8 12 20 30 70]);
-      end
       
       function [P,f,labels] = extract(self,varargin)
          p = inputParser;
@@ -515,6 +482,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p.addParameter('fmax',[],@(x) isscalar(x) || isempty(x));
          p.addParameter('psd','raw',@(x) ischar(x));
          p.addParameter('f',[],@(x) isvector(x));
+         p.addParameter('normalize',[]);
          p.parse(varargin{:});
          par = p.Results;
                   
@@ -544,6 +512,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             end
             P = P(ind,:);
          else
+            %% Assumes we've always sampled frequencies with same dF (spacing)
             f = self.raw.f;
             % Index into actual frequency vector
             fmin = max(par.f(1),self.baseParams.fmin);
@@ -562,11 +531,25 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             P = nan(numel(par.f),numel(self.labels_));
             P(ind2,:) = temp(ind,:);
             f = par.f;
-         end         
+         end
 
          if par.dB
             P = 10*log10(P);
          end
+         
+         if ~isempty(par.normalize)
+            ind = (f>=par.normalize.fmin) & (f<=par.normalize.fmax);
+            df = mean(diff(f));
+            switch par.normalize.method
+               case 'integral'
+                  P = bsxfun(@rdivide,P,df*trapz(P(ind,:)));
+               case 'mean'
+                  P = bsxfun(@rdivide,P,mean(P(ind,:)));
+               otherwise
+                  error('Unknown normalization method');
+            end
+         end
+         
          labels = self.labels_;
       end
       
@@ -607,6 +590,40 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                shift = shift + sep;
             end
          end
+      end
+      
+      %%
+      function h = plotDiagnostics(self)
+         f = self.raw.f;
+         fmin = 0.5;%f(1);
+         fmax = f(end);
+         
+         figure;
+         h = subplot(2,2,1);
+         self.plot('handle',h,'psd','raw','sep',10,'logx',false,'fmin',fmin,'fmax',fmax);
+         self.plot('handle',h,'psd','base','sep',10,'logx',false,'fmin',fmin,'fmax',fmax);
+         if ~isempty(self.baseParams.fmax)
+            yy = get(gca,'ylim');
+            plot([self.baseParams.fmax self.baseParams.fmax],yy,'k--');
+         end
+         grid on;
+         
+         h = subplot(2,2,2);
+         self.plot('handle',h,'psd','raw','sep',10,'fmin',fmin,'fmax',fmax);
+         self.plot('handle',h,'psd','base','sep',10,'fmin',fmin,'fmax',fmax,'label',true);
+         if ~isempty(self.baseParams.fmax)
+            yy = get(gca,'ylim');
+            plot([self.baseParams.fmax self.baseParams.fmax],yy,'k--');
+         end
+         grid on;
+         
+         h = subplot(2,2,3);
+         self.plot('handle',h,'psd','detail','sep',4,'logy',false,'logx',false,...
+            'percentile',[0.5],'fmin',fmin,'fmax',fmax,'vline',[4 8 12 20 30 70]);
+         
+         h = subplot(2,2,4);
+         self.plot('handle',h,'psd','detail','sep',4,'logy',false,...
+            'percentile',[0.9999],'fmin',fmin,'fmax',fmax,'vline',[4 8 12 20 30 70]);
       end
       
       %% Plot all channels on one axis
