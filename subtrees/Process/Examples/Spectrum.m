@@ -386,6 +386,41 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
       end
       
+      function [P,f] = statInBand(self,varargin)
+         p = inputParser;
+         p.KeepUnmatched = true;
+         p.FunctionName = 'Spectrum statInBand method';
+         %p.addParameter('dB',false,@(x) isnumeric(x) || islogical(x));
+         p.addParameter('band',[],@(x) isnumeric(x) && (size(x,2)==2));
+         p.addParameter('exclude',[],@(x) isnumeric(x) && (size(x,2)==2));
+         %p.addParameter('psd','raw',@(x) ischar(x));
+         p.addParameter('stat','mean',@(x) ischar(x));
+         %p.addParameter('normalize',[]);
+         p.parse(varargin{:});
+         par = p.Results;
+                  
+         [P,f,labels] = extract(self,p.Unmatched);
+         
+         f = self.raw.f;
+         P = zeros(size(par.band,1),self.nChannels);
+         tempP = squeeze(self.(par.psd).values{1});
+         
+         if ~isempty(par.exclude)
+            exclude = zeros(numel(f),size(par.exclude,1));
+            for i = 1:size(par.exclude)
+               exclude(:,i) = (f>=par.exclude(i,1)) & (f<=par.exclude(i,2));
+            end
+            exclude = logical(sum(exclude,2))';
+         else
+            exclude = false(1,numel(f));
+         end
+         
+         for i = 1:size(par.band,1)
+            ind = (f>=par.band(i,1)) & (f<=par.band(i,2));
+            P(i,:) = mean(tempP(ind&~exclude,:));
+         end
+      end
+      
       function P = meanInBand(self,varargin)
          p = inputParser;
          p.KeepUnmatched = true;
@@ -477,7 +512,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p = inputParser;
          p.KeepUnmatched = true;
          p.FunctionName = 'Spectrum extract method';
-         p.addParameter('dB',true,@(x) isnumeric(x) || islogical(x));
+         p.addParameter('dB',false,@(x) isnumeric(x) || islogical(x));
          p.addParameter('fmin',[],@(x) isscalar(x) || isempty(x));
          p.addParameter('fmax',[],@(x) isscalar(x) || isempty(x));
          p.addParameter('psd','raw',@(x) ischar(x));
@@ -538,13 +573,16 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
          
          if ~isempty(par.normalize)
-            ind = (f>=par.normalize.fmin) & (f<=par.normalize.fmax);
-            df = mean(diff(f));
+            % use extract here so that normalization frequency range can be
+            % different from requested frequency range
+            [Pnorm,fnorm] = extract(self,'psd',par.psd,'dB',par.dB,...
+               'fmin',par.normalize.fmin,'fmax',par.normalize.fmax);
+            df = mean(diff(fnorm));
             switch par.normalize.method
                case 'integral'
-                  P = bsxfun(@rdivide,P,df*trapz(P(ind,:)));
+                  P = bsxfun(@rdivide,P,df*trapz(Pnorm));
                case 'mean'
-                  P = bsxfun(@rdivide,P,mean(P(ind,:)));
+                  P = bsxfun(@rdivide,P,mean(Pnorm));
                otherwise
                   error('Unknown normalization method');
             end
