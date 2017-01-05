@@ -49,7 +49,7 @@ switch signal
       end
       gp = sum(gp,2) + .5*bl;
       gp(isinf(gp)) = 0;
-      x = sig.noise(sqrt(gp));
+      x = 10*sig.noise(sqrt(gp));
    case 6 %% Some gaussian bumps in frequency
       f = [12 30 90 300];
       sd = [1 3 3 20];
