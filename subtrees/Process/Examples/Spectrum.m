@@ -16,11 +16,11 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       filter              % magnitude response of ADC filter
    end
    properties(Dependent)
-      %Fs                 % Sampling Frequency
+      Fs                 % Sampling Frequency 
       nChannels           % unique & valid channels
       nSections           % valid sections
    end
-   properties%(SetAccess = protected)
+   properties(SetAccess = protected)
       labels_             % metadata labels for channels
       raw                 % direct multitaper spectral estimate
       base                % estimate of base spectrum
@@ -29,11 +29,11 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       detail              % estimate of detail spectrum (whitened & standardized)
    end
    properties(SetAccess = protected, Hidden)
-      x_                  % sectioned data
-      mask_               % boolean for valid sections
+      x_                  % [nSections x nSections] cell array of sectioned data
+      mask_               % boolean indicating valid sections
    end
    properties(SetAccess = immutable)
-      version = '0.2.0'   % Version string
+      version = '0.3.0'   % Version string
    end
    
    methods
@@ -108,6 +108,10 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       
       function nChannels = get.nChannels(self)
          nChannels = numel(self.labels_);
+      end
+      
+      function Fs = get.Fs(self)
+         Fs = self.raw.params.Fs;
       end
       
       function bool = isRunnable(self)
@@ -334,6 +338,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       %% Estimate detail spectrum using whitening transform
       function self = estimateDetail(self)
          self.detail = copy(self.raw);
+         self.detail.params = [];
          temp = self.base.values{1};
          self.detail.map(@(x) x./temp);
          self.detail.fix();         
@@ -342,28 +347,15 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       %% Rescale detail spectrum to unit variance white noise
       function self = standardize(self)
          % Approx alpha, this is not correct when section lengths differ
-         alpha = self.nSections*mean(self.detail.params.k);
-         f = self.raw.f;
-         pw = squeeze(self.detail.values{1});
-         if self.nChannels == 1
-            pw = pw';
-         end
-
-         % Take only frequencies included in basefit
-         if ~isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
-            ind = (f>=self.baseParams.fmin) & (f<=self.baseParams.fmax);
-         elseif ~isempty(self.baseParams.fmin) && isempty(self.baseParams.fmax)
-            ind = (f>=self.baseParams.fmin);
-         elseif isempty(self.baseParams.fmin) && ~isempty(self.baseParams.fmax)
-            ind = (f<=self.baseParams.fmax);
-         else
-            ind = true(size(f));
-         end
-
+         alpha = self.nSections*mean(self.raw.params.k);
+         
+         [Pw,f] = extract(self,'psd','detail',...
+            'fmin',self.baseParams.fmin,'fmax',self.baseParams.fmax);
+         
          % Match to lower 5% quantile of expected distribution for white noise
          for i = 1:self.nChannels
-            Q(i) = gaminv(0.05,alpha(i),1/alpha(i)) ./ (quantile(pw(ind,i),0.05));
-         end
+            Q(i) = gaminv(0.05,alpha(i),1/alpha(i)) ./ (quantile(Pw(:,i),0.05));
+         end      
          if self.nChannels > 1
             self.detail.map(@(x) x.*reshape(repmat(Q,numel(f),1),[1 numel(f) self.nChannels]));
          else
@@ -377,86 +369,58 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       
       %% Threshold power at significance alpha
       function [c,fsig] = threshold(self,alpha)
-         [P,f,labels] = self.extract('psd','detail','dB',false);
+         [P,f] = self.extract('psd','detail','dB',false);
          c = gaminv(1-alpha,self.baseParams.alpha,1./self.baseParams.alpha);
          if nargout == 2
-            for i = 1:size(P,2)
+            for i = 1:self.nChannels
                fsig{i} = f(P(:,i)>=c(i));
             end
          end
       end
       
-      function [P,f] = statInBand(self,varargin)
+      function m = measureInBand(self,band,varargin)
          p = inputParser;
          p.KeepUnmatched = true;
          p.FunctionName = 'Spectrum statInBand method';
-         %p.addParameter('dB',false,@(x) isnumeric(x) || islogical(x));
-         p.addParameter('band',[],@(x) isnumeric(x) && (size(x,2)==2));
-         p.addParameter('exclude',[],@(x) isnumeric(x) && (size(x,2)==2));
-         %p.addParameter('psd','raw',@(x) ischar(x));
-         p.addParameter('stat','mean',@(x) ischar(x));
-         %p.addParameter('normalize',[]);
-         p.parse(varargin{:});
-         par = p.Results;
-                  
-         [P,f,labels] = extract(self,p.Unmatched);
-         
-         f = self.raw.f;
-         P = zeros(size(par.band,1),self.nChannels);
-         tempP = squeeze(self.(par.psd).values{1});
-         
-         if ~isempty(par.exclude)
-            exclude = zeros(numel(f),size(par.exclude,1));
-            for i = 1:size(par.exclude)
-               exclude(:,i) = (f>=par.exclude(i,1)) & (f<=par.exclude(i,2));
-            end
-            exclude = logical(sum(exclude,2))';
-         else
-            exclude = false(1,numel(f));
-         end
-         
-         for i = 1:size(par.band,1)
-            ind = (f>=par.band(i,1)) & (f<=par.band(i,2));
-            P(i,:) = mean(tempP(ind&~exclude,:));
-         end
-      end
-      
-      function P = meanInBand(self,varargin)
-         p = inputParser;
-         p.KeepUnmatched = true;
-         p.FunctionName = 'Spectrum toArray method';
+         p.addRequired('band',@(x) isnumeric(x) && size(x,2)==2);
+         p.addParameter('measure','mean',@(x) ischar(x) || isa(x,'function_handle'));
          p.addParameter('dB',false,@(x) isnumeric(x) || islogical(x));
-         p.addParameter('band',[],@(x) isnumeric(x) && (size(x,2)==2));
-         p.addParameter('exclude',[],@(x) isnumeric(x) && (size(x,2)==2));
          p.addParameter('psd','raw',@(x) ischar(x));
-         p.parse(varargin{:});
+         p.addParameter('exclude',[],@(x) (isnumeric(x) && (size(x,2)==2)) || isempty(x));
+         p.addParameter('normalize',[]);
+         p.addParameter('plot',false);
+         p.parse(band,varargin{:});
          par = p.Results;
-                  
-         f = self.raw.f;
-         P = zeros(size(par.band,1),self.nChannels);
-         temp = squeeze(self.(par.psd).values{1});
-         if ~isempty(par.exclude)
-            exclude = zeros(numel(f),size(par.exclude,1));
-            for i = 1:size(par.exclude)
-               exclude(:,i) = (f>=par.exclude(i,1)) & (f<=par.exclude(i,2));
-            end
-            exclude = logical(sum(exclude,2))';
-         else
-            exclude = false(1,numel(f));
-         end
-         
-         for i = 1:size(par.band,1)
-            ind = (f>=par.band(i,1)) & (f<=par.band(i,2));
-            P(i,:) = mean(temp(ind&~exclude,:));
-         end
          
          if nargout == 0
+            par.plot = true;
+         end
+         
+         m = zeros(size(par.band,1),self.nChannels);
+         for i = 1:size(par.band,1)
+            [P,f] = extract(self,'fmin',par.band(i,1),'fmax',par.band(i,2),...
+               par);
+            if isa(par.measure,'function_handle')
+               m(i,:) = par.measure(P);
+            else
+               switch lower(par.measure)
+                  case 'mean'
+                     m(i,:) = mean(P);
+                  case 'max'
+                     m(i,:) = max(P);
+                  case 'integral'
+                     m(i,:) = mean(diff(f))*trapz(P);
+               end
+            end
+         end
+         
+         if par.plot
             sep = 2;
-            self.plot('psd',par.psd,'sep',sep,'logy',false,'label',true,'percentile',0.5);
+            self.plot('psd',par.psd,'sep',sep,'dB',false,'label',true,'percentile',0.5);
             shift = 0;
-            for i = 1:size(P,2)
+            for i = 1:self.nChannels
                for j = 1:size(par.band,1)
-                  plot([par.band(j,1) par.band(j,2)],[P(j,i) P(j,i)] + shift,'-',...
+                  plot([par.band(j,1) par.band(j,2)],[m(j,i) m(j,i)] + shift,'-',...
                      'color',self.labels_(i).color);
                end
                shift = shift + sep;
@@ -464,49 +428,21 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
       end
       
-      function P = maxInBand(self,varargin)
-         p = inputParser;
-         p.KeepUnmatched = true;
-         p.FunctionName = 'Spectrum toArray method';
-         p.addParameter('dB',false,@(x) isnumeric(x) || islogical(x));
-         p.addParameter('band',[],@(x) isnumeric(x) && (size(x,2)==2));
-         p.addParameter('exclude',[],@(x) isnumeric(x) && (size(x,2)==2));
-         p.addParameter('psd','raw',@(x) ischar(x));
-         p.parse(varargin{:});
-         par = p.Results;
-                  
-         f = self.raw.f;
-         P = zeros(size(par.band,1),self.nChannels);
-         temp = squeeze(self.(par.psd).values{1});
-         if ~isempty(par.exclude)
-            exclude = zeros(numel(f),size(par.exclude,1));
-            for i = 1:size(par.exclude)
-               exclude(:,i) = (f>=par.exclude(i,1)) & (f<=par.exclude(i,2));
-            end
-            exclude = logical(sum(exclude,2))';
-         else
-            exclude = false(1,numel(f));
-         end
-         
-         for i = 1:size(par.band,1)
-            ind = (f>=par.band(i,1)) & (f<=par.band(i,2));
-            P(i,:) = max(temp(ind&~exclude,:));
-         end
-         
+      function m = meanInBand(self,varargin)
+         plotit = false;
          if nargout == 0
-            sep = 2;
-            self.plot('psd',par.psd,'sep',sep,'logy',false,'label',true,'percentile',0.5);
-            shift = 0;
-            for i = 1:size(P,2)
-               for j = 1:size(par.band,1)
-                  plot([par.band(j,1) par.band(j,2)],[P(j,i) P(j,i)] + shift,'-',...
-                     'color',self.labels_(i).color);
-               end
-               shift = shift + sep;
-            end
+            plotit = true;
          end
+         m = self.measureInBand(varargin{:},'measure','mean','plot',plotit);
       end
       
+      function m = maxInBand(self,varargin)
+         plotit = false;
+         if nargout == 0
+            plotit = true;
+         end
+         m = self.measureInBand(varargin{:},'measure','max','plot',plotit);
+      end
       
       function [P,f,labels] = extract(self,varargin)
          p = inputParser;
@@ -517,6 +453,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p.addParameter('fmax',[],@(x) isscalar(x) || isempty(x));
          p.addParameter('psd','raw',@(x) ischar(x));
          p.addParameter('f',[],@(x) isvector(x));
+         p.addParameter('exclude',[],@(x) (isnumeric(x) && (size(x,2)==2)) || isempty(x));
          p.addParameter('normalize',[]);
          p.parse(varargin{:});
          par = p.Results;
@@ -533,7 +470,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             
             if isempty(par.fmax) && ~isempty(self.baseParams.fmax)
                fmax = self.baseParams.fmax;
-            elseif ~isempty(par.fmin)
+            elseif ~isempty(par.fmax)
                fmax = par.fmax;
             else
                fmax = f(end);
@@ -572,6 +509,18 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             P = 10*log10(P);
          end
          
+         if ~isempty(par.exclude)
+            exclude = zeros(numel(f),size(par.exclude,1));
+            for i = 1:size(par.exclude)
+               exclude(:,i) = (f>=par.exclude(i,1)) & (f<=par.exclude(i,2));
+            end
+            exclude = logical(sum(exclude,2))';
+         else
+            exclude = false(1,numel(f));
+         end
+         P(exclude,:) = [];
+         f(exclude) = [];
+         
          if ~isempty(par.normalize)
             % use extract here so that normalization frequency range can be
             % different from requested frequency range
@@ -609,7 +558,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             par2 = p.Unmatched;
          end
          
-         [P,f,labels] = extract(self,'fmin',par.fmin,'fmax',par.fmax,'psd',par.psd,'dB',par.dB);
+         [P,f,labels] = extract(self,'fmin',par.fmin,'fmax',par.fmax,...
+            'psd',par.psd,'dB',par.dB);
          
          pks = cell(size(labels));
          locs = cell(size(labels));
@@ -632,14 +582,14 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       
       %%
       function h = plotDiagnostics(self)
-         f = self.raw.f;
+         %f = self.raw.f;
          fmin = 0.5;%f(1);
-         fmax = f(end);
+         fmax = self.raw.f(end);
          
          figure;
          h = subplot(2,2,1);
-         self.plot('handle',h,'psd','raw','sep',10,'logx',false,'fmin',fmin,'fmax',fmax);
-         self.plot('handle',h,'psd','base','sep',10,'logx',false,'fmin',fmin,'fmax',fmax);
+         self.plot('handle',h,'psd','raw','sep',10,'dB',true,'fmin',fmin,'fmax',fmax);
+         self.plot('handle',h,'psd','base','sep',10,'dB',true,'fmin',fmin,'fmax',fmax);
          if ~isempty(self.baseParams.fmax)
             yy = get(gca,'ylim');
             plot([self.baseParams.fmax self.baseParams.fmax],yy,'k--');
@@ -647,8 +597,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          grid on;
          
          h = subplot(2,2,2);
-         self.plot('handle',h,'psd','raw','sep',10,'fmin',fmin,'fmax',fmax);
-         self.plot('handle',h,'psd','base','sep',10,'fmin',fmin,'fmax',fmax,'label',true);
+         self.plot('handle',h,'psd','raw','sep',10,'dB',true,'logx',true,'fmin',fmin,'fmax',fmax);
+         self.plot('handle',h,'psd','base','sep',10,'dB',true,'logx',true,'fmin',fmin,'fmax',fmax,'label',true);
          if ~isempty(self.baseParams.fmax)
             yy = get(gca,'ylim');
             plot([self.baseParams.fmax self.baseParams.fmax],yy,'k--');
@@ -656,11 +606,11 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          grid on;
          
          h = subplot(2,2,3);
-         self.plot('handle',h,'psd','detail','sep',4,'logy',false,'logx',false,...
+         self.plot('handle',h,'psd','detail','sep',4,...
             'percentile',[0.5],'fmin',fmin,'fmax',fmax,'vline',[4 8 12 20 30 70]);
          
          h = subplot(2,2,4);
-         self.plot('handle',h,'psd','detail','sep',4,'logy',false,...
+         self.plot('handle',h,'psd','detail','sep',4,'logx',true,...
             'percentile',[0.9999],'fmin',fmin,'fmax',fmax,'vline',[4 8 12 20 30 70]);
       end
       
@@ -673,11 +623,11 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p.FunctionName = 'Spectrum plot method';
          p.addParameter('handle',[],@(x) isnumeric(x) || ishandle(x));
          p.addParameter('stack',true,@(x) isnumeric(x) || islogical(x));
-         p.addParameter('sep',3,@(x) isscalar(x));
+         p.addParameter('sep',[],@(x) isscalar(x));
          p.addParameter('fmin',[],@(x) isscalar(x));
          p.addParameter('fmax',[],@(x) isscalar(x));
-         p.addParameter('logy',true,@(x) isnumeric(x) || islogical(x));
-         p.addParameter('logx',true,@(x) isnumeric(x) || islogical(x));
+         p.addParameter('dB',false,@(x) isnumeric(x) || islogical(x));
+         p.addParameter('logx',false,@(x) isnumeric(x) || islogical(x));
          p.addParameter('label',false,@(x) isnumeric(x) || islogical(x));
          p.addParameter('hline',[],@(x) isnumeric(x));
          p.addParameter('vline',[],@(x) isnumeric(x));
@@ -693,32 +643,14 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             axes(par.handle); hold on
          end
                   
-         f = self.raw.f;
-         if isempty(par.fmin) && ~isempty(self.baseParams.fmin)
-            fmin = self.baseParams.fmin;
-         elseif ~isempty(par.fmin)
-            fmin = par.fmin;
-         else
-            fmin = f(1);
-         end
+         [P,f] = extract(self,'psd',par.psd,'dB',par.dB,...
+            'fmin',par.fmin,'fmax',par.fmax);
+         fmin = f(1);
+         fmax = f(end);
          
-         if isempty(par.fmax) && ~isempty(self.baseParams.fmax)
-            fmax = self.baseParams.fmax;
-         elseif ~isempty(par.fmin)
-            fmax = par.fmax;
-         else
-            fmax = f(end);
+         if isempty(par.sep)
+            par.sep = max( max(P) - min(P) );
          end
-         
-         ind = (f>=fmin) & (f<=fmax);
-         f = f(ind);
-
-         if par.logy
-            P = 10*log10(squeeze(self.(par.psd).values{1}));
-         else
-            P = squeeze(self.(par.psd).values{1});
-         end
-         P = P(ind,:);
          
          shift = 0;
          alpha = self.baseParams.alpha;
