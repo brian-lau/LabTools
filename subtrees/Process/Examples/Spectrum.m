@@ -522,14 +522,50 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          f(exclude) = [];
          
          if ~isempty(par.normalize)
+            % Default normalization parameters
+            normalize.fmin = [];
+            normalize.fmax = [];
+            normalize.exclude = [];
+            normalize.method = 'integral';
+            fn = fieldnames(par.normalize);
+            
+            % Fill in what was requested
+            n = intersect(fieldnames(normalize),fn);
+            for i = 1:numel(n)
+               normalize.(n{i}) = par.normalize.(n{i});
+            end
+            
             % use extract here so that normalization frequency range can be
             % different from requested frequency range
             [Pnorm,fnorm] = extract(self,'psd',par.psd,'dB',par.dB,...
-               'fmin',par.normalize.fmin,'fmax',par.normalize.fmax);
-            df = mean(diff(fnorm));
-            switch par.normalize.method
+               'fmin',normalize.fmin,'fmax',normalize.fmax,'exclude',normalize.exclude);
+            switch normalize.method
                case 'integral'
-                  P = bsxfun(@rdivide,P,df*trapz(Pnorm));
+                  if isempty(normalize.exclude)
+                     df = mean(diff(fnorm));
+                     int = df*trapz(Pnorm);
+                  else
+                     % sum the disjoint chunks
+                     int = zeros(1,size(Pnorm,2));
+                     n = size(normalize.exclude,1);
+                     for i = 1:n
+                        if i == 1
+                           fstart = fnorm(1);
+                           fend = normalize.exclude(i,1);
+                        elseif i == n
+                           fstart = normalize.exclude(i,2);
+                           fend = fnorm(end);
+                        else
+                           fstart = normalize.exclude(i,2);
+                           fend = normalize.exclude(i+1,1);
+                        end
+                        ind = (fnorm >= fstart) & (fnorm <= fend);
+                        df = mean(diff(fnorm(ind)));
+                        int = int + df*trapz(Pnorm(ind,:));
+                     end
+                  end
+                  
+                  P = bsxfun(@rdivide,P,int);
                case 'mean'
                   P = bsxfun(@rdivide,P,mean(Pnorm));
                otherwise
