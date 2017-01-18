@@ -588,7 +588,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          par = p.Results;
          
          if isempty(fieldnames(p.Unmatched))
-            par2 = struct('MinPeakWidth',0.25,'MinPeakProminence',0.35);
+            par2 = struct('MinPeakWidth',0.25,'MinPeakProminence',0.25);
             par2.MinPeakHeight = mean(threshold(self,0.01));
          else
             par2 = p.Unmatched;
@@ -601,12 +601,24 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          locs = cell(size(labels));
          for i = 1:size(P,2)
             [pks{i},locs{i}] = findpeaks(P(:,i),f,par2);
+            
+            % Return only one peak (TODO make optional)
+            if isempty(pks{i})
+               out.pks(i) = max(P(:,i));
+               out.locs(i) = f(P(:,i)==max(P(:,i)));
+               out.type(i) = false;
+            else
+               ind = find(pks{i} == max(pks{i}));
+               out.pks(i) = pks{i}(ind(1));
+               out.locs(i) = locs{i}(ind(1));
+               out.type(i) = true;
+            end
          end
-
+         
          if nargout == 0
             sep = 1;
             self.plot('psd',par.psd,'fmin',par.fmin,'fmax',par.fmax,'sep',sep,...
-               'logy',false,'label',true);
+               'dB',false,'label',true);
             shift = 0;
             for i = 1:size(P,2)
                plot(locs{i},pks{i} + shift,'v','markersize',8,...
