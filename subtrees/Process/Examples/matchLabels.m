@@ -1,7 +1,8 @@
+% Given data=sampledProcess and corresponding artifacts=EventProcess,
+% match the labels from artifacts to those in data to ensure handle match
 function ep = matchLabels(data,artifacts)
 
 if numel(data) > 1
-   %keyboard;
    assert(numel(data)==numel(artifacts),'number of artifacts must match')
    for i = 1:numel(data)
       ep(i) = matchLabels(data(i),artifacts(i));
