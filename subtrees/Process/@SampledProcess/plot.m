@@ -49,7 +49,6 @@
 % o edit label
 % o use zoom ActionPostCallback to change label positions
 function varargout = plot(self,varargin)
-
    p = inputParser;
    p.KeepUnmatched = true;
    p.FunctionName = 'SampledProcess plot method';
@@ -67,36 +66,15 @@ function varargout = plot(self,varargin)
    end
    hold(h,'on');
    set(h,'tickdir','out','ticklength',[0.005 0.025],'Visible','off');
-   
+
    % Unique ID to tag objects from this call
    gui.id = char(java.util.UUID.randomUUID.toString);
+   
    gui.lineScaleSliderDiv = 12; % Slider stops per SD
    gui.lineScaleSliderNSD = 9; % # of signal SDs to cover
    sd = nanstd(self(1).values{1}(:));
    gui.lineScaleSliderSD = sd;
    
-   if numel(self) > 1
-      ah = findobj(h.Parent,'Tag','ArraySlider');
-      if isempty(ah)
-         gui.arraySlider = uicontrol('Style','slider','Min',1,'Max',numel(self),...
-            'SliderStep',[1 5]./numel(self),'Value',1,...
-            'Units','norm','Position',[0.01 0.005 .2 .04],...
-            'Parent',h.Parent,'Tag','ArraySlider');
-         gui.arraySliderTxt = uicontrol('Style','text','String','Element 1/',...
-            'HorizontalAlignment','left','Parent',h.Parent,...
-            'Units','norm','Position',[.22 .005 .2 .04],'Tag','ArraySliderTxt');
-         % Use cellfun in the callback to allow adding multiple callbacks later
-         set(gui.arraySlider,'Callback',...
-            {@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self h gui.id}} } );
-      else
-         % Adding event plot to existing axis that has slider controls
-         % Attach callbacks to existing list, to be evaluated in sequence
-         gui.arraySlider = ah;
-         f = {@refreshPlot self h gui.id};
-         ah.Callback{2}{end+1} = f;
-      end
-   end
-
    sh = findobj(h.Parent,'Tag','LineScaleSlider');
    if isempty(sh)
       sep_min = 0;
@@ -114,14 +92,37 @@ function varargout = plot(self,varargin)
          'Units','norm','Position',[0 .25 .04 .5],'Parent',h.Parent);
       % Use cellfun in the callback to allow adding multiple callbacks later
       jsepSlider.StateChangedCallback = ...
-         {@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self h gui.id}} };
+         {@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self h gui.id hsepSlider}} };
    else
       % Adding event plot to existing axis that has slider controls
       % Attach callbacks to existing list, to be evaluated in sequence
-      f = {@refreshPlot self h gui.id};
+      hsepSlider = findobj(h.Parent.Children,'flat','tag','LineScaleSlider');
+      f = {@refreshPlot self h gui.id hsepSlider};
       sh.UserData.StateChangedCallback{2}{end+1} = f;
    end
    
+   if numel(self) > 1
+      ah = findobj(h.Parent,'Tag','ArraySlider');
+      if isempty(ah)
+         gui.arraySlider = uicontrol('Style','slider','Min',1,'Max',numel(self),...
+            'SliderStep',[1 5]./numel(self),'Value',1,...
+            'Units','norm','Position',[0.01 0.005 .2 .04],...
+            'Parent',h.Parent,'Tag','ArraySlider');
+         gui.arraySliderTxt = uicontrol('Style','text','String','Element 1/',...
+            'HorizontalAlignment','left','Parent',h.Parent,...
+            'Units','norm','Position',[.22 .005 .2 .04],'Tag','ArraySliderTxt');
+         % Use cellfun in the callback to allow adding multiple callbacks later
+         set(gui.arraySlider,'Callback',...
+            {@(h,e,x) cellfun(@(x)feval(x{:}),x) {{@refreshPlot self h gui.id hsepSlider}} } );
+      else
+         % Adding event plot to existing axis that has slider controls
+         % Attach callbacks to existing list, to be evaluated in sequence
+         gui.arraySlider = ah;
+         f = {@refreshPlot self h gui.id hsepSlider};
+         ah.Callback{2}{end+1} = f;
+      end
+   end
+
    % Set up slider to control time range
    % This slider will be present if handle comes from SampledProcess.plot.
    % If so, let the originating process control the time range, otherwise add
@@ -142,7 +143,10 @@ function varargout = plot(self,varargin)
    end
    
    % First draw
-   refreshPlot(self,h,gui.id);
+%    if ~exist('hsepSlider','var')
+%       hsepSlider = findobj(h.Parent.Children,'flat','tag','LineScaleSlider');
+%    end
+   refreshPlot(self,h,gui.id,hsepSlider);
    h.Visible = 'on';
    
    if nargout >= 1
@@ -166,23 +170,30 @@ function setx(e,~,obj,h,id)
 
    lo = minmaxwin(1) + e.getLowValue*d/150;
    hi = minmaxwin(1) + e.getHighValue*d/150 + 100*eps(h.XLim(1));
+   
+   % Set the xlimits of axis
+   ah = findobj(h.Parent.Children,'flat','Type','Axes');
    try
-      h.XLim = [lo hi];
+      %h.XLim = [lo hi];
+      set(ah,'XLim',[lo hi]);
    catch err
       if strcmp('MATLAB:hg:shaped_arrays:LimitsWithInfsPredicate',err.identifier)
-         h.XLim = [hi lo];
+         %h.XLim = [hi lo];
+         set(ah,'XLim',[hi lo]);
       else
          rethrow(err);
       end
    end
 
-   th = findobj(h,'Tag',id,'-and','Type','Text');
+   % Move the text labels
+   %th = findobj(h,'Tag',id,'-and','Type','Text');
+   th = findobj(h.Parent.Children,'flat','Tag',id,'-and','Type','Text');
    for i = 1:numel(th)
       th(i).Position(1) = h.XLim(2);
    end
 end
 
-function refreshPlot(obj,h,id)
+function refreshPlot(obj,h,id,hsepSlider)
    % Extract specific parameters for this ID
    gui = linq(h.UserData).where(@(x) strcmp(x.id,id)).select(@(x) x).toArray;
 
@@ -195,12 +206,11 @@ function refreshPlot(obj,h,id)
    if ind1 > numel(obj)
       delete(findobj(h,'Tag',id));
       return;
-   end   
+   end
    
    values = obj(ind1).values{1};
    t = obj(ind1).times{1};
-   
-   hsepSlider = findobj(h.Parent,'tag','LineScaleSlider');
+   %hsepSlider = findobj(h.Parent.Children,'flat','tag','LineScaleSlider');
    % Convert slider step to data scale
    sep = hsepSlider.UserData.Value*gui.lineScaleSliderSD/gui.lineScaleSliderDiv;
 
@@ -208,7 +218,7 @@ function refreshPlot(obj,h,id)
    %hsepSlider.UserData.setMaximum(9*sd*10); % THIS TRIGGERS CALLBACK
    
    sf = (0:n-1)*sep; % shift factor
-   lh = findobj(h,'Tag',id,'-and','-and','Type','Line','LineStyle','-');
+   lh = findobj(h.Children,'flat','Tag',id,'-and','-and','Type','Line','LineStyle','-');
    
    % Do we need to draw from scratch, or can we replace data in handles?
    if isempty(lh)
@@ -220,7 +230,7 @@ function refreshPlot(obj,h,id)
       
    % Draw lines
    if newdraw
-      delete(findobj(h,'Tag',id,'-and','Type','Line'));
+      delete(findobj(h,'flat','Tag',id,'-and','Type','Line'));
       if sep > 0
          n = size(values,2);
          sf = (0:n-1)*sep;
@@ -237,8 +247,9 @@ function refreshPlot(obj,h,id)
       lh = lh(ind);
       % Refresh data for each line
       data = bsxfun(@plus,values,sf);
+      set(lh,'XData',t);
       for i = 1:n
-         lh(i).XData = t;
+         %lh(i).XData = t;
          lh(i).YData = data(:,i);
       end
    end
@@ -264,7 +275,7 @@ function refreshPlot(obj,h,id)
       plot(repmat([t(1) t(end) NaN]',n,1),temp(:),...
          '--','color',[.7 .7 .7 .4],'Parent',h,'Tag',id);
    else
-      blh = findobj(h,'Tag',id,'-and','LineStyle','--');
+      blh = findobj(h.Children,'flat','Tag',id,'-and','LineStyle','--');
       temp = [sf; sf; nan(size(sf))];
       blh.YData = temp(:)';
    end
@@ -273,7 +284,7 @@ function refreshPlot(obj,h,id)
    
    % Attach menus
    %if newdraw
-      delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
+      delete(findobj(h.Parent,'flat','Tag',id,'-and','Type','ContextMenu'));
       lineMenu = uicontextmenu('Parent',hf,'Callback',@lineHittest);
       uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj(ind1) 0});
       uimenu(lineMenu,'Label','Edit quality','Callback',{@setQuality obj(ind1) NaN});
@@ -282,7 +293,6 @@ function refreshPlot(obj,h,id)
       set(lineMenu,'Tag',id);
       set(lh,'uicontextmenu',lineMenu);
    %end
-   
    
    % Refresh labels
    if newdraw
@@ -299,7 +309,7 @@ function refreshPlot(obj,h,id)
          end
       end
    else
-      th = findobj(h,'Tag',id,'-and','Type','Text');
+      th = findobj(h.Children,'flat','Tag',id,'-and','Type','Text');
       th = th(ind);
       for i = 1:n
          th(i).Position = [t(end) sf(i)];
@@ -307,12 +317,12 @@ function refreshPlot(obj,h,id)
    end
    
    if isempty(hf.KeyPressFcn)%isempty(h.Parent.KeyPressFcn) % Zoom is not active
-      rh = findobj(h.Parent,'Tag','RangeSlider');
-      %if ~rh.UserData.Enabled
+      rh = findobj(h.Parent.Children,'flat','Tag','RangeSlider');
+      if ~rh.UserData.Enabled
          h.XLim(1) = t(1);
          h.XLim(2) = t(end);
          rh.UserData.Enabled = true;
-      %end
+      end
       h.YLim(1) = sf(1)-abs(min(min(values)));
       h.YLim(2) = sf(end)+max(max(values));
    end
@@ -330,6 +340,8 @@ function setQuality(src,~,obj,quality)
    lh = src.Parent.UserData;%gco;
    label = lh.UserData;
    ind = obj.labels == label;
+   % Could use this to find all lines in all axes matching label
+   % findobj(src.Parent.Parent.Children,'Type','line','-and','UserData',label)
    if isnan(quality)
       mouse = get(0,'PointerLocation');
       d = dialog('Position',[mouse 200 150],'Name','Set quality');

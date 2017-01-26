@@ -32,6 +32,28 @@ h = plot(s);
 % If you prefer non-overlapping, try below instead
 plot(events,'handle',h,'overlap',-.05,'stagger',true);
 
+%
+s2 = SampledProcess(randn(20,4));
+% Pull these labels out and reuse them for the remaining elements. This
+% means that each channel with the same label in each element will be
+% have matching labels. Otherwise, the default would generate unique labels
+% for each channel.
+l = s2.labels;
+for i = 2:20
+   s2(i) = SampledProcess(randn(20,4),'labels',l);
+end
+
+figure;
+% Plot SampledProcess
+g = subplot(211);
+h = plot(s,'handle',g);
+% Add events to the plot
+plot(events,'handle',g);
+g2 = subplot(212);
+h = plot(s2,'handle',g2);
+% Add events to the plot
+plot(events,'handle',g2);
+
 %%%%%%%%%%%%%%%%%%%%%%%
 %% Overlay two SampledProcesses
 t = (0:.001:1)';

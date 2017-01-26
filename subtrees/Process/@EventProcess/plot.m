@@ -57,7 +57,6 @@
 % TODO
 % o multiple windows
 function varargout = plot(self,varargin)
-
    p = inputParser;
    p.KeepUnmatched = true;
    p.FunctionName = 'EventProcess plot method';
@@ -82,6 +81,7 @@ function varargout = plot(self,varargin)
 
    % Unique ID to tag objects from this call
    gui.id = char(java.util.UUID.randomUUID.toString);
+   %gui.id = self(1).id;
 
    gui.alpha = par.alpha;   
    gui.bottom = par.bottom;
@@ -248,7 +248,7 @@ function refreshPlot(obj,h,id)
 
    % Attach menus
    %if newdraw
-      delete(findobj(h.Parent,'Tag',id,'-and','Type','ContextMenu'));
+      delete(findobj(h.Parent.Children,'flat','Tag',id,'-and','Type','ContextMenu'));
       eventMenu = uicontextmenu('Parent',hf,'Callback',@patchHittest);
       uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj(ind1) h});
       uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj(ind1) h});
@@ -256,6 +256,9 @@ function refreshPlot(obj,h,id)
       uimenu('Parent',eventMenu,'Label','View properties','Callback',{@editEvent obj(ind1)});
       set(eventMenu,'Tag',id);
       set(ph,'uicontextmenu',eventMenu);
+
+      % If left-click on Event -> Move
+      set(ph,'ButtonDownFcn',{@moveEvent obj(ind1) h},'HitTest','on');
    %end
    
    % Refresh labels
@@ -368,15 +371,22 @@ function editEvent(src,~,obj)
 end
 
 function moveEvent(src,~,obj,h)
-   ph = src.Parent.UserData;
-   ind = [obj.values{1}.name] == ph.UserData;
+   % modif par AVH pour avoir move directement en cliquant sur l'event
+   switch src.Type
+      case 'uimenu' % cas initial d?finit par B. Lau
+         ph = src.Parent.UserData;
+      case 'patch'
+         ph = src;
+   end
+   %keyboard
+   ind = [obj.values{1}.name] == ph.UserData
    label = ph.UserData;
    event = obj.values{1}(ind);
    textLabel = findobj(h,'UserData',ph.UserData,'-and','Type','Text');
    % findobj matches structs, so we need to restrict to handle matches
    ind2 = [textLabel.UserData] == label;
    textLabel(~ind2) = [];
-   
+
    setptr(ancestor(h,'Figure'),'hand');
    fig.movepatch(ph,'x',@mouseupEvent);
 
@@ -388,10 +398,27 @@ function moveEvent(src,~,obj,h)
       event.tEnd = tEnd;
       obj.values{1}(ind) = event;
       obj.times{1}(ind,:) = [tStart tEnd];
-      
+
       textLabel.Position(1) = tStart;
       % HACK - despite nextplot setting, this gets cleared?
       ph.UserData = label;
+
+      %updateAxes(src,v);
+   end
+end
+
+% Move events that are plotted in other axes of same figure
+function updateAxes(src,v)
+   ph = findobj(src.Parent.Parent.Children,'Type','patch','-and','UserData',src.UserData);
+   %set(ph,'Vertices',v);
+   if numel(ph) > 1
+      for h = ph'
+         h.Vertices(:,1) = v(:,1);
+      end
+      th = findobj(src.Parent.Parent.Children,'Type','text','-and','UserData',src.UserData);
+      for h = th'
+         h.Position(1) = v(1,1);
+      end
    end
 end
 

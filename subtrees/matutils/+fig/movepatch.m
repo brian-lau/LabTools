@@ -93,7 +93,7 @@ gui.YData = [];
       if any(d=='y')
          set(gui.currenthandle,'YData',gui.YData + pos(1,2));
       end
-      drawnow;
+      %drawnow;
    end
 
    function stopmovit(~,~,f)

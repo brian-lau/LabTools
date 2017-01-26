@@ -40,16 +40,23 @@
 %
 % EXAMPLES
 %     ev(1) = metadata.event.Stimulus('tStart',0.5,'tEnd',1,'name','fix');
-%     ev(2) = metadata.event.Response('tStart',5,'tEnd',6,'name','button','modality','hand');
-%     ev(3) = metadata.event.Stimulus('tStart',2,'tEnd',3,'name','cue');
+%     ev(2) = metadata.event.Stimulus('tStart',2,'tEnd',3,'name','cue');
+%     ev(3) = metadata.event.Response('tStart',5,'tEnd',6,'name','button','modality','hand');
+%     ev(4) = metadata.event.Generic('tStart',7,'tEnd',8,'name',metadata.Label('name','test'));
 %     ep = EventProcess('events',ev,'tStart',0,'tEnd',10);
 %
-%     ev = ep.find('eventType','metadata.event.Response') % event 2 by type
-%     ev = ep.find('eventVal','cue') % event 3 by name
-%     % event 3 by criteria
-%     ev = ep.find('eventType','metadata.event.Stimulus','func',@(x) x.tStart >= 2) 
+%     % event 3 by type
+%     result = ep.find('eventType','metadata.event.Response')
+%     % event 2 by name
+%     result = ep.find('eventVal','cue')
+%     % event 2 by criteria
+%     result = ep.find('eventType','metadata.event.Stimulus','func',@(x) x.tStart >= 2) 
+%     % event 4 by nested label
+%     result = ep.find('eventVal',ev(4).name) 
+%     % event 4 by nested label name
+%     result = ep.find('func',@(x) strcmp(x.name.name,'test')) 
 %     % no match by criteria
-%     ev = ep.find('eventType','metadata.event.Stimulus','func',@(x) x.tStart >= 2,'logic','not') 
+%     result = ep.find('eventType','metadata.event.Stimulus','func',@(x) x.tStart >= 2,'logic','not') 
 
 %     $ Copyright (C) 2016 Brian Lau <brian.lau@upmc.fr> $
 %     Released under the BSD license. The license and most recent version
@@ -159,12 +166,13 @@ end
 
 %%
 function result = funcErrorHandler(err,varargin)
-if strcmp(err.identifier,'MATLAB:noSuchMethodOrField');
+if strcmp(err.identifier,'MATLAB:noSuchMethodOrField') || strcmp(err.identifier,'MATLAB:structRefFromNonStruct')
    result = false;
 else
    err = MException(err.identifier,err.message);
    cause = MException('EventProcess:find:func',...
       'Problem in function handle.');
    err = addCause(err,cause);
+   %keyboard
    throw(err);
 end
