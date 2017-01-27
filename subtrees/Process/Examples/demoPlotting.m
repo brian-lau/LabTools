@@ -45,12 +45,16 @@ end
 
 figure;
 % Plot SampledProcess
-g = subplot(211);
+g = subplot(311);
 h = plot(s,'handle',g);
 % Add events to the plot
 plot(events,'handle',g);
-g2 = subplot(212);
+g2 = subplot(312);
 h = plot(s2,'handle',g2);
+% Add events to the plot
+plot(events,'handle',g2);
+g2 = subplot(313);
+h = plot(s,'handle',g2);
 % Add events to the plot
 plot(events,'handle',g2);
 

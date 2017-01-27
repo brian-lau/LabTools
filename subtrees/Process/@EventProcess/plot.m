@@ -247,19 +247,18 @@ function refreshPlot(obj,h,id)
    hf = ancestor(h,'Figure');
 
    % Attach menus
-   %if newdraw
-      delete(findobj(h.Parent.Children,'flat','Tag',id,'-and','Type','ContextMenu'));
-      eventMenu = uicontextmenu('Parent',hf,'Callback',@patchHittest);
-      uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj(ind1) h});
-      uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj(ind1) h});
-      uimenu('Parent',eventMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
-      uimenu('Parent',eventMenu,'Label','View properties','Callback',{@editEvent obj(ind1)});
-      set(eventMenu,'Tag',id);
-      set(ph,'uicontextmenu',eventMenu);
-
-      % If left-click on Event -> Move
-      set(ph,'ButtonDownFcn',{@moveEvent obj(ind1) h},'HitTest','on');
-   %end
+   delete(findobj(h.Parent.Children,'flat','Tag',id,'-and','Type','uicontextmenu'));
+   %delete(findobj(h.Parent.Children,'flat','Tag',id,'-and','Type','ContextMenu'));
+   eventMenu = uicontextmenu('Parent',hf,'Callback',@patchHittest);
+   uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj(ind1) h});
+   uimenu('Parent',eventMenu,'Label','Delete','Callback',{@deleteEvent obj(ind1) h});
+   uimenu('Parent',eventMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
+   uimenu('Parent',eventMenu,'Label','View properties','Callback',{@editEvent obj(ind1)});
+   set(eventMenu,'Tag',id);
+   set(ph,'uicontextmenu',eventMenu);
+   
+   % If left-click on Event -> Move
+   set(ph,'ButtonDownFcn',{@moveEvent obj(ind1) h});
    
    % Refresh labels
    if newdraw
@@ -378,8 +377,7 @@ function moveEvent(src,~,obj,h)
       case 'patch'
          ph = src;
    end
-   %keyboard
-   ind = [obj.values{1}.name] == ph.UserData
+   ind = [obj.values{1}.name] == ph.UserData;
    label = ph.UserData;
    event = obj.values{1}(ind);
    textLabel = findobj(h,'UserData',ph.UserData,'-and','Type','Text');
@@ -403,7 +401,7 @@ function moveEvent(src,~,obj,h)
       % HACK - despite nextplot setting, this gets cleared?
       ph.UserData = label;
 
-      %updateAxes(src,v);
+      updateAxes(src,v);
    end
 end
 

@@ -70,7 +70,7 @@ function varargout = plot(self,varargin)
    % Unique ID to tag objects from this call
    gui.id = char(java.util.UUID.randomUUID.toString);
    
-   gui.lineScaleSliderDiv = 12; % Slider stops per SD
+   gui.lineScaleSliderDiv = 3; % Slider stops per SD
    gui.lineScaleSliderNSD = 9; % # of signal SDs to cover
    sd = nanstd(self(1).values{1}(:));
    gui.lineScaleSliderSD = sd;
@@ -143,9 +143,6 @@ function varargout = plot(self,varargin)
    end
    
    % First draw
-%    if ~exist('hsepSlider','var')
-%       hsepSlider = findobj(h.Parent.Children,'flat','tag','LineScaleSlider');
-%    end
    refreshPlot(self,h,gui.id,hsepSlider);
    h.Visible = 'on';
    
@@ -174,11 +171,9 @@ function setx(e,~,obj,h,id)
    % Set the xlimits of axis
    ah = findobj(h.Parent.Children,'flat','Type','Axes');
    try
-      %h.XLim = [lo hi];
       set(ah,'XLim',[lo hi]);
    catch err
       if strcmp('MATLAB:hg:shaped_arrays:LimitsWithInfsPredicate',err.identifier)
-         %h.XLim = [hi lo];
          set(ah,'XLim',[hi lo]);
       else
          rethrow(err);
@@ -186,8 +181,7 @@ function setx(e,~,obj,h,id)
    end
 
    % Move the text labels
-   %th = findobj(h,'Tag',id,'-and','Type','Text');
-   th = findobj(h.Parent.Children,'flat','Tag',id,'-and','Type','Text');
+   th = findobj(h.Children,'flat','Tag',id,'-and','Type','Text');
    for i = 1:numel(th)
       th(i).Position(1) = h.XLim(2);
    end
@@ -210,7 +204,6 @@ function refreshPlot(obj,h,id,hsepSlider)
    
    values = obj(ind1).values{1};
    t = obj(ind1).times{1};
-   %hsepSlider = findobj(h.Parent.Children,'flat','tag','LineScaleSlider');
    % Convert slider step to data scale
    sep = hsepSlider.UserData.Value*gui.lineScaleSliderSD/gui.lineScaleSliderDiv;
 
@@ -218,7 +211,8 @@ function refreshPlot(obj,h,id,hsepSlider)
    %hsepSlider.UserData.setMaximum(9*sd*10); % THIS TRIGGERS CALLBACK
    
    sf = (0:n-1)*sep; % shift factor
-   lh = findobj(h.Children,'flat','Tag',id,'-and','-and','Type','Line','LineStyle','-');
+   lh = findobj(h.Children,'flat','Tag',id,'-and','Type','Line','-and','LineStyle','-');
+   %lh = findobj(h.Children,'flat','Tag',id,'-and','-and','Type','Line','LineStyle','-');
    
    % Do we need to draw from scratch, or can we replace data in handles?
    if isempty(lh)
@@ -249,7 +243,6 @@ function refreshPlot(obj,h,id,hsepSlider)
       data = bsxfun(@plus,values,sf);
       set(lh,'XData',t);
       for i = 1:n
-         %lh(i).XData = t;
          lh(i).YData = data(:,i);
       end
    end
@@ -283,16 +276,14 @@ function refreshPlot(obj,h,id,hsepSlider)
    hf = ancestor(h,'Figure');
    
    % Attach menus
-   %if newdraw
-      delete(findobj(h.Parent,'flat','Tag',id,'-and','Type','ContextMenu'));
-      lineMenu = uicontextmenu('Parent',hf,'Callback',@lineHittest);
-      uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj(ind1) 0});
-      uimenu(lineMenu,'Label','Edit quality','Callback',{@setQuality obj(ind1) NaN});
-      uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
-      uimenu(lineMenu,'Label','Edit label','Callback',{@editLabel obj(ind1) h});
-      set(lineMenu,'Tag',id);
-      set(lh,'uicontextmenu',lineMenu);
-   %end
+   delete(findobj(h.Parent.Children,'flat','Tag',id,'-and','Type','uicontextmenu'));
+   lineMenu = uicontextmenu('Parent',hf,'Callback',@lineHittest);
+   uimenu(lineMenu,'Label','Quick set quality = 0','Callback',{@setQuality obj(ind1) 0});
+   uimenu(lineMenu,'Label','Edit quality','Callback',{@setQuality obj(ind1) NaN});
+   uimenu(lineMenu,'Label','Change color','Callback',{@pickColor obj(ind1) h});
+   uimenu(lineMenu,'Label','Edit label','Callback',{@editLabel obj(ind1) h});
+   set(lineMenu,'Tag',id);
+   set(lh,'uicontextmenu',lineMenu);
    
    % Refresh labels
    if newdraw
@@ -337,11 +328,11 @@ function refreshPlot(obj,h,id,hsepSlider)
 end
 
 function setQuality(src,~,obj,quality)
-   lh = src.Parent.UserData;%gco;
+   lh = src.Parent.UserData;
    label = lh.UserData;
    ind = obj.labels == label;
-   % Could use this to find all lines in all axes matching label
-   % findobj(src.Parent.Parent.Children,'Type','line','-and','UserData',label)
+   % Find all corresponding lines in axes in same parent
+   lh = findobj(src.Parent.Parent.Children,'Type','line','-and','UserData',label);
    if isnan(quality)
       mouse = get(0,'PointerLocation');
       d = dialog('Position',[mouse 200 150],'Name','Set quality');
@@ -356,9 +347,9 @@ function setQuality(src,~,obj,quality)
       if any(ind)
          obj.quality(ind) = quality;
          if quality == 0
-            lh.Color = [.7 .7 .7 .4];
+            set(lh,'Color',[.7 .7 .7 .4]);
          else
-            lh.Color = obj.labels(ind).color;
+            set(lh,'Color',obj.labels(ind).color);
          end
       end
    end
@@ -374,9 +365,11 @@ function txtcallback(data,~,obj,src)
 end
 
 function pickColor(src,~,obj,h)
-   lh = src.Parent.UserData;%gco;
+   lh = src.Parent.UserData;
    label = lh.UserData;
    ind = obj.labels == label;
+   % Find all corresponding lines in axes in same parent
+   lh = findobj(src.Parent.Parent.Children,'Type','line','-and','UserData',label);
    
    color = obj.labels(ind).color;
    
@@ -395,12 +388,13 @@ function pickColor(src,~,obj,h)
    color = cc.getColor;
    obj.labels(ind).color = [color.getRed color.getGreen color.getBlue]/255;
    if obj.quality(ind) ~= 0
-      lh.Color = obj.labels(ind).color;
+      set(lh,'Color',obj.labels(ind).color);
+      %lh.Color = obj.labels(ind).color;
    end
-   
+
    % Redraw label
-   th = findobj(h,'Tag',lh.Tag,'-and','Type','Text','-and','UserData',lh.UserData);
-   th.Color = lh.Color;
+   th = findobj(h.Parent.Children,'Type','Text','-and','UserData',label);
+   set(th,'Color',obj.labels(ind).color);
 end
 
 function editLabel(src,~,obj,h)
