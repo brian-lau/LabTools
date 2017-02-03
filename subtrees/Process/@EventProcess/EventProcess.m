@@ -8,9 +8,7 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
    properties
       null = metadata.Event('name','NULL','tStart',NaN,'tEnd',NaN)
    end
-   properties(SetAccess = protected, Hidden, Transient)
-      updateEventListener_@event.proplistener % listener
-   end   
+   
    %%
    methods
       %% Constructor
@@ -62,7 +60,6 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
          end
          
          self = self@PointProcess(args);         
-         self.updateEventListener_ = addlistener(self,'values','PreGet',@self.updateEventTimes);
       end
       
       function duration = get.duration(self)
@@ -84,6 +81,19 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
          end
       end
       
+      function chop(self,varargin)
+         % Call superclass method to split
+         chop@Process(self,varargin{:});
+         % Make sure eventTimes are updated
+         arrayfun(@(x) x.updateEventTimes(),self);
+         if nargout == 0
+            % Currently Matlab OOP doesn't allow the handle to be
+            % reassigned, ie self = obj, so we do a silent pass-by-value
+            % http://www.mathworks.com/matlabcentral/newsreader/view_thread/268574
+            assignin('caller',inputname(1),self);
+         end
+      end
+      
       updateEventTimes(self,varargin)
       
       [ev,selection] = find(self,varargin)
@@ -98,12 +108,22 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       %% Display
       h = plot(self,varargin)
       
+      function print(self)
+         for i = 1:numel(self)
+            temp = self(i).values{1};
+            rownames = arrayfun(@(x) x.name.name,temp,'uni',0);
+            tStart = [temp.tStart]';
+            tEnd = [temp.tEnd]';
+            duration = [temp.duration]';
+            disp(table(tStart,tEnd,duration,'RowNames',rownames))
+         end
+      end
+      
       function S = saveobj(self)
          if ~self.serializeOnSave
             S = self;
          else
             %disp('event process saveobj');
-            delete(self.updateEventListener_);
             % Converting to bytestream prevents removal of transient/dependent
             % properties, so we have to do this manually
             warning('off','MATLAB:structOnObject');
@@ -115,6 +135,7 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
    
    methods(Access = protected)
       applyWindow(self)
+      applyOffset(self,offset)
    end
    
    methods(Static)

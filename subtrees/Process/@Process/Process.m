@@ -85,7 +85,7 @@ classdef(Abstract) Process < hgsetget & matlab.mixin.Copyable
    end
    properties(SetAccess = immutable)
       serializeOnSave = false 
-      version = '0.9.1'   % Version string
+      version = '0.10.0'   % Version string
    end
    events
       runImmediately      % trigger queue evaluation

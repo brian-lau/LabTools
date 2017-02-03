@@ -5,9 +5,11 @@ function bool = checkVersion(ver,req)
 
 if ischar(ver)
    ver = regexp(ver,'\.','split');
+   ver = str2double(ver);
 end
 if ischar(req)
    req = regexp(req,'\.','split');
+   req = str2double(req);
 end
 
 assert((numel(ver)==3) && (numel(req)==3),...
@@ -19,7 +21,7 @@ if isequal(ver,req)
 end
 
 for i = 1:numel(ver)
-   if ver{i}>req{i}
+   if ver(i)>req(i)
       bool = true;
       return;
    end
