@@ -21,7 +21,7 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
          end
          
          p = inputParser;
-         p.KeepUnmatched= true;
+         p.KeepUnmatched = true;
          p.FunctionName = 'EventProcess constructor';
          p.addParameter('events',[],@(x) iscell(x) || isa(x,'metadata.Event') );
          p.addParameter('times',[],@(x) isnumeric(x) || iscell(x));
@@ -47,10 +47,13 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
                   'nonmatching dimensions for times and events');
             else
                if iscell(par.events)
-                  assert(all(cellfun(@(x) isa(x,'metadata.Event'),par.events)));
+                  assert(all(cellfun(@(x) isa(x,'metadata.Event'),par.events)));                  
+                  events = par.events;
+                  times = cellfun(@(x) vertcat(x.time),events,'uni',0);
+               else
+                  events = {par.events};
+                  times = {[vertcat(par.events.tStart),vertcat(par.events.tEnd)]};
                end
-               events = {par.events};
-               times = cellfun(@(x) vertcat(x.time),events,'uni',0);
             end
 
             args.times = times;
@@ -84,8 +87,12 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       function chop(self,varargin)
          % Call superclass method to split
          chop@Process(self,varargin{:});
-         % Make sure eventTimes are updated
-         arrayfun(@(x) x.updateEventTimes(),self);
+         
+         % Update metadata.Event times
+         for i = 1:numel(self)
+            self(i).updateEventTimes();
+         end
+         
          if nargout == 0
             % Currently Matlab OOP doesn't allow the handle to be
             % reassigned, ie self = obj, so we do a silent pass-by-value
@@ -111,7 +118,11 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       function print(self)
          for i = 1:numel(self)
             temp = self(i).values{1};
-            rownames = arrayfun(@(x) x.name.name,temp,'uni',0);
+            if 1
+               rownames = arrayfun(@(x) x.name,temp,'uni',0);
+            else
+               rownames = arrayfun(@(x) x.name.name,temp,'uni',0);
+            end
             tStart = [temp.tStart]';
             tEnd = [temp.tEnd]';
             duration = [temp.duration]';

@@ -1,8 +1,6 @@
 % Window event times, setting
 %     times
 %     values
-%     index
-%     isValidWindow
 
 % TODO
 %   o Round windows to dt to avoid surprises due to numerical error?
@@ -34,8 +32,12 @@ for i = 1:nWindowReq
    
    times = self.times{idx};
    values = self.values{idx};
-   tStart = min(times);
-   tEnd = max(times);
+   if isempty(times)
+      continue;
+   else
+      tStart = times(1);
+      tEnd = times(end);
+   end
    dim = size(values);
    dim = dim(2:end); % leading dim is always time
 
@@ -65,12 +67,12 @@ for i = 1:nWindowReq
          windowedValues{i,1} = [preV ; values];
       end
    else
-      if sum(ind) ~= numel(ind)
-         windowedTimes{i,1} = times(ind);
-         windowedValues{i,1} = values(ind,:);
-      else
+      if all(ind)
          windowedTimes{i,1} = times;
          windowedValues{i,1} = values;
+      else
+         windowedTimes{i,1} = times(ind);
+         windowedValues{i,1} = values(ind,:);
       end
    end
 end

@@ -12,7 +12,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       Fs_                 % Original sampling frequency
    end
    properties(SetAccess = protected)
-      n = 0                  % # of signals/channels 
+      n = 0               % # of signals/channels 
    end
    properties(SetAccess = protected, Dependent)
       dt                  % 1/Fs
@@ -46,7 +46,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
          end
          
          p = inputParser;
-         p.KeepUnmatched= false;
+         p.KeepUnmatched = false;
          p.FunctionName = 'PointProcess constructor';
          p.addParameter('info',containers.Map('KeyType','char','ValueType','any'));
          p.addParameter('Fs',1000,@(x) isnumeric(x));
@@ -88,7 +88,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                end
                [eventTimes{1},tInd{1}] = sortrows(times);
             else
-               for i = 1:numel(times);
+               for i = 1:numel(times)
                   if isrow(times{i}) && ... % FIXME: this is hacky...
                      ~(isa(self,'EventProcess')&&(numel(times{i})==2))
                      times{i} = times{i}';
@@ -120,6 +120,7 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
                      'Cell arrays not matched in dims, # of ''times'' must equal # of ''values''');
                   for i = 1:numel(values)
                      values{i} = reshape(values{i}(tInd{i}),size(eventTimes{i},1),1);
+                     %values{i} = vec(values{i}(tInd{i}));
                   end
                end
             end

@@ -19,11 +19,10 @@
 %     copyLabel - boolean, optional, default = False
 %               boolean for copying labels (since they're handles object)
 %
-%
 % EXAMPLES
 %     s = SampledProcess((1:10)','tStart',1);
 %     s.window = [1 5; 6 10];
-%     s.chop() 
+%     s.chop()
 
 %     $ Copyright (C) 2016 Brian Lau <brian.lau@upmc.fr> $
 %     Released under the BSD license. The license and most recent version
@@ -33,7 +32,7 @@
 function chop(self,varargin)
 
 p = inputParser;
-p.KeepUnmatched = true;
+p.KeepUnmatched = false;
 p.FunctionName = 'Process chop';
 p.addParameter('shiftToWindow',true,@(x) islogical(x));
 p.addParameter('copyInfo',true,@(x) islogical(x));
@@ -46,120 +45,83 @@ if numel(self) > 1
       'You can only chop a scalar Process.');
 end
 
-nWindow = size(self.window,1);
 window = self.window;
-% Preallocate
-obj(nWindow,1) = feval(class(self));
-
+nWindow = size(window,1);
 oldOffset = self.offset;
 oldCumulOffset = self.cumulOffset;
-self.offset = 0;
-if 1
-   %[obj(:).values_] = deal(self.values(:));
-   for i = 1:nWindow
-      if par.copyInfo
-         obj(i).info = copyInfo(self);
-      else
-         obj(i).info = self.info;
-      end
-      
-      if par.shiftToWindow
-         shift = self.window(i,1);
-      else
-         shift = 0;
-      end
-      
-      % Current times become original times in new Process, removing all
-      % former offsets (and window edge if requested)
-      obj(i).times_ = cellfun(@(x) x - shift - oldCumulOffset(i),self.times(i,:),'uni',0);
-      obj(i).times = obj(i).times_;
-      obj(i).values_ = self.values(i,:);
-      obj(i).values = obj(i).values_;
-      obj(i).set_n();
-      
-      % Take current Fs, which may be different from original Fs_
-      obj(i).Fs_ = self.Fs;
-      obj(i).Fs = self.Fs;
-      
-      obj(i).tStart = window(i,1) - shift;
-      obj(i).tEnd = window(i,2) - shift;
-      %    obj(i).tStart = self.window(i,1) - shift;
-      %    obj(i).tEnd = self.window(i,2) - shift;
-      obj(i).cumulOffset = 0;
-      
-      obj(i).window = window(i,:) - shift;
-      %   obj(i).window = self.window(i,:) - shift;
-      % Bring cumulative offset back to just before the last offset
-      obj(i).offset = oldCumulOffset(i) - oldOffset(i);
-      % Now set the final offset
-      obj(i).offset = oldOffset(i);
-      
-      % Take current selection
-      obj(i).selection_ = self.selection_(self.selection_);
-      if par.copyLabel
-         obj(i).labels_ = copy(self.labels);
-      else
-         obj(i).labels_ = self.labels;
-      end
-      obj(i).quality_ = self.quality;
-      obj(i).labels = obj(i).labels_;
-      obj(i).quality = self.quality;
-      %   obj(i).quality = obj(i).quality_;
-      
-      obj(i).window_ = obj(i).window;
-      obj(i).offset_ = 0;
-   end
+times = self.times;
+values = self.values;
+
+% Clear variables extracted above to minimize copy
+self.times = [];
+self.values = [];
+self.times_ = [];
+self.values_ = {};
+% Flip reset bit to shortcut setters
+self.reset_ = true;
+% Preallocate object array to copy of original
+obj(1:nWindow,1) = self;
+obj = copy(obj); % Shallow copy
+
+if par.shiftToWindow
+   shift = window(:,1);
 else
-   for i = 1:nWindow
-      if par.copyInfo
-         obj(i).info = copyInfo(self);
-      else
-         obj(i).info = self.info;
-      end
+   shift = zeros(nWindow,1);
+end
+
+% Deal each window to one object
+temp = cell(nWindow,1);
+for i = 1:nWindow
+   temp{i} = values(i,:);
+end
+[obj(:).values] = temp{:};
+[obj(:).values_] = temp{:};
+
+% Shift times
+for i = 1:nWindow
+   for j = 1:size(times,2)
+      times{i,j} = times{i,j} - shift(i);
+   end
+   % Pack into cell array so we can deal to object array
+   temp{i} = times(i,:);
+end
+[obj(:).times] = temp{:};
+[obj(:).times_] = temp{:};
+
+window = bsxfun(@minus,window,shift);
+temp = num2cell(window,2);
+[obj(:).window] = temp{:};
+[obj(:).window_] = temp{:};
+temp = num2cell(window(:,1));
+[obj(:).tStart] = temp{:};
+temp = num2cell(window(:,2));
+[obj(:).tEnd] = temp{:};
+
+temp = num2cell(oldOffset);
+[obj(:).offset] = temp{:};
+temp = num2cell(oldCumulOffset);
+[obj(:).cumulOffset] = temp{:};
+
+[obj(:).offset_] = deal(0);
+
+% Flip reset bit back
+[obj(:).reset_] = deal(false);
+
+% Take current selection
+[obj(:).selection_] = deal(self.selection_(self.selection_));
+[obj(:).quality_] = obj(:).quality;
+
+for i = 1:nWindow
+   if par.copyInfo
+      obj(i).info = copyInfo(self);
+   end
       
-      if par.shiftToWindow
-         shift = self.window(i,1);
-      else
-         shift = 0;
-      end
-      
-      % Current times become original times in new Process, removing all
-      % former offsets (and window edge if requested)
-      obj(i).times_ = cellfun(@(x) x - shift - oldCumulOffset(i),self.times(i,:),'uni',0);
-      obj(i).times = obj(i).times_;
-      obj(i).values_ = self.values(i,:);
-      obj(i).values = obj(i).values_;
-      obj(i).set_n();
-      
-      % Take current Fs, which may be different from original Fs_
-      obj(i).Fs_ = self.Fs;
-      obj(i).Fs = self.Fs;
-      
-      obj(i).tStart = self.window(i,1) - shift;
-      obj(i).tEnd = self.window(i,2) - shift;
-      obj(i).cumulOffset = 0;
-      
-      obj(i).window = self.window(i,:) - shift;
-      % Bring cumulative offset back to just before the last offset
-      obj(i).offset = oldCumulOffset(i) - oldOffset(i);
-      % Now set the final offset
-      obj(i).offset = oldOffset(i);
-      
-      % Take current selection
-      obj(i).selection_ = self.selection_(self.selection_);
-      if par.copyLabel
-         obj(i).labels_ = copy(self.labels);
-      else
-         obj(i).labels_ = self.labels;
-      end
-      obj(i).quality_ = self.quality;
+   if par.copyLabel
+      obj(i).labels_ = copy(self.labels);
       obj(i).labels = obj(i).labels_;
-      obj(i).quality = obj(i).quality_;
-      
-      obj(i).window_ = obj(i).window;
-      obj(i).offset_ = 0;
    end
 end
+
 if nargout == 0
    % Currently Matlab OOP doesn't allow the handle to be
    % reassigned, ie self = obj, so we do a silent pass-by-value

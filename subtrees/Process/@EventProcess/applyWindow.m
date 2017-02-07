@@ -1,8 +1,6 @@
 % Window original event times, setting
 %     times
 %     values
-%     index
-%     isValidWindow
 
 function applyWindow(self)
 
@@ -32,12 +30,12 @@ for i = 1:nWindowReq
       y = self.values{idx,j};
       % Events in window if either edge inside
       ind = (x(:,2)>=window(i,1)) & (x(:,1)<=window(i,2));
-      if sum(ind) ~= numel(ind)
-         windowedTimes{i,j} = x(ind,:);
-         windowedValues{i,j} = y(ind);
-      else
+      if all(ind)
          windowedTimes{i,j} = x;
          windowedValues{i,j} = y;
+      else
+         windowedTimes{i,j} = x(ind,:);
+         windowedValues{i,j} = y(ind);
       end
    end
 end
