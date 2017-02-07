@@ -17,7 +17,16 @@ else
    assert(all([self.tEnd]==[self.tEnd]),'arrays do not match');
 end
 
-plot(self,'handle',h);
+% De
+l = findobj(h,'Type','Line');
+if isempty(l)
+   plot(self,'handle',h);
+elseif all(ismember(self.labels,[l.UserData]))
+   % do nothing
+else
+   % TODO: handle when only some are plotted
+   plot(self,'handle',h);
+end
 plot(ep,'handle',h,'patchcallback',{@testPatchClick ep});
 
 %h = plot(self);
