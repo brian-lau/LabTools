@@ -212,7 +212,6 @@ function refreshPlot(obj,h,id,hsepSlider)
    
    sf = (0:n-1)*sep; % shift factor
    lh = findobj(h.Children,'flat','Tag',id,'-and','Type','Line','-and','LineStyle','-');
-   %lh = findobj(h.Children,'flat','Tag',id,'-and','-and','Type','Line','LineStyle','-');
    
    % Do we need to draw from scratch, or can we replace data in handles?
    if isempty(lh)
@@ -271,6 +270,7 @@ function refreshPlot(obj,h,id,hsepSlider)
       blh = findobj(h.Children,'flat','Tag',id,'-and','LineStyle','--');
       temp = [sf; sf; nan(size(sf))];
       blh.YData = temp(:)';
+      blh.XData = repmat([t(1) t(end) NaN]',n,1)';
    end
    
    hf = ancestor(h,'Figure');
@@ -307,13 +307,14 @@ function refreshPlot(obj,h,id,hsepSlider)
       end
    end
    
-   if isempty(hf.KeyPressFcn)%isempty(h.Parent.KeyPressFcn) % Zoom is not active
+   if isempty(hf.KeyPressFcn) % Zoom is not active
       rh = findobj(h.Parent.Children,'flat','Tag','RangeSlider');
-      if ~rh.UserData.Enabled
+      
+      %if ~rh.UserData.Enabled
          h.XLim(1) = t(1);
          h.XLim(2) = t(end);
          rh.UserData.Enabled = true;
-      end
+      %end
       h.YLim(1) = sf(1)-abs(min(min(values)));
       h.YLim(2) = sf(end)+max(max(values));
    end
