@@ -192,6 +192,7 @@ function refreshPlot(obj,h,id,hsepSlider)
    gui = linq(h.UserData).where(@(x) strcmp(x.id,id)).select(@(x) x).toArray;
 
    if numel(obj) > 1
+      % Identify the array element
       ind1 = max(1,round(gui.arraySlider.Value));
    else
       ind1 = 1;
@@ -212,7 +213,7 @@ function refreshPlot(obj,h,id,hsepSlider)
    
    sf = (0:n-1)*sep; % shift factor
    lh = findobj(h.Children,'flat','Tag',id,'-and','Type','Line','-and','LineStyle','-');
-   
+
    % Do we need to draw from scratch, or can we replace data in handles?
    if isempty(lh)
       newdraw = true;
@@ -223,7 +224,7 @@ function refreshPlot(obj,h,id,hsepSlider)
       
    % Draw lines
    if newdraw
-      delete(findobj(h,'flat','Tag',id,'-and','Type','Line'));
+      delete(findobj(h.Children,'flat','Tag',id,'-and','Type','Line'));
       if sep > 0
          n = size(values,2);
          sf = (0:n-1)*sep;
@@ -269,7 +270,9 @@ function refreshPlot(obj,h,id,hsepSlider)
    else
       blh = findobj(h.Children,'flat','Tag',id,'-and','LineStyle','--');
       temp = [sf; sf; nan(size(sf))];
+      try
       blh.YData = temp(:)';
+      catch, keyboard; end
       blh.XData = repmat([t(1) t(end) NaN]',n,1)';
    end
    

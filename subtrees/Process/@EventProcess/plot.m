@@ -137,7 +137,7 @@ function varargout = plot(self,varargin)
          'Callback',{@addEvent self h gui.id validEventTypes{i}});
    end
    set(h,'uicontextmenu',menu);
-   
+
    % First draw
    refreshPlot(self,h,gui.id);
    h.Visible = 'on';
@@ -247,7 +247,8 @@ function refreshPlot(obj,h,id)
    hf = ancestor(h,'Figure');
 
    % Attach menus
-   delete(findobj(h.Parent.Children,'flat','Tag',id,'-and','Type','uicontextmenu'));
+   % Remove existing menus associated with old patches
+   delete(findobj(h.Parent.Children,'flat','Tag',id,'-and','Type','uicontextmenu','-and','Callback',@patchHittest));
    %delete(findobj(h.Parent.Children,'flat','Tag',id,'-and','Type','ContextMenu'));
    eventMenu = uicontextmenu('Parent',hf,'Callback',@patchHittest);
    uimenu('Parent',eventMenu,'Label','Move','Callback',{@moveEvent obj(ind1) h});
@@ -341,13 +342,18 @@ function addEvent(~,~,obj,h,id,eventType)
          event.tEnd = d.xPoints(1);
       end
       if isa(event,'metadata.event.Artifact')
-         p = findobj(h,'Type','Text','-not','Tag',id);
-         labels = [p.UserData]; %fliplr([p.UserData]);
-         
-         [s,v] = listdlg('PromptString','Channels to which event applies',...
-            'SelectionMode','multiple','ListString',{labels.name});
-         if v
-            event.labels = labels(s);
+         try
+            % This only makes sense when events are overlaid with another
+            % Process, in which case 
+            p = findobj(h,'Type','Text','-not','Tag',id);
+            labels = [p.UserData]; %fliplr([p.UserData]);
+
+            [s,v] = listdlg('PromptString','Channels to which event applies',...
+               'SelectionMode','multiple','ListString',{labels.name});
+            if v
+               event.labels = labels(s);
+            end
+         catch
          end
       end
       
