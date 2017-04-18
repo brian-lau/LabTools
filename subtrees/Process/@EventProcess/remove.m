@@ -27,13 +27,11 @@ for i = 1:numel(self)
    indL = find(ismember(self(i).labels,labels));
    if any(indL)
       indT = cellfun(@(x) ismember(x(:,1),times),self(i).times(indL),'uni',0);
-      self(i).updateEventListener_.Enabled = false;
       for j = 1:numel(indL)
          if any(indT{j})
             self(i).times{indL(j)}(indT{j},:) = [];
             self(i).values{indL(j)}(indT{j}) = [];
          end
       end
-      self(i).updateEventListener_.Enabled = true;
    end
 end
