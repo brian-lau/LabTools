@@ -4,16 +4,20 @@
 %     
 %     Returns an array of random numbers generated from the lognormal 
 %     distribution with parameters MU and SIGMA. *Unlike* LOGNRND, MU and 
-%     SIGMA are the mean and covariance matrix of the lognormal distribution. 
+%     SIGMA are the desired mean and covariance matrix of the lognormal 
+%     distribution. 
 %     
 % INPUTS
 %     mu    - [1 x d] lognormal means
 %     sigma - [d x d] covariance matrix for lognormal
-%     cases - scalar, number of multivariate draws
+%
+% OPTIONAL
+%     cases - scalar > 0, default = 1, number of multivariate draws
 %
 % OUTPUTS
 %     r     - [cases x d] lognormal random numbers
 %     sigma - [d x d] covariance matrix for lognormal
+%             SIGMA will be corrected if it exceeds the theoretical 
 %
 % REFERENCES
 %     Zerovnik G, Trkov A, Smith DL, Capote R (2013). Transformation of 
@@ -22,15 +26,17 @@
 %     Nuclear Instruments and Methods in Physics Research A, 727, 33-39
 %
 % EXAMPLE
+%     import stat.* % If function came in +stat package
+%     % Specifying covariance
 %     mu = [15 30]
 %     sigma = [1 1.5;1.5 3]
 %     [r,sigma2] = mvlognrnd(mu,sigma,1e6);
 %     mean(r)
 %     cov(r)
-%     corr(r)
-%
 %     % Desired correlation
-%     [~,expC] = cov2corr(sigma)
+%     sigma./sqrt(diag(sigma)*diag(sigma)')
+%     % Obtained correlation
+%     corr(r)
 %
 %     % Specifying correlation rather than covariance
 %     mu = [5 10]
@@ -47,8 +53,11 @@
 %     of the code can be found on GitHub:
 %     https://github.com/brian-lau/matutils
 
-
 function [r,sigma] = mvlognrnd(mu,sigma,cases)
+
+if nargin < 3
+   cases = 1;
+end
 
 mu = mu(:)';
 mumu = mu'*mu;
