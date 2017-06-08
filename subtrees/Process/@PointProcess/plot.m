@@ -5,12 +5,16 @@
 % SEE ALSO
 % plotRaster
 
+% TODO
+%  o parameter to select channels to plot
+%  o pass label colors
+
 function [hh,yOffset] = plot(self,varargin)
 
 import spk.*
 
 p = inputParser;
-p.KeepUnmatched= true;
+p.KeepUnmatched = true;
 p.FunctionName = 'PointProcess raster method';
 % Intercept some parameters to override defaults
 p.addParameter('grpBorder',false,@islogical);
@@ -25,7 +29,6 @@ if n == 1
    times = self.times;
 else
    times = cat(1,self.times);
-   %window = self.checkWindow(cat(1,self.window),n);
 end
 
 if isempty(times)

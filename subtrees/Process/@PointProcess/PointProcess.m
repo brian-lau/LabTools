@@ -268,10 +268,13 @@ classdef(CaseInsensitiveProperties) PointProcess < Process
       end
             
       [s,labels] = extract(self,reqLabels)
-      %%
-      output = apply(self,fun,nOpt,varargin)
+      
       self = insert(self,times,values,labels)
       self = remove(self,times,labels)
+
+      %%
+      output = apply(self,fun,nOpt,varargin)
+      sp = smooth(self,varargin)
       output = valueFun(self,fun,varargin)
       [bool,times] = hasValue(self,value)
       iei = intervals(self)
