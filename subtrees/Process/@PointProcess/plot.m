@@ -24,7 +24,7 @@ n = numel(self);
 if n == 1
    times = self.times;
 else
-   times = [self.times];
+   times = cat(1,self.times);
    %window = self.checkWindow(cat(1,self.window),n);
 end
 
