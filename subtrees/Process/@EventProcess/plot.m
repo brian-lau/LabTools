@@ -199,7 +199,12 @@ function refreshPlot(obj,h,id)
    elseif numel([values.name]) ~= numel([ph.UserData])
       newdraw = true;
    else
-      [bool,ind] = ismember([values.name],[ph.UserData]);
+      % FIXME name may be char or label... how to manage mixtures?
+      if all(arrayfun(@(x) ischar(x.name),values))
+         [bool,ind] = ismember({values.name},{ph.UserData});
+      else
+         [bool,ind] = ismember([values.name],[ph.UserData]);
+      end
       newdraw = any(~bool);
    end
    
