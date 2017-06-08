@@ -118,10 +118,14 @@ classdef(CaseInsensitiveProperties) EventProcess < PointProcess
       function print(self)
          for i = 1:numel(self)
             temp = self(i).values{1};
-            if 1
-               rownames = arrayfun(@(x) x.name,temp,'uni',0);
-            else
+            try
                rownames = arrayfun(@(x) x.name.name,temp,'uni',0);
+            catch err
+               if strcmp(err.identifier,'MATLAB:structRefFromNonStruct')
+                  rownames = arrayfun(@(x) x.name,temp,'uni',0);
+               else
+                  rethrow(err);
+               end
             end
             tStart = [temp.tStart]';
             tEnd = [temp.tEnd]';
