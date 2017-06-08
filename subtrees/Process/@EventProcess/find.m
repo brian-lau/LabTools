@@ -117,8 +117,11 @@ if isempty(events)
 end
 
 if ~isempty(par.eventType)
-   temp = strfind(arrayfun(@(x) lower(class(x)),events,'uni',0),lower(par.eventType));
-   eventTypeInd = cellfun(@(x) ~isempty(x),temp);
+%    temp = strfind(arrayfun(@(x) lower(class(x)),events,'uni',0),lower(par.eventType));
+%    eventTypeInd = cellfun(@(x) ~isempty(x),temp);
+   eventTypeInd = strcmpi(arrayfun(@(x) class(x),events,'uni',0),par.eventType);
+%   eventTypeInd = strcmp(arrayfun(@(x) lower(class(x)),events,'uni',0),lower(par.eventType));
+%   eventTypeInd = arrayfun(@(x) isa(x,par.eventType),events);
 else
    eventTypeInd = false(nev,1);
 end
