@@ -457,7 +457,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p.addParameter('normalize',[]);
          p.parse(varargin{:});
          par = p.Results;
-                  
+         
          if isempty(par.f)
             f = self.raw.f;
             if isempty(par.fmin) && ~isempty(self.baseParams.fmin)
@@ -476,7 +476,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                fmax = f(end);
             end
             
-            ind = (f>=fmin) & (f<fmax);
+            ind = (f>=fmin) & (f<=fmax);
             f = f(ind);
             P = squeeze(self.(par.psd).values{1});
             if self.nChannels == 1
@@ -489,12 +489,12 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             % Index into actual frequency vector
             fmin = max(par.f(1),self.baseParams.fmin);
             fmax = min(par.f(end),self.baseParams.fmax);
-            ind = (f>=fmin) & (f<fmax);
+            ind = (f>=fmin) & (f<=fmax);
             
             % Index into requested frequency vector
             fmin = max(par.f(1),self.baseParams.fmin);%f(1);
             fmax = min(par.f(end),self.baseParams.fmax);%f(end);
-            ind2 = (par.f>=fmin) & (par.f<fmax);
+            ind2 = (par.f>=fmin) & (par.f<=fmax);
             
             temp = squeeze(self.(par.psd).values{1});
             if self.nChannels == 1
