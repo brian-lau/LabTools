@@ -357,7 +357,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             Q(i) = gaminv(0.05,alpha(i),1/alpha(i)) ./ (quantile(Pw(:,i),0.05));
          end      
          if self.nChannels > 1
-            self.detail.map(@(x) x.*reshape(repmat(Q,numel(f),1),[1 numel(f) self.nChannels]));
+            self.detail.map(@(x) x.*reshape(repmat(Q,numel(self.detail.f),1),...
+               [1 numel(self.detail.f) self.nChannels]));
          else
             self.detail.map(@(x) Q*x);
          end
@@ -484,25 +485,46 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             end
             P = P(ind,:);
          else
-            %% Assumes we've always sampled frequencies with same dF (spacing)
-            f = self.raw.f;
-            % Index into actual frequency vector
-            fmin = max(par.f(1),self.baseParams.fmin);
-            fmax = min(par.f(end),self.baseParams.fmax);
-            ind = (f>=fmin) & (f<=fmax);
-            
-            % Index into requested frequency vector
-            fmin = max(par.f(1),self.baseParams.fmin);%f(1);
-            fmax = min(par.f(end),self.baseParams.fmax);%f(end);
-            ind2 = (par.f>=fmin) & (par.f<=fmax);
-            
-            temp = squeeze(self.(par.psd).values{1});
-            if self.nChannels == 1
-               temp = temp';
+            if 0
+%                keyboard
+%                f = self.raw.f;
+%                f2 = par.f;
+%                fmin = max(f2(1),self.baseParams.fmin);
+%                fmax = min(f2(end),self.baseParams.fmax);
+%                
+%                indfmin = f>fmin;
+%                indfmin = 
+%                indfmax = f<=fmax;
+%                %f2((f2<fmin) | (f2>fmax)) = [];
+%                ind = nearestpoint(f2,f);
+%                
+%                temp = squeeze(self.(par.psd).values{1});
+%                if self.nChannels == 1
+%                   temp = temp';
+%                end
+%                P = nan(numel(ind),numel(self.labels_));
+%                P(ind2,:) = temp(ind,:);
+            else
+               %% Assumes we've always sampled frequencies with same dF (spacing)
+               f = self.raw.f;
+               % Index into actual frequency vector
+               fmin = max(par.f(1),self.baseParams.fmin);
+               fmax = min(par.f(end),self.baseParams.fmax);
+               ind = (f>=fmin) & (f<=fmax);
+               
+               % Index into requested frequency vector
+               fmin = max(par.f(1),self.baseParams.fmin);
+               fmax = min(par.f(end),self.baseParams.fmax);
+               ind2 = (par.f>=fmin) & (par.f<=fmax);
+               
+               temp = squeeze(self.(par.psd).values{1});
+               if self.nChannels == 1
+                  temp = temp';
+               end
+               P = nan(numel(par.f),numel(self.labels_));
+               P(ind2,:) = temp(ind,:);
+               f = par.f;
             end
-            P = nan(numel(par.f),numel(self.labels_));
-            P(ind2,:) = temp(ind,:);
-            f = par.f;
          end
 
          if par.dB
@@ -731,7 +753,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
          
          if ~isempty(par.vline)
-            yy = get(gca,'ylim');
+            yy = get(gca,'ylim')*.90;
             for i = 1:numel(par.vline)
                plot([par.vline(i) par.vline(i)],yy,'Color',[0 0 0 0.25]);
                text(par.vline(i),yy(2),sprintf('%g',par.vline(i)),...
