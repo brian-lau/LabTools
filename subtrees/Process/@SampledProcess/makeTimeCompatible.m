@@ -10,7 +10,7 @@ method = 'linear';
 
 if bool
    return;
-elseif relWindow && dt % relWindow & tStep
+elseif true%relWindow && dt % relWindow & tStep
    nt = linq(self).select(@(x) numel(x.times{1})).toArray;
    
    if all(nt) == 0
@@ -24,6 +24,7 @@ elseif relWindow && dt % relWindow & tStep
       self(i).times{1} = tq;
    end
 else
+   keyboard
    error('not yet implemented');
 end
 
