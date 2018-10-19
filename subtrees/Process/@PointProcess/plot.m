@@ -25,19 +25,24 @@ p.parse(varargin{:});
 params = p.Unmatched;
 
 n = numel(self);
+
 if n == 1
    times = self.times;
 else
    times = cat(1,self.times);
 end
 
-if isempty(times)
+if isempty(times) || (n==0)
    % need to return handle and yOffset if they exist? TODO
    if isfield(params,'h')
       h = params.h;
+   elseif isfield(params,'handle')
+      h = params.handle;
    end
    if isfield(params,'yOffset')
       yOff = params.yOffset;
+   else
+      yOff = 0;
    end
 else
    [h,yOff] = plotRaster(times,p.Results,params);

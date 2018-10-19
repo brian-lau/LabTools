@@ -71,6 +71,10 @@
 
 function self = subset(self,varargin)
 
+if nargin == 1
+   return;
+end
+
 if mod(nargin-1,2)==1 && ~isstruct(varargin{1})
    assert(isnumeric(varargin{1}),...
       'Process:subset:InputFormat',...
