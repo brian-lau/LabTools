@@ -49,14 +49,14 @@ classdef Label < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyable
          end
          
          nObj = numel(self);
-         
+
          if ~isempty(par.label) % requires full label match (ignores labelProp/Val)
             if isa(par.label,'metadata.Label')
                bool = ismember(self,par.label);
                bool = bool(:);
             end
          elseif ~isempty(par.labelVal)
-            if ischar(par.labelVal)
+            if ischar(par.labelVal) || all(cellfun(@ischar,par.labelVal))
                v = arrayfun(@(x) strcmp(x.(par.labelProp),par.labelVal),self,'uni',0,'ErrorHandler',@valErrorHandler);
             else
                if par.nansequal && ~par.strictHandleEq
@@ -73,12 +73,16 @@ classdef Label < handle & matlab.mixin.Heterogeneous & matlab.mixin.Copyable
                end
             end
             bool = vertcat(v{:});
+            if size(bool,2) > 1
+               bool = logical(sum(bool,2));
+            end
          else
             bool = false(nObj,1);
          end
          labels = self(bool);
+ 
       end
-      
+
    end
 end
 
