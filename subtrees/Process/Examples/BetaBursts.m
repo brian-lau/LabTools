@@ -24,8 +24,8 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       nChannels           % unique & valid channels
       nExclude            % # of bursts that are not valid
    end
-
    properties(SetAccess = protected, Hidden)
+      reqLabels_
       labels_             % metadata labels for channels
       mask_               % boolean indicating valid bursts
       isPreprocessed_
@@ -43,6 +43,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          p.KeepUnmatched= false;
          p.FunctionName = 'BetaBursts constructor';
          p.addParameter('input',[],@(x) isa(x,'SampledProcess') || ischar(x));
+         p.addParameter('labels',{});
          p.addParameter('spectrum',[],@(x) isa(x,'Spectrum') || ischar(x));
          p.addParameter('instAmpMethod','hilbert',@ischar);
          p.addParameter('pctileThreshold',75,@(x) isscalar(x) && (x>0) && (x<100));
@@ -53,6 +54,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          p.parse(varargin{:});
          par = p.Results;
          
+         self.reqLabels_ = par.labels;
          self.input = par.input;
          self.instAmpMethod = par.instAmpMethod;
          self.preprocessParams = par.preprocessParams;
@@ -67,8 +69,14 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       end
       
       function self = set.input(self,input)
+         
+         % Reduce to requested labels
+         if ~isempty(self.reqLabels_)
+            input.subset('labelVal',self.reqLabels_).fix();
+         end
          self.input = copy(input);
          self.input_ = copy(input);
+         
          % TODO, check labels for array inputs
          self.labels_ = input.labels;
          self.isPreprocessed_ = false;
@@ -76,9 +84,9 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          self.hasInstAmp_ = false;
       end
       
-%       function self = set.rejectParams(self,rejectParams)
-%          
-%       end
+      %       function self = set.rejectParams(self,rejectParams)
+      %
+      %       end
       
       function duration = get.bDuration(self)
          duration = cellfun(@(x) x(:,2)-x(:,1),self.bTime,'uni',0);
@@ -117,7 +125,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
             fprintf('Preprocessing already done\n');
          end
       end
-
+      
       function self = estimateInstAmp(self)
          if ~self.hasInstAmp_
             switch self.instAmpMethod
@@ -156,24 +164,6 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
                self.instAmp.map(f).fix();
                %tempPost = extract(self.instAmp);
             end
-            
-%             if isfield(self.postprocessParams,'movmean')
-%                if self.postprocessParams.movmean > 0
-%                   Fs = unique([self.instAmp.Fs]);
-%                   assert(isscalar(Fs),'Different sampling frequencies!!');
-%                   k = round(self.postprocessParams.movmean*Fs);
-%                   if iseven(k)
-%                      k = k + 1;
-%                   end
-%                   
-%                   %tempPre = extract(self.instAmp);                 
-%                   f = @(x) x - movmean(x,k);
-%                   self.instAmp.map(f).fix();
-%                   %tempPost = extract(self.instAmp);
-%                end
-%             elseif isfield(self.postprocessParams,'movmedian')
-%                
-%             end
             self.isPostprocessed_ = true;
          else
             fprintf('Postprocessing already done\n');
@@ -264,19 +254,20 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       
       function plot(self,c)
          %figure;
-         for i = 1:6
+         for i = 1:numel(self.labels_)
             subplot(2,3,i); hold on
             dur = cat(1,self.bDuration{:,i});
             amp = cat(1,self.bMaxAmp{:,i});
             scatter(dur,amp,'Markerfacecolor',c,'MarkerEdgeColor',c,'MarkerFaceAlpha',.2,'MarkerEdgeAlpha',.2);
             bad = ~cat(1,self.mask_{:,i});
             plot(dur(bad),amp(bad),'kx');
+            title(self.labels_(i).name);
          end
       end
       
       function hist(self,c)
          %figure;
-         for i = 1:6
+         for i = 1:numel(self.labels_)
             subplot(2,3,i); hold on
             dur = cat(1,self.bDuration{:,i});
             amp = cat(1,self.bMaxAmp{:,i});
