@@ -1,4 +1,4 @@
-function ev = detect(self,threshold)
+function [events,values] = detect(self,threshold)
 
 s = copy(self);
 
@@ -8,12 +8,11 @@ else
    % TODO : implement standard detectors
 end
 s.map(func);
-keyboard
 
 for i = 1:numel(s)
    ind = s(i).values{1};
+   values = self(i).values{1};
    times = s(i).times{1};
-   %times = repmat(times,s(i).n);
    
    dind = diff(ind); % +1 event goes hi, -1 event goes lo
    
@@ -35,16 +34,16 @@ for i = 1:numel(s)
          events{i,j} = [ascend , descend];
       end
       
-      n = size(events{i,j},1);
-      ev(n) = metadata.event.Generic();
+%       n = size(events{i,j},1);
+%       ev(n) = metadata.event.Generic();
+%       
+%       tStart = num2cell(events{i,j}(:,1));
+%       [ev.tStart] = deal(tStart{:});
+%       tEnd = num2cell(events{i,j}(:,2));
+%       [ev.tEnd] = deal(tEnd{:});
       
-      tStart = num2cell(events{i,j}(:,1));
-      [ev.tStart] = deal(tStart{:});
-      tEnd = num2cell(events{i,j}(:,2));
-      [ev.tEnd] = deal(tEnd{:});
-      
-      evv{j} = ev;
-      clear ev;
+      %evv{j} = ev;
+      %clear ev;
    end
    %ep(i) = EventProcess(evv,'tStart',self(i).tStart,'tEnd',self(i).tEnd);
 end
