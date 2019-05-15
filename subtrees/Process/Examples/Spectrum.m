@@ -33,7 +33,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       mask_               % boolean indicating valid sections
    end
    properties(SetAccess = immutable)
-      version = '0.3.0'   % Version string
+      version = '0.4.0'   % Version string
    end
    
    methods
@@ -379,12 +379,15 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
       end
       
-      function m = measureInBand(self,band,varargin)
+      %% Measure some scalar quantity in a frequency band [fmin fmax]
+      function [m,P,par] = measureInBand(self,band,varargin)
          p = inputParser;
          p.KeepUnmatched = true;
-         p.FunctionName = 'Spectrum statInBand method';
+         p.FunctionName = 'Spectrum measureInBand method';
          p.addRequired('band',@(x) isnumeric(x) && size(x,2)==2);
          p.addParameter('measure','mean',@(x) ischar(x) || isa(x,'function_handle'));
+         p.addParameter('redefineFunction',false,@islogical);
+         % Remaining are passed through to extract
          p.addParameter('dB',false,@(x) isnumeric(x) || islogical(x));
          p.addParameter('psd','raw',@(x) ischar(x));
          p.addParameter('exclude',[],@(x) (isnumeric(x) && (size(x,2)==2)) || isempty(x));
@@ -397,12 +400,20 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             par.plot = true;
          end
          
-         m = zeros(size(par.band,1),self.nChannels);
+         %m = zeros(size(par.band,1),self.nChannels);
          for i = 1:size(par.band,1)
             [P,f] = extract(self,'fmin',par.band(i,1),'fmax',par.band(i,2),...
                par);
             if isa(par.measure,'function_handle')
-               m(i,:) = par.measure(P);
+               if par.redefineFunction
+                  % Redefine handle to capture variables in this local workspace
+                  func = par.measure;
+                  func = functions(func);
+                  func = eval(func.function);
+                  par.measure = func;
+
+                  m(i,:) = par.measure(P);
+               end
             else
                switch lower(par.measure)
                   case 'mean'
@@ -443,6 +454,83 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             plotit = true;
          end
          m = self.measureInBand(varargin{:},'measure','max','plot',plotit);
+      end
+      
+      function [mom,f,par] = moments(self,varargin)
+         % Spectral moments 0-5
+         f = NaN; % Dummy variable that will get redefined
+         func = @(s) simpson(f',[s f'.*s f'.^2.*s f'.^3.*s f.^4'.*s]);
+         [m,P,par] = self.measureInBand(varargin{:},'measure',func,'redefineFunction',true);
+         
+         g = functions(par.measure);
+         f = g.workspace{1}.f;
+         f = f(:);
+         ind  = find(f>0);
+         
+         % Struct array for easier formatting and manipulation
+         stride = self.nChannels;
+         for i = 1:self.nChannels
+            % m_-1 calculated separately to ensure exclusion of f=0
+            mom(i).m_1 = simpson(f(ind),P(ind,i)./f(ind));
+            
+            temp = m(i:stride:end);
+            mom(i).m0 = temp(1);
+            mom(i).m1 = temp(2);
+            mom(i).m2 = temp(3);
+            mom(i).m3 = temp(4);
+            mom(i).m4 = temp(5);
+            mom(i).P = P(:,i);
+         end
+      end
+      
+      %% 
+      % Rogers & Van Vledder (2013). Frequency width in predictions of
+      % windsea spectra and the role of the nonlinear solver.
+      % Ocean Modelling, 
+      %
+      % Saulnier et al (2011). Wave groupiness and spectral bandwidth as
+      % relevant parameters for the performance assessment of wave energy
+      % converters.
+      % Ocean Engineering, 38: 130-147
+      function stats = wavestats(self,varargin)
+         
+         [mom,f,par] = moments(self,varargin{:});
+         
+         for i = 1:numel(mom)
+            stats(i).Hm0  = 4*sqrt(mom(i).m0);           % Significant wave height
+            stats(i).Tm01 = mom(i).m0/mom(i).m1;         % Mean wave period
+            stats(i).Tm02 = sqrt(mom(i).m0/mom(i).m2);   % Mean zero-crossing period
+            stats(i).Tm12 = mom(i).m1/mom(i).m2;
+            stats(i).Tm24 = sqrt(mom(i).m2/mom(i).m4);   % Mean period between maxima
+            stats(i).Tm_10 = mom(i).m_1/mom(i).m0;       % Mean spectral period
+            
+            % Spectral shape (aka kappa), dimensionless, range = [0 1] bigger values sharper
+            stats(i).Qa = abs(simpson(f,mom(i).P.*exp(sqrt(-1)*2*pi*f*stats(i).Tm02)))/mom(i).m0;
+            % dimensionless, range = [0 1] bigger values sharper
+            stats(i).Qb = (stats(i).Tm02/stats(i).Tm_10)^2;
+            % dimensionless, range = [0 inf] bigger values sharper
+            stats(i).Qc = max(mom(i).P/mom(i).m0)/stats(i).Tm_10;
+            % Goda's peakedness (aka Qp), dimensionless, range = [0 inf] bigger values sharper
+            stats(i).Qd = 2/mom(i).m0^2 * simpson(f,f.*mom(i).P.^2);
+            % Medina & Hudspeth (1987)
+            stats(i).Qe = 2*mom(i).m1/mom(i).m0^3 * simpson(f,mom(i).P.^2);
+            % Blackman & Tukey's spectral bandwidth, Hz
+            stats(i).Alpha = mom(i).m0^2 / simpson(f,mom(i).P.^2);
+            % Prevosto bandwidth
+            stats(i).Bw = 4/mom(i).m0^2 * simpson(f,(f - mom(i).m1/mom(i).m0).^2.*mom(i).P.^2);
+            
+            stats(i).epsilon = 1 - mom(i).m2^2 / (mom(i).m0*mom(i).m4);
+            stats(i).nu = sqrt((mom(i).m1*mom(i).m_1)/mom(i).m0^2 - 1);
+            
+            %stats(i).Alpha2 = 2*(stats(i).nu^2+1) / (stats(i).Tm_10*stats(i).Qe);
+         end
+        
+%          keyboard
+%          if par.plot
+%             sep = 2;
+%             %self.plot('psd',par.psd,'sep',sep,'dB',false,'label',true,'percentile',0.5);
+%             self.plot('psd',par.psd,'sep',sep,'dB',true,'label',true,'fmin',8,'fmax',35);
+%          end
       end
       
       function [P,f,labels] = extract(self,varargin)
@@ -650,6 +738,63 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          end
       end
       
+      function [peak,f,P,labels] = findpeaks2(self,varargin)
+         p = inputParser;
+         p.KeepUnmatched = true;
+         p.FunctionName = 'Spectrum findpeaks2 method';
+         p.addParameter('dB',false,@(x) isnumeric(x) || islogical(x));
+         p.addParameter('fmin',[],@(x) isscalar(x));
+         p.addParameter('fmax',[],@(x) isscalar(x));
+         p.addParameter('psd','detail',@(x) ischar(x));
+         p.parse(varargin{:});
+         par = p.Results;
+
+         [P,f,labels] = extract(self,'fmin',par.fmin,'fmax',par.fmax,...
+            'psd',par.psd,'dB',par.dB);
+
+         %Threshold
+         c = threshold(self,.001);
+         %c = repmat(1.5,1,self.nChannels);
+
+         % min width
+         minwidth = 1.5; % Hz
+         df = mean(diff(f));
+         n = minwidth/df; % samples
+
+         Pind = false(size(P));
+         %Pind2 = false(size(P));
+         peak.Start = cell(1,self.nChannels);
+         peak.End = cell(1,self.nChannels);
+         peak.StartFreq = cell(1,self.nChannels);
+         peak.EndFreq = cell(1,self.nChannels);
+         peak.Max = cell(1,self.nChannels);
+         peak.Freq = cell(1,self.nChannels);
+         peak.FreqCOM = cell(1,self.nChannels);
+         for i = 1:self.nChannels
+            Pind(:,i) = P(:,i)>=c(i);
+            
+            up = strfind(['0' num2str(Pind(:,i)','%1d')],['0' repmat('1',1,n)]); %// starting indices of n consecutive matches
+            down = strfind([num2str(Pind(:,i)','%1d') '0'],[repmat('1',1,n) '0']); %// starting indices of n consecutive matches
+            if ~isempty(up)
+               down = down + n - 1;
+               if numel(up) ~= numel(down)
+                  error('huh');
+               end
+               peak.Start{i} = up;
+               peak.End{i} = down;
+               peak.StartFreq{i} = f(up);
+               peak.EndFreq{i} = f(down);
+               for j = 1:numel(up)
+                  %Pind2(up(j):down(j),i) = true;
+                  peak.Max{i}(j) = max(P(up(j):down(j),i));
+                  peak.Freq{i}(j) = f(P(:,i) == peak.Max{i}(j));
+                  peak.FreqCOM{i}(j) = sum( P(up(j):down(j),i).*f(up(j):down(j))' ) / sum (P(up(j):down(j),i));
+              end
+            end
+         end
+          
+      end
+      
       %%
       function h = plotDiagnostics(self)
          %f = self.raw.f;
@@ -681,7 +826,8 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          
          h = subplot(2,2,4);
          self.plot('handle',h,'psd','detail','sep',4,'logx',true,...
-            'percentile',[0.9999],'fmin',fmin,'fmax',fmax,'vline',[4 8 12 20 30 70]);
+            'percentile',[0.9999],'fmin',fmin,'fmax',fmax,'vline',[4 8 12 20 30 70],...
+            'peak',true);
       end
       
       %% Plot all channels on one axis
@@ -703,6 +849,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          p.addParameter('vline',[],@(x) isnumeric(x));
          p.addParameter('percentile',[],@(x) isnumeric(x));
          p.addParameter('psd','raw',@(x) ischar(x));
+         p.addParameter('peak',false,@(x) islogical(x));
          p.parse(varargin{:});
          par = p.Results;
          
@@ -724,6 +871,10 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
          
          shift = 0;
          alpha = self.baseParams.alpha;
+         if par.peak
+            peak = self.findpeaks2('fmin',10,'fmax',30);
+         end
+         
          for i = 1:self.nChannels
             plot(f,shift + P(:,i),...
                'color',self.labels_(i).color,p.Unmatched);
@@ -741,6 +892,14 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
                   c = gaminv(par.percentile(j),alpha(i),1/alpha(i));
                   plot([fmin fmax],shift + [c c],'-','Color',[1 0 0 0.25]);
                   text(fmax,shift + c,sprintf('%1.4f',par.percentile(j)));
+               end
+            end
+            
+            if par.peak
+               for j = 1:numel(peak.Start{i})
+                  plot([peak.StartFreq{i}(j) peak.EndFreq{i}(j)],[shift shift],'k-');
+                  plot(peak.Freq{i}(j),shift + peak.Max{i}(j),'rx');
+                  plot(peak.FreqCOM{i}(j),shift + peak.Max{i}(j),'bx');
                end
             end
             
