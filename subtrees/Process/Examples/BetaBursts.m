@@ -1,7 +1,7 @@
 classdef BetaBursts < hgsetget & matlab.mixin.Copyable
    properties
       input               % SampledProcess
-      spectrum
+      %spectrum
       instAmpMethod       %
       preprocessParams    %
       postprocessParams   %
@@ -34,7 +34,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       input_
    end
    properties(SetAccess = immutable)
-      version = '0.1.0'   % Version string
+      version = '0.1.1'   % Version string
    end
    
    methods
@@ -69,6 +69,11 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       end
       
       function self = set.input(self,input)
+         if isempty(input)
+            self.input = [];
+            self.input_ = [];
+            return;
+         end
          
          % Reduce to requested labels
          if ~isempty(self.reqLabels_)
@@ -222,20 +227,24 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
             artifacts = extract(self.rejectParams.artifacts);
             for i = 1:numel(self.input)
                for j = 1:self.input(i).n
-                  for k = 1:numel(artifacts(i).values{1})
-                     if any(labels(j)==artifacts(i).values{1}(k).labels)
-                        bt = self.bTime{i,j};
-                        self.mask_{i,j} = ((bt(:,1) < artifacts(i).values{1}(k).tStart) & (bt(:,2) < artifacts(i).values{1}(k).tStart)) | ...
-                           ((bt(:,1) > artifacts(i).values{1}(k).tEnd) & (bt(:,2) > artifacts(i).values{1}(k).tEnd));
-                     else
-                        self.mask_{i,j} = true(size(self.bTime{i,j},1),1);
+                  if numel(artifacts(i).values{1}) > 0
+                     for k = 1:numel(artifacts(i).values{1})
+                        if any(labels(j)==artifacts(i).values{1}(k).labels)
+                           bt = self.bTime{i,j};
+                           self.mask_{i,j} = ((bt(:,1) < artifacts(i).values{1}(k).tStart) & (bt(:,2) < artifacts(i).values{1}(k).tStart)) | ...
+                              ((bt(:,1) > artifacts(i).values{1}(k).tEnd) & (bt(:,2) > artifacts(i).values{1}(k).tEnd));
+                        else
+                           self.mask_{i,j} = true(size(self.bTime{i,j},1),1);
+                        end
                      end
+                  else
+                     self.mask_{i,j} = true(size(self.bTime{i,j},1),1);
                   end
                   if self.input(i).quality(j) == 0
                      self.mask_{i,j} = false(size(self.bTime{i,j},1),1);
                   end
                   ind = self.bDuration{i,j} < self.minDurThreshold;
-                  self.mask_{i,j}(ind) = false;
+                  self.mask_{i,j}(ind) = false;    
                end
             end
          else
@@ -249,8 +258,14 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
                   self.mask_{i,j}(ind) = false;
                end
             end
-         end
+         end   
       end
+      
+      function self = clean(self)
+         self.input = [];
+         self.instAmp = [];
+      end
+      
       
       function plot(self,c)
          %figure;
