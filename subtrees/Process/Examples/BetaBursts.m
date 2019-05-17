@@ -1,7 +1,6 @@
 classdef BetaBursts < hgsetget & matlab.mixin.Copyable
    properties
       input               % SampledProcess
-      %spectrum
       instAmpMethod       %
       preprocessParams    %
       postprocessParams   %
@@ -20,7 +19,6 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
    properties(Dependent)
       bMaxAmp             % maximum amplitude of burst (from bEnvelope)
       bDuration
-      %Fs                  % Sampling Frequency
       nChannels           % unique & valid channels
       nExclude            % # of bursts that are not valid
    end
@@ -34,7 +32,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       input_
    end
    properties(SetAccess = immutable)
-      version = '0.1.1'   % Version string
+      version = '0.2.0'   % Version string
    end
    
    methods
@@ -50,7 +48,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          p.addParameter('minDurThreshold',0.1,@(x) isscalar(x) && (x>=0));
          p.addParameter('rejectParams',[]);
          p.addParameter('preprocessParams',struct('Fstop1',8,'Fpass1',12,'Fpass2',18,'Fstop2',23,'movmean',20),@isstruct);
-         p.addParameter('postprocessParams',struct('baselineRemoval','movmean','baselineWindow',20),@isstruct);
+         p.addParameter('postprocessParams',struct('baselineRemoval','movmean','baselineWindow',20,'smoothWindow',0.2),@isstruct);
          p.parse(varargin{:});
          par = p.Results;
          
@@ -151,24 +149,41 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       
       function self = postprocess(self)
          if ~self.isPostprocessed_
+            
             if isfield(self.postprocessParams,'baselineRemoval')
                Fs = unique([self.instAmp.Fs]);
                assert(isscalar(Fs),'Different sampling frequencies!!');
                k = round(self.postprocessParams.baselineWindow*Fs);
-               if iseven(k)
-                  k = k + 1;
+               if k > 1
+                  if iseven(k)
+                     k = k + 1;
+                  end
+                  switch self.postprocessParams.baselineRemoval
+                     case 'movmean'
+                        f = @(x) x - movmean(x,k);
+                     case 'movmedian'
+                        f = @(x) x - movmedian(x,k);
+                     otherwise
+                  end
+                  %tempPre = extract(self.instAmp);
+                  self.instAmp.map(f).fix();
+                  %tempPost = extract(self.instAmp);
                end
-               switch self.postprocessParams.baselineRemoval
-                  case 'movmean'
-                     f = @(x) x - movmean(x,k);
-                  case 'movmedian'
-                     f = @(x) x - movmedian(x,k);
-                  otherwise
-               end
-               %tempPre = extract(self.instAmp);
-               self.instAmp.map(f).fix();
-               %tempPost = extract(self.instAmp);
             end
+            
+            if isfield(self.postprocessParams,'smoothWindow')
+               Fs = unique([self.instAmp.Fs]);
+               assert(isscalar(Fs),'Different sampling frequencies!!');
+               k = round(self.postprocessParams.smoothWindow*Fs);
+               if k > 1
+                  if iseven(k)
+                     k = k + 1;
+                  end
+                  f = @(x) movmean(x,k);
+                  self.instAmp.map(f).fix();
+               end
+            end
+            
             self.isPostprocessed_ = true;
          else
             fprintf('Postprocessing already done\n');
@@ -244,7 +259,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
                      self.mask_{i,j} = false(size(self.bTime{i,j},1),1);
                   end
                   ind = self.bDuration{i,j} < self.minDurThreshold;
-                  self.mask_{i,j}(ind) = false;    
+                  self.mask_{i,j}(ind) = false;
                end
             end
          else
@@ -258,15 +273,14 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
                   self.mask_{i,j}(ind) = false;
                end
             end
-         end   
+         end
       end
       
       function self = clean(self)
          self.input = [];
          self.instAmp = [];
       end
-      
-      
+            
       function plot(self,c)
          %figure;
          for i = 1:numel(self.labels_)
@@ -278,6 +292,33 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
             plot(dur(bad),amp(bad),'kx');
             title(self.labels_(i).name);
          end
+      end
+      
+      function plotBurst(self,n)
+         if nargin < 2
+            n = 1;
+         end
+         
+         f = figure;
+         myhandles = guihandles(f);
+         myhandles.n = n;
+         guidata(f,myhandles);
+         
+         envelope = self.bEnvelope{1}{n,:};
+         carrier = self.bCarrier{1}{n,:};
+         raw = self.bRaw{1}{n,:};
+         bt = self.bTime{1}(n,:);
+         t = linspace(bt(1),bt(2),numel(raw));
+         
+         hold on;
+         plot(t,raw);
+         plot(t,envelope);
+         plot(t,carrier);
+         
+         
+         % Set the KeyPressFcn Callback
+         set(f,'KeyPressFcn',{@self.plotBurstFun,self});
+         
       end
       
       function hist(self,c)
@@ -299,6 +340,35 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
             end
          end
       end
-      
+   end
+   
+   methods(Static)
+      function plotBurstFun(src,event,h)
+         % Get the structure using guidata in the callback
+         myhandles = guidata(src);
+         
+         % If right arrow is pressed
+         if strcmp(event.Key,'rightarrow')
+            n = myhandles.n + 1;
+            myhandles.n = n;
+            guidata(src,myhandles);
+            
+            envelope = h.bEnvelope{1}{n,:};
+            carrier = h.bCarrier{1}{n,:};
+            raw = h.bRaw{1}{n,:};
+            bt = h.bTime{1}(n,:);
+            t = linspace(bt(1),bt(2),numel(raw));
+            
+            lineObject = src.Children.Children;
+            
+            lineObject(1).XData = t;
+            lineObject(1).YData = raw;
+            lineObject(2).XData = t;
+            lineObject(2).YData = envelope;
+            lineObject(3).XData = t;
+            lineObject(3).YData = carrier;
+         end
+      end
+
    end
 end
