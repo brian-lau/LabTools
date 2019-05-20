@@ -1,3 +1,5 @@
+% setting threshold revalidates bursts, default to keeping everything
+
 classdef BetaBursts < hgsetget & matlab.mixin.Copyable
    properties
       input               % SampledProcess
@@ -294,31 +296,52 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          end
       end
       
-      function plotBurst(self,n)
-         if nargin < 2
-            n = 1;
+      function plotBurst(self,channel,nBurst)
+         if nargin < 3
+            nBurst = 1;
          end
+         if nargin < 2
+            channel = 1;
+         end
+         
+         n = 1;
          
          f = figure;
          myhandles = guihandles(f);
+         myhandles.channel = channel;
+         myhandles.nBurst = nBurst;
          myhandles.n = n;
-         guidata(f,myhandles);
          
-         envelope = self.bEnvelope{1}{n,:};
-         carrier = self.bCarrier{1}{n,:};
-         raw = self.bRaw{1}{n,:};
-         bt = self.bTime{1}(n,:);
+         temp = self.instAmp(n).values{1}(:,channel);
+         [N,EDGES] = histcounts(temp,'Normalization','probability');
+         
+         myhandles.N = N;
+         myhandles.EDGES = EDGES;
+         guidata(f,myhandles);
+
+         envelope = self.bEnvelope{n,channel}{nBurst,:};
+         carrier = self.bCarrier{n,channel}{nBurst,:};
+         raw = self.bRaw{n,channel}{nBurst,:};
+         bt = self.bTime{n,channel}(nBurst,:);
+         thresh = self.threshold{n}(channel);
          t = linspace(bt(1),bt(2),numel(raw));
          
+         subplot('Position',[0.1 0.1 .7 .8]);
          hold on;
-         plot(t,raw);
-         plot(t,envelope);
-         plot(t,carrier);
+         plot([t(1) t(end)],[thresh thresh],'k--');
+         plot([t(1) t(end)],[0 0],'-','Color',[.9 .9 .9],'LineWidth',.1);
+         plot(t,raw,'Color',[.9 .9 .9],'LineWidth',.1);
+         plot(t,envelope,'LineWidth',2);
+         plot(t,carrier,'LineWidth',2);
+         axis tight;
+         title([num2str(nBurst) '/' num2str(numel(self.bEnvelope{n,channel})) '/valid=' num2str(self.mask_{n,channel}(nBurst))]);
+         ylim = get(gca,'ylim');
          
+         subplot('Position',[0.9 0.1 .05 .8]);
+         plot(N,EDGES(1:end-1),'k-');
+         axis([get(gca,'xlim') ylim]); box off
          
-         % Set the KeyPressFcn Callback
          set(f,'KeyPressFcn',{@self.plotBurstFun,self});
-         
       end
       
       function hist(self,c)
@@ -344,30 +367,64 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
    
    methods(Static)
       function plotBurstFun(src,event,h)
-         % Get the structure using guidata in the callback
          myhandles = guidata(src);
-         
-         % If right arrow is pressed
+                        nMax = size(h.bEnvelope,1);
+
          if strcmp(event.Key,'rightarrow')
-            n = myhandles.n + 1;
-            myhandles.n = n;
-            guidata(src,myhandles);
-            
-            envelope = h.bEnvelope{1}{n,:};
-            carrier = h.bCarrier{1}{n,:};
-            raw = h.bRaw{1}{n,:};
-            bt = h.bTime{1}(n,:);
-            t = linspace(bt(1),bt(2),numel(raw));
-            
-            lineObject = src.Children.Children;
-            
-            lineObject(1).XData = t;
-            lineObject(1).YData = raw;
-            lineObject(2).XData = t;
-            lineObject(2).YData = envelope;
-            lineObject(3).XData = t;
-            lineObject(3).YData = carrier;
+            if myhandles.nBurst == numel(h.bEnvelope{myhandles.n,myhandles.channel})
+               if myhandles.n < nMax
+                  myhandles.n = myhandles.n + 1;
+                  nBurst = 1;
+               else
+                  myhandles.n = 1;
+                  nBurst = 1;
+               end
+            else
+               nBurst = myhandles.nBurst + 1;
+            end
+         elseif strcmp(event.Key,'leftarrow')
+            if myhandles.nBurst == 1
+               if myhandles.n == 1
+                  myhandles.n = nMax;
+                  nBurst = numel(h.bEnvelope{nMax,myhandles.channel});
+               else
+                  myhandles.n = myhandles.n - 1;
+                  nBurst = numel(h.bEnvelope{myhandles.n,myhandles.channel});
+               end
+            else
+               nBurst = myhandles.nBurst - 1;
+            end
+         else
+            return;
          end
+         n = myhandles.n;
+         myhandles.nBurst = nBurst;
+         channel = myhandles.channel;
+         guidata(src,myhandles);
+         
+         clf(src);
+         subplot('Position',[0.1 0.1 .7 .8]);
+         hold on
+         envelope = h.bEnvelope{n,channel}{nBurst,:};
+         carrier = h.bCarrier{n,channel}{nBurst,:};
+         raw = h.bRaw{n,channel}{nBurst,:};
+         bt = h.bTime{n,channel}(nBurst,:);
+         thresh = h.threshold{n}(channel);
+         t = linspace(bt(1),bt(2),numel(raw));
+         
+         hold on;
+         plot([t(1) t(end)],[thresh thresh],'k--');
+         plot([t(1) t(end)],[0 0],'-','Color',[.9 .9 .9],'LineWidth',.1);
+         plot(t,raw,'Color',[.9 .9 .9],'LineWidth',.1);
+         plot(t,envelope,'LineWidth',2);
+         plot(t,carrier,'LineWidth',2);
+         axis tight;
+         title([num2str(nBurst) '/' num2str(numel(h.bEnvelope{n,channel})) '/valid=' num2str(h.mask_{n,channel}(nBurst))]);
+         ylim = get(gca,'ylim');
+         
+         subplot('Position',[0.9 0.1 .05 .8]);
+         plot(myhandles.N,myhandles.EDGES(1:end-1),'k-');
+         axis([get(gca,'xlim') ylim]); box off;
       end
 
    end
