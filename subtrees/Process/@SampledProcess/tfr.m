@@ -125,7 +125,7 @@ switch lower(par.method)
       tStep = obj.dt;
       tBlock = obj.dt;
    case {'wavelet', 'cwt'}
-      % Currently required Wavelet toolbox
+      % Currently requires Matlab's Wavelet toolbox
       % consider https://github.com/grinsted/wavelet-coherence
       
       if isempty(fn) || ~isfield(params,'wavelet')

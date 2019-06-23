@@ -7,6 +7,7 @@ t = (0:92047)'*dt;
 x = cos(2*pi*250*t) + .5*cos(2*pi*50*t) + 5*randn(size(t));
 nw = 4.5;
 
+% FTESTC comes from Chronux
 [Fval,A,f,signal,sd] = ftestc(x,struct('tapers',[nw 8],'Fs',Fs),[],'n');
 [out,par] = sig.mtspectrum(x,'thbw',nw,'f',f,'Fs',Fs,'Ftest',true);
 

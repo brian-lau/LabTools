@@ -1,4 +1,4 @@
-function Annotate()
+function [gui,data] = Annotate()
 % Data is shared between all child functions by declaring the variables
 % here (they become global to the function). We keep things tidy by putting
 % all GUI stuff in one structure and all data stuff in another. 
@@ -131,7 +131,6 @@ gui = createInterface( data.Files );
       else
          data.artifacts = annotate(s.data,gui.ViewAxes);
       end
-      
       gui.ViewPanel.Title = file;
    end % onAnnotate
 

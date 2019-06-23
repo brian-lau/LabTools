@@ -49,7 +49,7 @@
 %     legend('original','filter - compensated','filter - no compensation');
 %
 %     SEE ALSO
-%     filtfilt
+%     filtfilt, bandpass, bandstop, lowpass
 
 %     $ Copyright (C) 2016 Brian Lau <brian.lau@upmc.fr> $
 %     Released under the BSD license. The license and most recent version

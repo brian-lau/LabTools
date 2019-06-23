@@ -19,9 +19,14 @@
 %     thbw    - scalar (Hz), optional, default = 4
 %               Time-half-bandwidth product. If hbw is set, this will be
 %               determined automatically.
+%     k       - scalar, optional, default = 2*thbw - 1
+%               # of tapers to average. There are less than 2*thbw-1 tapers 
+%               with good concentration in the band [-hbw hbw]. Frequently,
+%               people use 2*thbw-1, although this is an upper bound, 
+%               in some cases K should be << 2*thbw-1.
+%     Fs      - scalar sampling frequency, optional, default = 2pi
 %     f       - fmin:df:fmax, optional, default = linspace(0,nyquist,100)
 %               Vector of frequencies for calculating PSD
-%     Fs      - scalar sampling frequency, optional, default = 2pi
 %     nfft    - scalar, optional
 %               Determines the size of FFT. If f is defined, nfft =
 %               numel(f), otherwise nfft = 2^nextpow2(length(x))
@@ -30,13 +35,7 @@
 %               also be supplied
 %     lambda  - k x 1, optional
 %               Eigenvalues of tapers V. If given, V must also be supplied.
-%     lambda_thresh -
-%
-%     k       - scalar, optional, default = 2*thbw - 1
-%               # of tapers to average. There are less than 2*thbw-1 tapers 
-%               with good concentration in the band [-hbw hbw]. Frequently,
-%               people use 2*thbw-1, although this is an upper bound, 
-%               in some cases K should be << 2*thbw-1.
+%     lambdaThresh - Eigenvalue threshold for dropping tapers, default = 0.9
 %     weights - string, optional, default = 'adapt'
 %               Algorithm for combining tapered estimates:
 %               'adapt'  - Thomson's adaptive non-linear combination 
@@ -146,28 +145,29 @@
 % o jackknife confidence intervals
 % o multi-section F-test
 % o reshaping currently only takes the maximum within +-hw to reshape_f
+% o option to return spectrum
 function [output,params] = mtspectrum(x,varargin)
 
 p = inputParser;
 p.KeepUnmatched = true;
 p.FunctionName = 'sig.mtspectrum';
 p.addRequired('x');
-p.addParameter('thbw',[],@(x) isscalar(x));
-p.addParameter('hbw',[],@(x) isscalar(x));
-p.addParameter('k',[],@(x) isnumeric(x));
+p.addParameter('thbw',[],@(x) isscalar(x) || isempty(x));
+p.addParameter('hbw',[],@(x) isscalar(x) || isempty(x));
+p.addParameter('k',[],@(x) isnumeric(x) || isempty(x));
 p.addParameter('Fs',2*pi,@(x) isscalar(x));
 p.addParameter('f',[],@(x) isnumeric(x));
 p.addParameter('nfft',[],@(x) isnumeric(x));
 p.addParameter('V',[],@(x) ismatrix(x));
-p.addParameter('Ftest',false,@(x) islogical(x) || isscalar(x));
-p.addParameter('alpha',[],@(x) isnumeric(x));
-p.addParameter('confMethod','asymp',@ischar);
 p.addParameter('lambda',[],@(x) isnumeric(x));
 p.addParameter('lambdaThresh',0.9,@(x) isnumeric(x) && isscalar(x));
 p.addParameter('weights','adapt',@(x) any(strcmp(x,{'adapt' 'eigen' 'unity'})));
 p.addParameter('dropLastTaper',true,@(x) islogical(x) || isscalar(x));
 p.addParameter('quadratic',false,@(x) islogical(x) || isscalar(x));
 p.addParameter('robust','mean',@ischar);
+p.addParameter('Ftest',false,@(x) islogical(x) || isscalar(x));
+p.addParameter('alpha',[],@(x) isnumeric(x));
+p.addParameter('confMethod','asymp',@ischar);
 p.addParameter('detrend','none',@ischar);
 p.addParameter('mask',[]);
 p.addParameter('reshape',false,@(x) islogical(x));
@@ -175,6 +175,7 @@ p.addParameter('reshape_f',[],@(x) isnumeric(x));
 p.addParameter('reshape_hw',0,@(x) isscalar(x) && isnumeric(x) && (x>=0));
 p.addParameter('reshape_nhbw',4,@(x) isscalar(x) && isnumeric(x) && (x>=0));
 p.addParameter('reshape_threshold',0.01,@(x) isscalar(x));
+p.addParameter('spectrogram',[0 0],@(x) isnumeric(x) && (numel(x)==2));
 p.addParameter('verbose',false,@(x) islogical(x) || isscalar(x));
 p.parse(x,varargin{:});
 par = p.Results;
@@ -183,13 +184,13 @@ par = rmfield(par,'x');
 checkInputs();
 
 %% Cell array of signals, process each element adjusting tapers to maintain hbw
-if iscell(x)
+if iscell(x) && ~all(par.spectrogram)
    if par.Nsections == 1
       [output,params] = sig.mtspectrum(x{1},par);
    else
       % Duration of each section
       Twin = cellfun(@(x) size(x,1)/par.Fs,x);
-      
+
       params = par;
       temp = zeros(par.nf,par.Nchan,par.Nsections);
       for i = 1:par.Nsections
@@ -256,6 +257,32 @@ if iscell(x)
       
       % TODO HOW TO RETURN F-TEST/DOF IN THIS CASE?
    end
+   return;
+elseif all(par.spectrogram)
+   n = size(x,1);
+
+   % Round window settings to nearest sample
+   tBlock = par.spectrogram(1);
+   tStep = par.spectrogram(2);
+   nBlock = max(1,floor(tBlock*par.Fs));
+   nStep = max(0,floor(tStep*par.Fs));
+   tBlock = nBlock/par.Fs;
+   tStep = nStep/par.Fs;
+
+   blockStart = 1:nStep:n;
+   nBlocks = numel(blockStart);
+   
+   for i = 1:nBlocks
+      ind = blockStart(i):min(n,(blockStart(i)+nBlock-1));
+      xBlock{i} = x(ind,:);
+   end
+
+   params = p.Results;
+   params.spectrogram = [0 0];
+   params.robust = 'none';
+   params = rmfield(params,'x');
+ 
+   [output,params] = sig.mtspectrum(xBlock,params);
    return;
 end
 
@@ -354,6 +381,7 @@ end
          N = sum(cellfun(@(x) size(x,1),x));
          T = sum(cellfun(@(x) size(x,1)/par.Fs,x));
          par.Nchan = unique(cellfun(@(x) size(x,2),x));
+
          par.Nsections = numel(x);
          assert(numel(par.Nchan)==1,'Multiple sections must have same number of channels');
       else
@@ -389,7 +417,7 @@ end
             assert((par.k>=1) && (par.k<=k),...
                '# of tapers must be greater than 1 and < 2*nw-1');
          end
-         if ~iscell(x)
+         if ~iscell(x) && ~all(par.spectrogram)
             % Compute tapers, if cell wait for each section
             [par.V,par.lambda] = dpss(N,par.thbw,par.k);
          end
@@ -415,7 +443,7 @@ end
          error('detrend options are ''none'', ''constant'' or ''linear''.');
       end
       
-      if ~iscell(x)
+      if ~iscell(x) && ~all(par.spectrogram)
          % Do tapers pass the eigenvalue threshold?
          ind = find(par.lambda < par.lambdaThresh);
          if ~isempty(ind)
@@ -429,6 +457,8 @@ end
       end
       
       if isempty(par.f)
+% TODO, this seems wrong for sectioned data. N is total samples across
+% sections, and will produce massive nffts???
          if isempty(par.nfft)
             par.nfft = max(256,2^nextpow2(N));
          end
