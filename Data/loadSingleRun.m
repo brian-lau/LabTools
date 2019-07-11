@@ -37,7 +37,21 @@ parse(par,lfpfile,varargin{:});
 switch lower(ext)
    case '.poly5'
       signal = tms_read(lfpfile);
+      
+      % Catch empty data
+      ind = cellfun(@isempty,signal.data);
+      if any(ind)
+         n = cellfun(@numel,signal.data);
+         un = unique(n);
+         if numel(un) > 2
+            error('Mismatched signal lengths???');
+         end
+         n = max(n);
+         % Fill with empty (maybe should be NaNs?)
+         signal.data{ind} = zeros(1,n);
+      end
       temp = cell2mat(signal.data(1:end))';
+       
       tags = linq(signal.description);
       tags = tags.select(@(x) x.SignalName')...
          .where(@(x) strncmp(x,'(Lo)',4))...
@@ -49,11 +63,12 @@ switch lower(ext)
       for i = 1:numel(tags)
          labels(i) = metadata.label.dbsDipole(tags{i});
       end
-      
+  
       s = SampledProcess('values',temp(:,ind),...
          'Fs',signal.fs,...
          'tStart',0,...
          'labels',labels);
+
       % Trigger
       t = SampledProcess('values',temp(:,~ind),...
          'Fs',signal.fs,...
@@ -110,7 +125,7 @@ end
 if par.Results.Fpass
    fprintf('Highpass filtering\n');
    try
-      load('/Users/brian.lau/Documents/Code/Repos/LabAnalyses/FIR_highpass.mat');
+      load('/Users/brian/Documents/Code/Repos/LabAnalyses/FIR_highpass.mat');
       i = Fs == s.Fs;
       j = Fpass == par.Results.Fpass;
       k = Fstop == par.Results.Fstop;
