@@ -118,7 +118,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          self.preprocess();
          self.estimateInstAmp();
          self.postprocess();
-         self.estimateThreshold();
+         %self.estimateThreshold();
          self.detectBursts();
          self.validateBursts();
       end
@@ -213,9 +213,27 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       function detectBursts(self)
          % TODO grab snippets of filtered input & instAmp
          
+         if isempty(self.threshold)
+            f = @(x) prctile(x,self.pctileThreshold);
+            
+            temp = self.instAmp.apply(f);
+            if numel(self.instAmp) > 1
+               self.threshold = cat(1,temp{:});
+            else
+               self.threshold = temp;
+            end
+            %keyboard
+            f = @(x) bsxfun(@(x,y) x>y,x,prctile(x,self.pctileThreshold));
+         else
+            f = @(x) bsxfun(@(x,y) x>y,x,self.threshold);
+         end
+         
          % Run detection function
-         f = @(x) bsxfun(@(x,y) x>y,x,self.threshold);
+         %f = @(x) bsxfun(@(x,y) x>y,x,self.threshold);
+         %f = @(x) bsxfun(@(x,y) x>y,x,prctile(x,self.pctileThreshold));
+         try
          ev = self.instAmp.detect(f);
+         catch, keyboard; end
          
          % Pull out burst times, envelopes & carriers
          for i = 1:size(ev,1)
