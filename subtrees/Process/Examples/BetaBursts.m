@@ -76,6 +76,8 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
             return;
          end
          
+         input = input(:);
+         
          % Reduce to requested labels
          if ~isempty(self.reqLabels_)
             input.subset('labelVal',self.reqLabels_).fix();
@@ -118,7 +120,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          self.preprocess();
          self.estimateInstAmp();
          self.postprocess();
-         %self.estimateThreshold();
+         self.estimateThreshold();
          self.detectBursts();
          self.validateBursts();
       end
@@ -199,13 +201,13 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       function estimateThreshold(self)
          % Estimate threshold
          if isempty(self.threshold)
-            f = @(x) prctile(x,self.pctileThreshold);
-            
+            f = @(x) prctile(x,self.pctileThreshold);            
             temp = self.instAmp.apply(f);
-            if numel(self.instAmp) > 1
-               self.threshold = cat(1,temp{:});
-            else
+            
+            if iscell(temp)
                self.threshold = temp;
+            else
+               self.threshold{1} = temp;
             end
          end
       end
@@ -213,28 +215,29 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       function detectBursts(self)
          % TODO grab snippets of filtered input & instAmp
          
-         if isempty(self.threshold)
-            f = @(x) prctile(x,self.pctileThreshold);
-            
-            temp = self.instAmp.apply(f);
-            if numel(self.instAmp) > 1
-               self.threshold = cat(1,temp{:});
-            else
-               self.threshold = temp;
-            end
-            %keyboard
-            f = @(x) bsxfun(@(x,y) x>y,x,prctile(x,self.pctileThreshold));
-         else
-            f = @(x) bsxfun(@(x,y) x>y,x,self.threshold);
+%          if isempty(self.threshold)
+%             f = @(x) prctile(x,self.pctileThreshold);            
+%             temp = self.instAmp.apply(f);
+%             
+%             if iscell(temp)
+%                self.threshold = temp;
+%             else
+%                self.threshold{1} = temp;
+%             end
+%          end
+         
+         ev = cell(size(self.instAmp));
+         for i = 1:numel(self.instAmp)
+            f = @(x) bsxfun(@(x,y) x>y,x,self.threshold{i});
+            temp = self.instAmp(i).detect(f);
+            ev{i} = temp{:};
          end
          
-         % Run detection function
-         %f = @(x) bsxfun(@(x,y) x>y,x,self.threshold);
-         %f = @(x) bsxfun(@(x,y) x>y,x,prctile(x,self.pctileThreshold));
-         try
-         ev = self.instAmp.detect(f);
-         catch, keyboard; end
-         
+%          % Run detection function
+%          %f = @(x) bsxfun(@(x,y) x>y,x,self.threshold);
+%          %f = @(x) bsxfun(@(x,y) x>y,x,prctile(x,self.pctileThreshold));
+%          ev = self.instAmp.detect(f);
+
          % Pull out burst times, envelopes & carriers
          for i = 1:size(ev,1)
             for j = 1:size(ev,2)
@@ -344,7 +347,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          carrier = self.bCarrier{n,channel}{nBurst,:};
          raw = self.bRaw{n,channel}{nBurst,:};
          bt = self.bTime{n,channel}(nBurst,:);
-         thresh = self.threshold(channel);%threshold{n}(channel);
+         thresh = self.threshold{n}(channel);
          t = linspace(bt(1),bt(2),numel(raw));
          
          subplot('Position',[0.1 0.1 .7 .8]);
@@ -430,7 +433,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          carrier = h.bCarrier{n,channel}{nBurst,:};
          raw = h.bRaw{n,channel}{nBurst,:};
          bt = h.bTime{n,channel}(nBurst,:);
-         thresh = h.threshold(channel);%h.threshold{n}(channel);
+         thresh = h.threshold{n}(channel);
          t = linspace(bt(1),bt(2),numel(raw));
          
          hold on;
