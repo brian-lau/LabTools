@@ -10,6 +10,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       rejectParams        % currently, struct with field 'artifacts'
       pctileThreshold
       minDurThreshold
+      keepBelowThreshold
       threshold           % threshold for detecting burst
    end
    properties(SetAccess = protected)
@@ -35,7 +36,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       input_
    end
    properties(SetAccess = immutable)
-      version = '0.2.0'   % Version string
+      version = '0.3.0'   % Version string
    end
    
    methods
@@ -49,6 +50,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          p.addParameter('instAmpMethod','hilbert',@ischar);
          p.addParameter('pctileThreshold',75,@(x) isscalar(x) && (x>0) && (x<100));
          p.addParameter('minDurThreshold',0.1,@(x) isscalar(x) && (x>=0));
+         p.addParameter('keepBelowThreshold',false,@islogical);
          p.addParameter('rejectParams',[]);
          p.addParameter('preprocessParams',struct('Fstop1',8,'Fpass1',12,'Fpass2',18,'Fstop2',23,'movmean',20),@isstruct);
          p.addParameter('postprocessParams',struct('baselineRemoval','movmean','baselineWindow',20,'smoothWindow',0.2),@isstruct);
@@ -62,6 +64,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          self.postprocessParams = par.postprocessParams;
          self.pctileThreshold = par.pctileThreshold;
          self.minDurThreshold = par.minDurThreshold;
+         self.keepBelowThreshold = par.keepBelowThreshold;
          self.rejectParams = par.rejectParams;
       end
       
@@ -214,33 +217,30 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       
       function detectBursts(self)
          % TODO grab snippets of filtered input & instAmp
-         
-%          if isempty(self.threshold)
-%             f = @(x) prctile(x,self.pctileThreshold);            
-%             temp = self.instAmp.apply(f);
-%             
-%             if iscell(temp)
-%                self.threshold = temp;
-%             else
-%                self.threshold{1} = temp;
-%             end
-%          end
-         
+
+         % Run detection function
          ev = cell(size(self.instAmp));
          for i = 1:numel(self.instAmp)
             f = @(x) bsxfun(@(x,y) x>y,x,self.threshold{i});
             temp = self.instAmp(i).detect(f);
             ev{i} = temp{:};
-         end
-         
-%          % Run detection function
+         end         
 %          %f = @(x) bsxfun(@(x,y) x>y,x,self.threshold);
 %          %f = @(x) bsxfun(@(x,y) x>y,x,prctile(x,self.pctileThreshold));
 %          ev = self.instAmp.detect(f);
 
+         %keyboard
+
          % Pull out burst times, envelopes & carriers
          for i = 1:size(ev,1)
             for j = 1:size(ev,2)
+               
+               if ~self.keepBelowThreshold
+                  dur = diff(ev{i,j},1,2);
+                  ind = dur < self.minDurThreshold;
+                  ev{i,j}(ind,:) = [];
+               end
+               
                self.instAmp(i).subset(j);           % Isolate channel
                self.instAmp(i).window = ev{i,j};    % Window instAmp
                self.input(i).subset(j);             % Isolate channel
