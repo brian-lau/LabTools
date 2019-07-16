@@ -115,6 +115,43 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          end
       end
       
+      function nbursts = nBursts(self)
+         nbursts = cellfun(@(x) size(x,1),self.bTime,'uni',0);
+      end
+      
+      function meandur = meanBurstDuration(self)
+         meandur = zeros(size(self.labels_));
+         for i = 1:numel(self.labels_)
+            dur = cat(1,self.bDuration{:,i});
+            bad = ~cat(1,self.mask_{:,i});
+            dur(bad) = [];
+            meandur(i) = mean(dur);
+         end
+      end
+      
+      function meanamp = meanBurstAmplitude(self)
+         meanamp = zeros(size(self.labels_));
+         for i = 1:numel(self.labels_)
+            amp = cat(1,self.bMaxAmp{:,i});
+            bad = ~cat(1,self.mask_{:,i});
+            amp(bad) = [];
+            meanamp(i) = mean(amp);
+         end
+      end
+      
+      function brate = burstRate(self)
+         % TODO valid time (excluding artifacts)
+         for i = 1:numel(self.input)
+            T(i) = self.input(i).tEnd - self.input(i).tStart;
+         end
+         n = self.nBursts();
+         
+         brate = zeros(size(self.labels_));
+         for i = 1:numel(self.labels_)
+            brate(i) = sum(cat(1,n{:,i}))/T;
+         end
+      end
+      
       function self = run(self)
          if ~self.isRunnable
             error('No input signal');
