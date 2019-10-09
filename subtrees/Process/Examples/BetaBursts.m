@@ -12,6 +12,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
       minDurThreshold
       keepBelowThreshold
       threshold           % threshold for detecting burst
+      verbose
    end
    properties(SetAccess = protected)
       instAmp             % instantaneous amplitude
@@ -51,6 +52,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          p.addParameter('pctileThreshold',75,@(x) isscalar(x) && (x>0) && (x<100));
          p.addParameter('minDurThreshold',0.1,@(x) isscalar(x) && (x>=0));
          p.addParameter('keepBelowThreshold',false,@islogical);
+         p.addParameter('verbose',false,@islogical);
          p.addParameter('rejectParams',[]);
          p.addParameter('preprocessParams',struct('Fstop1',8,'Fpass1',12,'Fpass2',18,'Fstop2',23,'movmean',20),@isstruct);
          p.addParameter('postprocessParams',struct('baselineRemoval','movmean','baselineWindow',20,'smoothWindow',0.2),@isstruct);
@@ -65,6 +67,7 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          self.pctileThreshold = par.pctileThreshold;
          self.minDurThreshold = par.minDurThreshold;
          self.keepBelowThreshold = par.keepBelowThreshold;
+         self.verbose = par.verbose;
          self.rejectParams = par.rejectParams;
       end
       
@@ -129,6 +132,16 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
          end
       end
       
+      function mediandur = medianBurstDuration(self)
+         mediandur = zeros(size(self.labels_));
+         for i = 1:numel(self.labels_)
+            dur = cat(1,self.bDuration{:,i});
+            bad = ~cat(1,self.mask_{:,i});
+            dur(bad) = [];
+            mediandur(i) = median(dur);
+         end
+      end
+      
       function meanamp = meanBurstAmplitude(self)
          meanamp = zeros(size(self.labels_));
          for i = 1:numel(self.labels_)
@@ -173,7 +186,9 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
             end
             self.isPreprocessed_ = true;
          else
-            fprintf('Preprocessing already done\n');
+            if self.verbose
+               fprintf('Preprocessing already done\n');
+            end
          end
       end
       
@@ -191,7 +206,9 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
             end
             self.hasInstAmp_ = true;
          else
-            fprintf('Instantaneous amplitude already done\n');
+            if self.verbose
+               fprintf('Instantaneous amplitude already done\n');
+            end
          end
       end
       
@@ -234,7 +251,9 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
             
             self.isPostprocessed_ = true;
          else
-            fprintf('Postprocessing already done\n');
+            if self.verbose
+               fprintf('Postprocessing already done\n');
+            end
          end
       end
       
@@ -265,8 +284,6 @@ classdef BetaBursts < hgsetget & matlab.mixin.Copyable
 %          %f = @(x) bsxfun(@(x,y) x>y,x,self.threshold);
 %          %f = @(x) bsxfun(@(x,y) x>y,x,prctile(x,self.pctileThreshold));
 %          ev = self.instAmp.detect(f);
-
-         %keyboard
 
          % Pull out burst times, envelopes & carriers
          for i = 1:size(ev,1)
