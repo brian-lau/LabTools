@@ -486,7 +486,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
       %% 
       % Rogers & Van Vledder (2013). Frequency width in predictions of
       % windsea spectra and the role of the nonlinear solver.
-      % Ocean Modelling, 
+      % Ocean Modelling, 70: 52-61
       %
       % Saulnier et al (2011). Wave groupiness and spectral bandwidth as
       % relevant parameters for the performance assessment of wave energy
@@ -511,6 +511,7 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             % dimensionless, range = [0 inf] bigger values sharper
             stats(i).Qc = max(mom(i).P/mom(i).m0)/stats(i).Tm_10;
             % Goda's peakedness (aka Qp), dimensionless, range = [0 inf] bigger values sharper
+            % factor 2 included such that Qd -> 1 for white noise
             stats(i).Qd = 2/mom(i).m0^2 * simpson(f,f.*mom(i).P.^2);
             % Medina & Hudspeth (1987)
             stats(i).Qe = 2*mom(i).m1/mom(i).m0^3 * simpson(f,mom(i).P.^2);
@@ -525,12 +526,9 @@ classdef Spectrum < hgsetget & matlab.mixin.Copyable
             %stats(i).Alpha2 = 2*(stats(i).nu^2+1) / (stats(i).Tm_10*stats(i).Qe);
          end
         
-%          keyboard
-%          if par.plot
 %             sep = 2;
 %             %self.plot('psd',par.psd,'sep',sep,'dB',false,'label',true,'percentile',0.5);
 %             self.plot('psd',par.psd,'sep',sep,'dB',true,'label',true,'fmin',8,'fmax',35);
-%          end
       end
       
       function [P,f,labels] = extract(self,varargin)
