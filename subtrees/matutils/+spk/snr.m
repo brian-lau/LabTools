@@ -12,6 +12,7 @@ p.KeepUnmatched = false;
 p.addRequired('waveforms',@ismatrix);
 p.addParameter('noise',[],@ismatrix);
 p.addParameter('labels',[],@isvector);
+p.addParameter('fac',5,@isscalar);
 p.parse(waveforms,varargin{:});
 par = p.Results;
 
@@ -19,10 +20,10 @@ nT = size(waveforms,1);
 
 if ~isempty(par.labels)
    uLabels = unique(par.labels);
-   results(numel(uLabels)) = struct('p2p',[],'rms1',[],'rms2',[]);
+   results(numel(uLabels)) = struct('snr_p2p',[],'snr_rms1',[],'snr_rms2',[]);
    for i = 1:numel(uLabels)
       ind = par.labels == uLabels(i);
-      results(i) = spk.snr(waveforms(:,ind),'noise',par.noise);
+      results(i) = spk.snr(waveforms(:,ind),'noise',par.noise,'fac',par.fac);
    end
    return;
 else
@@ -36,13 +37,13 @@ else
    else
       noise = par.noise;
    end
-   
+
    % Eq 7 Joshua et al.
-   results.p2p =  p2p / (5*std(noise(:)));
+   results.snr_p2p =  p2p / (par.fac*std(noise(:)));
    
    % from U. Rutishauser, E.M. Schuman, A.N. Mamelak 2006
-   results.rms1 = norm(meanwf) /  sqrt(nT*var(noise(:)));
+   results.snr_rms1 = norm(meanwf) /  sqrt(nT*var(noise(:)));
    
    % pg 3 Stratton et al.
-   results.rms2 = rms(waveforms(:)) / rms(noise(:));
+   results.snr_rms2 = rms(waveforms(:)) / rms(noise(:));
 end
