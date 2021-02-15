@@ -1,4 +1,4 @@
-function [events,values] = detect(self,threshold)
+function [events,vmax] = detect(self,threshold)
 
 s = copy(self);
 
@@ -10,7 +10,7 @@ end
 s.map(func);
 
 for i = 1:numel(s)
-   ind = s(i).values{1};
+   ind = s(i).values{1};         % indices where signal exceeds threshold
    values = self(i).values{1};
    times = s(i).times{1};
    
@@ -20,42 +20,25 @@ for i = 1:numel(s)
       ascend = times(dind(:,j)==1);
       descend = times(dind(:,j)==-1);
       if isempty(ascend) || isempty(descend)
-         %events{i,j} = [NaN NaN];
          events{i,j} = [];
       else
+         ascend_ind = find(dind(:,j)==1);
+         descend_ind = find(dind(:,j)==-1);
          if descend(1) < ascend(1)
             descend(1) = [];
+            descend_ind(1) = [];
          end
          
          if ascend(end) > descend(end)
             ascend(end) = [];
+            ascend_ind(end) = [];
          end
          
          events{i,j} = [ascend , descend];
+         if nargout == 2
+            vmax{i,j} = arrayfun(@(u,d) max(values(u:d,j)), ascend_ind, descend_ind);
+         end
       end
       
-%       n = size(events{i,j},1);
-%       ev(n) = metadata.event.Generic();
-%       
-%       tStart = num2cell(events{i,j}(:,1));
-%       [ev.tStart] = deal(tStart{:});
-%       tEnd = num2cell(events{i,j}(:,2));
-%       [ev.tEnd] = deal(tEnd{:});
-      
-      %evv{j} = ev;
-      %clear ev;
    end
-   %ep(i) = EventProcess(evv,'tStart',self(i).tStart,'tEnd',self(i).tEnd);
 end
-
-% n = size(events,1);
-% ev(n) = metadata.event.Generic();
-% 
-% tStart = num2cell(events(:,1));
-% [ev.tStart] = deal(tStart{:});
-% tEnd = num2cell(events(:,2));
-% [ev.tEnd] = deal(tEnd{:});
-% 
-% ep = EventProcess(ev,'tStart',self.tStart,'tEnd',self.tEnd);
-% 
-% for 
